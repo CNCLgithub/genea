@@ -1,0 +1,17 @@
+set(CURRENT_SLICE 
+ Algo
+Core
+devTools
+extern
+Gui
+Hardware
+Infer
+MDP
+Motion
+Optim
+Ors
+Perception
+pr2
+relational
+System
+ )

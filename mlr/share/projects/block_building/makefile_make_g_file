@@ -1,0 +1,9 @@
+BASE = ../..
+
+OBJS = cpp/make_g_files.o
+
+DEPEND = Motion Core Geo Ors Gui Optim
+
+OUTPUT = cpp/make_g_files.exe
+
+include $(BASE)/build/generic.mk

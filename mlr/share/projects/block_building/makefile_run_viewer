@@ -1,0 +1,9 @@
+BASE = ../..
+
+OBJS = cpp/run_viewer.o
+
+DEPEND = Motion Core Geo Ors Gui Optim
+
+OUTPUT = cpp/run_viewer.exe
+
+include $(BASE)/build/generic.mk

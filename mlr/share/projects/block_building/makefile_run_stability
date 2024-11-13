@@ -1,0 +1,9 @@
+BASE = ../..
+
+OBJS = cpp/run_stability.o
+
+DEPEND = Motion Core Geo Ors Gui Optim
+
+OUTPUT = cpp/run_stability.exe
+
+include $(BASE)/build/generic.mk

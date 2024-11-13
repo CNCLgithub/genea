@@ -1,0 +1,9 @@
+BASE = ../..
+
+OBJS = cpp/run_ppm_generator.o
+
+DEPEND = Motion Core Geo Ors Gui Optim
+
+OUTPUT = cpp/run_ppm_generator.exe
+
+include $(BASE)/build/generic.mk

@@ -1,0 +1,9 @@
+BASE = ../..
+
+OBJS = cpp/run_risk_test.o
+
+DEPEND = Motion Core Geo Ors Gui Optim
+
+OUTPUT = cpp/run_risk_test.exe
+
+include $(BASE)/build/generic.mk
