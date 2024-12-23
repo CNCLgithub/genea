@@ -34,7 +34,7 @@ fi
 ## ==========================================================================
 if [[ "$*" =~ "cont_pull" ]] || [[ "$*" =~ "all" ]];then
     echo_blue "Pulling singularity container..."
-    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EVysC-tuizdIgs9wmTrXYwoBjwkTOXNlF9kTLsRMfbPj4w?e=Wav01N&download=1" -O "${ENV[cont_init]}"
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EVysC-tuizdIgs9wmTrXYwoBjwkTOXNlF9kTLsRMfbPj4w?e=M4ZrLd&download=1" -O "${ENV[cont_init]}"
     wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EaFj9lg1b-5FseCdNFSJkcQB5VAYydkXVqjYYQu0LSeeJg?e=njvmDj&download=1" -O "${ENV[cont_main]}"
 elif [[ "$*" =~ "cont_build" ]];then
     echo_blue "Building apptainer container..."
@@ -59,6 +59,8 @@ if [[ "$*" =~ "python" ]] || [[ "$*" =~ "all" ]];then
     ./run.sh "python -m pip install matplotlib==3.7.5"
     ./run.sh "python -m pip install click==8.1.7"
     ./run.sh "python -m pip install click-help-colors==0.9.4"
+    ./run.sh "python -m pip install shapely==2.0.6"
+    ./run.sh "python -m pip install seaborn==0.13.2"
 fi
 
 
@@ -67,7 +69,7 @@ fi
 ## ==========================================================================
 if [[ "$*" =~ "data" ]] || [[ "$*" =~ "all" ]];then
     echo_blue "Pulling data..."
-    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EU5kMTlcjEtJiT7VrRsJ85EBf-QTOi0D4bb1uDjYoZ2clg?e=lcyCuL&download=1" -O library.zip
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EU5kMTlcjEtJiT7VrRsJ85EBq7wzKnjrUVCwGi2rt6Gn4g?e=AIbwap&download=1" -O library.zip
     rm -rf mlr/share/projects/block_building/library
     chmod +777 library.zip
     unzip library.zip

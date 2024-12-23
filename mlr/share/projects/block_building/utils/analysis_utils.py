@@ -1,6 +1,7 @@
 import numpy as np
 
 from mlr.share.projects.block_building.utils.compute_utils import ComputeUtils
+from mlr.share.projects.block_building.utils.core_utils import ConfigUtils
 from mlr.share.projects.block_building.utils.msg_utils import Msg
 
 
@@ -17,21 +18,20 @@ class TrialKeys:
     TRIAL_LEFT_DETAIL = 'TrialLeftDetail'
     TRIAL_RIGHT_DETAIL = 'TrialRightDetail'
 
-    TRIAL_VALUE = 'TrialValue'
     TRIAL_Z_SCORE_VALUE = 'TrialZScoreValue'
 
 
 class Trial:
     def __init__(self):
-        self._trial_data_keys = [TrialKeys.TRIAL_NAME, TrialKeys.TRIAL_VALUE]
+        self._trial_data_keys = [TrialKeys.TRIAL_NAME, TrialKeys.TRIAL_SLIDER_VALUE]
         self._trial_data_by_key = {}
 
     def add_trial_data(self, trial_data):
         self._trial_data_by_key[TrialKeys.TRIAL_NAME] = trial_data[TrialKeys.TRIAL_NAME]
-        self._trial_data_by_key[TrialKeys.TRIAL_VALUE] = trial_data[TrialKeys.TRIAL_VALUE]
+        self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE] = trial_data[TrialKeys.TRIAL_SLIDER_VALUE]
 
     def set_response_value(self, value):
-        self._trial_data_by_key[TrialKeys.TRIAL_VALUE] = value
+        self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE] = value
 
     def set_z_scored_response_value(self, value):
         self._trial_data_by_key[TrialKeys.TRIAL_Z_SCORE_VALUE] = value
@@ -216,6 +216,10 @@ class Experiment:
     def compute_and_set_replan_probability(self, participant_id, trial_key):
         self._participants_by_participant_id_dict[participant_id].set_replan_probability(trial_key)
 
+    @staticmethod
+    def compute_prob(input_value):
+        return np.exp(-input_value * ConfigUtils.EXP_TEMPERATURE)
+
     def z_score_participant_responses(self, trial_key):
         for participant_id in self.get_participant_id_list():
             self._participants_by_participant_id_dict[participant_id].z_score_responses(trial_key)
@@ -241,7 +245,7 @@ class Experiment:
         participant = self.get_participant_by_participant_id(participant_id)
         return participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
 
-    def get_neg_exp_trial_responses_dict(self, trial_key, participant_id_list=None):
+    def get_prob_trial_responses_dict(self, trial_key, participant_id_list=None):
         trial_names_list = self.get_all_trial_names()
 
         if participant_id_list is None:
@@ -255,7 +259,7 @@ class Experiment:
             participant = self.get_participant_by_participant_id(participant_id)
             for trial_name in trial_names_list:
                 trial_responses = participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
-                trial_responses = [np.exp(-resp * 0.04) if resp > 0.0 else np.exp(-20) for resp in trial_responses]
+                trial_responses = [Experiment.compute_prob(response) for response in trial_responses]
                 response_values_dict[trial_name].append(np.sum(trial_responses))
 
         for key in response_values_dict:

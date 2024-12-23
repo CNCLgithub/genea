@@ -30,7 +30,7 @@ class CPPUtils:
 
     @staticmethod
     def run_make_g_filepath(arguments="", run_gdb=False):
-        return CPPUtils._run_command("make_g_file.exe", arguments, run_gdb)
+        return CPPUtils._run_command("make_g_files.exe", arguments, run_gdb)
 
     @staticmethod
     def run_risk_test(arguments="", run_gdb=False):

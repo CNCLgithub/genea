@@ -4,8 +4,12 @@ import random
 import scipy.stats as stats
 import time
 
+from torch.fx.experimental.migrate_gradual_types.constraint import Constraint
+
 from mlr.share.projects.block_building.analysis.parse_data import ExperimentType, Parser, ModelType, ModelData
 from mlr.share.projects.block_building.utils.compute_utils import ComputeUtils
+from mlr.share.projects.block_building.utils.core_utils import ConfigUtils
+from mlr.share.projects.block_building.utils.file_utils import FileUtils
 from mlr.share.projects.block_building.utils.plot_utils import PlotUtils
 from mlr.share.projects.block_building.utils.analysis_utils import TrialKeys
 from mlr.share.projects.block_building.utils.msg_utils import Msg
@@ -71,8 +75,8 @@ def run_leave_one_out_bootstrap(behavior_data):
     return bootstrap_cor_list
 
 
-def run_behavior_vs_model_bootstrap(behavior_data, model_response_dict_dict):
-    behavior_trial_key = TrialKeys.TRIAL_Z_SCORE_VALUE
+def run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict, save_filepath=None):
+    behavior_trial_key = TrialKeys.TRIAL_SLIDER_VALUE
     model_names_list = list(model_response_dict_dict.keys())
     trial_names_list = behavior_data.get_all_trial_names()
 
@@ -119,14 +123,19 @@ def run_behavior_vs_model_bootstrap(behavior_data, model_response_dict_dict):
         correlation_value = np.mean(bootstrap_cor_list[model_name])
         Msg.print_warn("BOOTSTRAP HUMAN vs MODEL " + model_name + " = " + str(correlation_value))
 
+    if save_filepath:
+        write_list = [ConfigUtils.EXP_TEMPERATURE]
+        for model in model_names_list:
+            write_list.append(np.mean(bootstrap_cor_list[model]))
+        FileUtils.write_row_to_file(save_filepath, write_list)
+
     return bootstrap_cor_list
 
 
 def run_behavior_vs_model_correlation(behavior_data, model_response_dict, model_name=None, do_plot=True, do_z=False):
-    behavior_response_dict = behavior_data.get_mean_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE)
+    behavior_response_dict = behavior_data.get_mean_trial_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE)
 
     trial_names_list = behavior_data.get_all_trial_names()
-    # trial_names_list = model_response_dict.keys()
 
     behavior_responses_list = []
     model_responses_list = []
@@ -134,9 +143,6 @@ def run_behavior_vs_model_correlation(behavior_data, model_response_dict, model_
     for trial_name in trial_names_list:
         behavior_responses_list.append(behavior_response_dict[trial_name])
         model_responses_list.append(model_response_dict[trial_name])
-        # FileUtils.write_row_to_file("/home/jakiroshah/Desktop/diff_stability.csv",
-        #                             [trial_name,
-        #                              model_response_dict[trial_name]])
 
     correlation_value, p_value = stats.pearsonr(behavior_responses_list, model_responses_list)
 
@@ -148,28 +154,23 @@ def run_behavior_vs_model_correlation(behavior_data, model_response_dict, model_
             model_responses_list = ComputeUtils.zscore_list(model_responses_list)
 
         save_path = "/home/jakiroshah/Desktop/" + model_name + ".pdf"
-
         PlotUtils.draw_scatter_plot(model_responses_list, behavior_responses_list,
                                     f"behavior vs {model_name}", model_name, "behavior",
                                     save_path=save_path, annot=trial_names_list)
 
-        # PlotUtils.draw_scatter_plot(model_responses_list, behavior_responses_list,
-        #                             f"behavior vs {model_name}", model_name, "behavior",
-        #                             save_path=save_path)
-
     Msg.print_warn("HUMAN vs MODEL " + model_name + " = " + str(correlation_value) + ", " + str(p_value))
 
 
-def draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict):
-    correlation_list_by_model_dict = run_behavior_vs_model_bootstrap(behavior_data, model_response_dict_dict)
+def draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict, save_path):
+    corr_list_by_model_dict = run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict)
 
     correlation_list_split_half = run_split_half_bootstrap(behavior_data)
     correlation_list_leave_one_out = run_leave_one_out_bootstrap(behavior_data)
 
     floor_ceiling_list = [np.mean(correlation_list_split_half), np.mean(correlation_list_leave_one_out)]
-    save_path = "/home/jakiroshah/Desktop/" + experiment_type + "_bar.pdf"
+    # floor_ceiling_list = [0.0, 1.0]
     PlotUtils.draw_multiple_bar_plots(list(model_response_dict_dict.keys()),
-                                      correlation_list_by_model_dict,
+                                      corr_list_by_model_dict,
                                       floor_ceiling_list, save_path=save_path)
 
 
@@ -223,10 +224,15 @@ def run_analysis(experiment_type):
         "heuristic": heuristics_response_dict
         }
 
-    run_behavior_vs_model_bootstrap(behavior_data, model_response_dict_dict)
+    # ----------- uncomment when running temperature analysis -----------
+    # save_filepath = "/home/jakiroshah/Desktop/" + "bootstrap_" + str(experiment_type).lower() + ".csv"
+    # run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict, save_filepath)
 
-    draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict)
+    # ----------- produces bar graphs -----------
+    save_path = "/home/jakiroshah/Desktop/" + str(experiment_type).lower() + "_bar.pdf"
+    draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict, save_path)
 
+    # ----------- produces correlation scatter graphs -----------
     run_behavior_vs_model_correlation(behavior_data, phy_energy_response_dict, experiment_type + "_" + "PHY_ON_ENERGY")
 
     time.sleep(1)
@@ -236,7 +242,8 @@ def run_analysis(experiment_type):
 @click.option("-ag", "--action_goal_inference", default=False, is_flag=True, help="analyze action-goal inference data")
 @click.option("-e", "--effector_inference", default=False, is_flag=True, help="analyze hands data")
 @click.option("-d", "--difficulty", default=False, is_flag=True, help="analyze difficulty data")
-def main(action_goal_inference, effector_inference, difficulty):
+@click.option("-t", "--temperature", default=False, is_flag=True, help="analyze effect of temperature parameter")
+def main(action_goal_inference, effector_inference, difficulty, temperature):
     Msg.print_warn("Running analysis...")
 
     if action_goal_inference:
@@ -251,6 +258,16 @@ def main(action_goal_inference, effector_inference, difficulty):
         run_analysis(ExperimentType.DIFFICULTY_DIFF)
         run_analysis(ExperimentType.DIFFICULTY_TIME)
         run_analysis(ExperimentType.DIFFICULTY_BUILD)
+        return
+
+    if temperature:
+        for temperature in np.linspace(0.1, 10, 100):
+            ConfigUtils.EXP_TEMPERATURE = temperature
+            run_analysis(ExperimentType.ACTION_GOAL)
+            run_analysis(ExperimentType.HANDS)
+            run_analysis(ExperimentType.DIFFICULTY_DIFF)
+            run_analysis(ExperimentType.DIFFICULTY_TIME)
+            run_analysis(ExperimentType.DIFFICULTY_BUILD)
         return
 
 

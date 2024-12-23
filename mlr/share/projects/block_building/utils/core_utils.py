@@ -7,11 +7,14 @@ class ConfigUtils:
     IS_PHYSICS_ON = True
     DO_GRAB_OPTIMIZATION = True
 
-    ONE_HAND_PENALTY = 30.0
+    PLACE_PENALTY = 15.0  # KE
+    # PLACE_PENALTY = 1.0  # SSA
+
+    EXP_TEMPERATURE = 3
 
     # options
     DEBUG_CPP = False
-    RUN_PLANNER_OFFLINE = False
+    DEBUG_PLANNER = False
 
     NOISE_GAUSSIAN_STD = 0.01
     NOISE_THRESHOLD = 0.018  # if changed, remember to change this in run_physx.cpp as well

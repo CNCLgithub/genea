@@ -14,7 +14,7 @@ class ExperimentType:
 
 
 class ActionGoalTrial(Trial):
-    TRIALS_TO_FLIP = ["action_b", "action_d", "action_i", "goal_a", "goal_c", "goal_d"]
+    TRIALS_TO_FLIP = ["action_b", "action_d", "action_i", "goal_a", "goal_c", "goal_g"]
 
     def __init__(self, trial_name, trial_name_detailed):
         super().__init__()
@@ -46,10 +46,17 @@ class ActionGoalTrial(Trial):
             elif "3" in self._trial_name_detailed:
                 slider_value = self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE]
                 self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE] = _flip(slider_value)
+
+            slider_value = self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE]
+            self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE] = 100 - slider_value
             return
+
         if "2" in self._trial_name_detailed:
             slider_value = self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE]
             self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE] = _flip(slider_value)
+
+        slider_value = self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE]
+        self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE] = 100 - slider_value
 
     # noinspection PyTypeChecker
     def add_trial_data(self, trial_data):
@@ -108,7 +115,7 @@ class DifficultyExperiment(Experiment):
         participant = self._participants_by_participant_id_dict[participant_id]
         trial = Trial()
         trial.add_trial_data({TrialKeys.TRIAL_NAME: trial_name,
-                              TrialKeys.TRIAL_VALUE: trial_value})
+                              TrialKeys.TRIAL_SLIDER_VALUE: trial_value})
         participant.add_trial(trial)
 
 

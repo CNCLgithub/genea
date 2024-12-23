@@ -21,7 +21,7 @@ class Parser:
         elif experiment_type == ExperimentType.DIFFICULTY_TIME:
             db_file_path = PathUtils.join(PathUtils.get_out_human_data_dirpath(), "diff_estimation_scored.csv")
         elif experiment_type == ExperimentType.DIFFICULTY_BUILD:
-            db_file_path = PathUtils.join(PathUtils.get_out_human_data_dirpath(), "diff_build_scored_all.csv")
+            db_file_path = PathUtils.join(PathUtils.get_out_human_data_dirpath(), "diff_build_scored.csv")
 
         with open(db_file_path) as csv_read:
             csv_reader = csv.reader(csv_read, delimiter=",")
@@ -32,7 +32,7 @@ class Parser:
                         experiment.add_participant_data(participant_id, trial_name, float(trial_value))
 
         experiment.apply_exclusion_criteria()
-        experiment.z_score_participant_responses(TrialKeys.TRIAL_VALUE)
+        experiment.z_score_participant_responses(TrialKeys.TRIAL_SLIDER_VALUE)
 
         return experiment
 
@@ -90,8 +90,6 @@ class Parser:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "diff_phy_ke.csv")
         elif ExperimentType.DIFFICULTY in experiment_type and model_type == ModelType.PHYSICS_ON_SSA:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "diff_phy_ssa.csv")
-        elif ExperimentType.DIFFICULTY in experiment_type and model_type == ModelType.PHYSICS_ON_PE:
-            model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "diff_phy_pe.csv")
         elif ExperimentType.DIFFICULTY in experiment_type and model_type == ModelType.PHYSICS_OFF:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "diff_no_phy_ke.csv")
         elif ExperimentType.DIFFICULTY in experiment_type and model_type == ModelType.PHYSICS_OFF_SSA:
@@ -105,8 +103,6 @@ class Parser:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "action_goal_phy_ke.csv")
         elif experiment_type == ExperimentType.ACTION_GOAL and model_type == ModelType.PHYSICS_ON_SSA:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "action_goal_phy_ssa.csv")
-        elif experiment_type == ExperimentType.ACTION_GOAL and model_type == ModelType.PHYSICS_ON_PE:
-            model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "action_goal_phy_pe.csv")
         elif experiment_type == ExperimentType.ACTION_GOAL and model_type == ModelType.PHYSICS_OFF:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "action_goal_no_phy_ke.csv")
         elif experiment_type == ExperimentType.ACTION_GOAL and model_type == ModelType.PHYSICS_OFF_SSA:
@@ -120,8 +116,6 @@ class Parser:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "hands_phy_ke.csv")
         elif experiment_type == ExperimentType.HANDS and model_type == ModelType.PHYSICS_ON_SSA:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "hands_phy_ssa.csv")
-        elif experiment_type == ExperimentType.HANDS and model_type == ModelType.PHYSICS_ON_PE:
-            model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "hands_phy_pe.csv")
         elif experiment_type == ExperimentType.HANDS and model_type == ModelType.PHYSICS_OFF:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "hands_no_phy_ke.csv")
         elif experiment_type == ExperimentType.HANDS and model_type == ModelType.PHYSICS_OFF_SSA:
@@ -143,16 +137,13 @@ class Parser:
                     elif trial_num_of_hands == 2:
                         trial_name += "_2"
 
-                # trial_plan = row[ModelData.TRIAL_SYMBOLIC_PLAN]
                 trial_cost = float(row[ModelData.TRIAL_COST])
                 trial_energy = float(row[ModelData.TRIAL_ENERGY])
 
-                # model_data.add_participant_data(ModelData.REPLAN_PROB, trial_name, trial_plan)
                 model_data.add_participant_data(ModelData.COST, trial_name, trial_cost)
                 model_data.add_participant_data(ModelData.ENERGY, trial_name, trial_energy)
 
-        # model_data.compute_and_set_replan_probability(ModelData.REPLAN_PROB, TrialKeys.TRIAL_VALUE)
-        model_data.z_score_participant_responses(TrialKeys.TRIAL_VALUE)
+        model_data.z_score_participant_responses(TrialKeys.TRIAL_SLIDER_VALUE)
 
         return model_data
 

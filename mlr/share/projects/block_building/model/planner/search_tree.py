@@ -486,16 +486,7 @@ class WorldStateNode:
 
         fin_loc_name = block.get_name_of_block_underneath_at_final()
         if fin_loc_name == NameUtils.TABLE:
-            block_size_x = block.get_shape().get_block_width()
-            block_size_y = block.get_shape().get_block_length()
-
-            pos_x = block.get_final_pos().x()
-            pos_y = block.get_final_pos().y()
-            new_pos_x_min = pos_x - block_size_x / 2
-            new_pos_x_max = pos_x + block_size_x / 2
-            new_pos_y_min = pos_y - block_size_y / 2
-            new_pos_y_max = pos_y + block_size_y / 2
-            if self._table.is_spot_free(new_pos_x_min, new_pos_x_max, new_pos_y_min, new_pos_y_max):
+            if self._table.is_spot_free(block):
                 Msg.print_info("INFO [fix_block_from_hand]: block can be fixed at final location")
                 return True
         else:
@@ -1290,7 +1281,7 @@ class WorldStateTree:
 
     @staticmethod
     def _run_physx_executable(arguments_list):
-        if ConfigUtils.RUN_PLANNER_OFFLINE:
+        if ConfigUtils.DEBUG_PLANNER:
             return
 
         arguments_string = " ".join(arguments_list)

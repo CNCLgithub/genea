@@ -272,6 +272,18 @@ class Experiment:
                 previous_element = element[0]
         return list(_extract_unique_elements_in_list(sorted(zipped_input_list, key=lambda x: x[0], reverse=True)))
 
+    @staticmethod
+    def _remove_second_move_grab(zipped_input_list):
+        return_list = []
+        for element in zipped_input_list:
+            symbolic_plan = element[0]
+            second_action_detailed = symbolic_plan[2]
+            second_action = [action_str[:1] for action_str in second_action_detailed.split(", ")]
+            if "G" in second_action:
+                continue
+            return_list.append(element)
+        return return_list
+
     def _print_planner_output(self, planner_output):
         if planner_output is None:
             Msg.print_warn("WARN []: nothing to run for " + str(self.exp_type) + "_" + str(self.exp_trial_num))
@@ -298,18 +310,10 @@ class Experiment:
             plan_ke_to_print = 0.0
             plan_stability_to_print = 0.0
             for move, ke, stability in zip(plan_moves_list, plan_kes_list, plan_stability_list):
-                if "PL" in move or "PR" in move:  # add penalty to place object (the computed KE is too low)
-                    plan_ke_to_print += 10.0
-
-                if len(move.split(",")) == 2:
+                if [i[0] for i in move.split(", ")].count('P') > 0:
+                    plan_ke_to_print += ke + ConfigUtils.PLACE_PENALTY
+                else:
                     plan_ke_to_print += ke
-                elif len(move.split(",")) == 1 and int(plan_cost_to_print) == 1:
-                    plan_ke_to_print += ke
-                else:  # add penalty for not taking any action with the other hand
-                    if self.exp_type == ExpType.HAND:  # no penalty here because this is evaluating number of hands
-                        plan_ke_to_print += ke
-                    else:
-                        plan_ke_to_print += ke + ConfigUtils.ONE_HAND_PENALTY
 
                 plan_stability_to_print += stability
             out_row = [self.exp_name_to_print, plan_tree_paths[0], plan_tree_paths_to_print,
@@ -319,8 +323,6 @@ class Experiment:
                        str(plan_stability_to_print)]
 
             out_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "overall_out.csv")
-            if self.exp_type == ExpType.DIFFICULTY:
-                out_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "diff_overall_out.csv")
             FileUtils.write_row_to_file(out_file_path, out_row)
 
         return planner_output
@@ -367,9 +369,16 @@ class Experiment:
 
         two_hand_moves = self._plan_two_hand_moves(first_block_names_to_grab)
         all_plans.extend(two_hand_moves)
+
+        if self.exp_type == ExpType.GOAL or self.exp_type == ExpType.ACTION:
+            all_plans = self._remove_second_move_grab(all_plans)
+
         return self._remove_duplicates(all_plans)
 
     def _run_g_file_generator(self):
+        if ConfigUtils.DEBUG_PLANNER:
+            return
+
         init_filename = self._get_init_file_path()
         final_filename = self._get_fin_file_path()
         if self.exp_trial_num == '7_1':
@@ -440,10 +449,10 @@ class Experiment:
                                        [8], [GFileGenerator.DEFAULT_COLOR], [GFileGenerator.TABLE_CENTER])
         elif self.exp_trial_num == '18_1':
             GFileGenerator.init_g_file(init_filename, final_filename, self.exp_trial_num,
-                                       [2, 4, 6, 3],
+                                       [5, 5, 3, 2],
                                        [GFileGenerator.GREEN_COLOR, GFileGenerator.YELLOW_COLOR,
                                         GFileGenerator.GREEN_COLOR, GFileGenerator.YELLOW_COLOR],
-                                       [GFileGenerator.TABLE_CENTER, GFileGenerator.TABLE_CENTER,
+                                       [GFileGenerator.TABLE_LEFT_CENTER, GFileGenerator.TABLE_RIGHT_CENTER,
                                         GFileGenerator.TABLE_CENTER, GFileGenerator.TABLE_CENTER])
         elif self.exp_trial_num == '18_2':
             GFileGenerator.init_g_file(init_filename, final_filename, self.exp_trial_num,
@@ -488,7 +497,7 @@ class Experiment:
                                        [8], [GFileGenerator.DEFAULT_COLOR], [GFileGenerator.TABLE_CENTER])
         elif self.exp_trial_num == '25_1':
             GFileGenerator.init_g_file(init_filename, final_filename, self.exp_trial_num,
-                                       [6, 6], [GFileGenerator.RED_COLOR, GFileGenerator.BLUE_COLOR],
+                                       [6, 6], [GFileGenerator.BLUE_COLOR, GFileGenerator.RED_COLOR],
                                        [GFileGenerator.TABLE_LEFT_CENTER, GFileGenerator.TABLE_RIGHT_CENTER])
         elif self.exp_trial_num == '25_2':
             GFileGenerator.init_g_file(init_filename, final_filename, self.exp_trial_num,

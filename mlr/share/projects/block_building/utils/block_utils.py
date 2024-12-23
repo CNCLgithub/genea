@@ -6,6 +6,12 @@ from mlr.share.projects.block_building.utils.compute_utils import ComputeUtils
 from mlr.share.projects.block_building.utils.core_utils import NameUtils
 
 
+class BlockConfig:
+    BLOCK_MARGIN_SIZE = 0.0005
+    BLOCK_ROT_THRESHOLD = 4.0  # in degrees
+    TABLE_HEIGHT = 0.9  # check .g files
+
+
 class BlockPosition:
     def __init__(self, x=-9, y=-9, z=-9):
         self._x = x
@@ -185,6 +191,60 @@ class BlockParams:
         assignments_c = linear_sum_assignment(c_dist_matrix)
 
         return assignments_b, assignments_c
+
+    @staticmethod
+    def get_block_vertices(block, at_final=False):
+        block_width = block.get_shape().get_block_width()
+        block_length = max(block.get_shape().get_block_length(), block.get_shape().get_block_height())
+        if block.get_shape().get_block_height() < block.get_shape().get_block_length():
+            block_length = block.get_shape().get_block_width()
+            block_width = max(block.get_shape().get_block_length(), block.get_shape().get_block_height())
+
+        if at_final:
+            block_pos = block.get_final_pos()
+            block_rot = block.get_final_rot()
+        else:
+            block_pos = block.get_current_pos()
+            block_rot = block.get_current_rot()
+
+        block_pos_x = block_pos.x()
+        block_pos_y = block_pos.y()
+        block_pos_z = block_pos.z()
+
+        pos_y = block_pos_y
+        pos_x = block_pos_z - BlockConfig.TABLE_HEIGHT
+        if block_width == block_length:  # difficulty experiment
+            pos_x = block_pos_x
+
+        angles = ComputeUtils.get_euler_angles(block_rot.get_values_as_list())
+
+        block_rot_rad = np.radians(angles[0])
+        if BlockConfig.BLOCK_ROT_THRESHOLD <= abs(angles[0]) <= 180.0 - BlockConfig.BLOCK_ROT_THRESHOLD:
+            block_rot_rad = np.radians(angles[0])
+        elif BlockConfig.BLOCK_ROT_THRESHOLD <= abs(angles[2]) <= 180.0 - BlockConfig.BLOCK_ROT_THRESHOLD:
+            block_rot_rad = np.radians(angles[2])
+
+        block_rot_mat = np.array([
+            [np.cos(block_rot_rad), np.sin(block_rot_rad)],
+            [-np.sin(block_rot_rad), np.cos(block_rot_rad)],
+        ])
+
+        new_half_block_wid = (block_width + 2 * BlockConfig.BLOCK_MARGIN_SIZE) / 2
+        new_half_block_len = (block_length + 2 * BlockConfig.BLOCK_MARGIN_SIZE) / 2
+
+        block_vertices = np.array([
+            [new_half_block_len, new_half_block_wid],  # top-right
+            [-new_half_block_len, new_half_block_wid],  # top-left
+            [-new_half_block_len, -new_half_block_wid],  # bot-left
+            [new_half_block_len, -new_half_block_wid],  # bot-right
+        ])
+
+        block_vertices = block_vertices @ block_rot_mat.T
+
+        block_vertices[:, 0] += pos_x
+        block_vertices[:, 1] += pos_y
+
+        return block_vertices
 
     def __eq__(self, other):
         if isinstance(other, BlockParams):

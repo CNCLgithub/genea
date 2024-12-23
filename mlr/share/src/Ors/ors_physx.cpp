@@ -194,6 +194,7 @@ PhysXInterface::PhysXInterface(mlr::KinematicWorld& _world): world(_world), s(NU
 
   //-- Create objects
 //  PxMaterial* mMaterial = mPhysics->createMaterial(.0001f, .0001f, .0001f);
+//  PxMaterial* mMaterial = mPhysics->createMaterial(1000.f, 1000.f, 1000.f);
   PxMaterial* mMaterial = mPhysics->createMaterial(1.f, 1.f, 0.5f);
 
   //Create ground plane
@@ -547,6 +548,7 @@ void PhysXInterface::pullFromPhysx(double tau) {
 
 void PhysXInterface::pushToPhysx() {
 //  PxMaterial* mMaterial = mPhysics->createMaterial(.0001f, .0001f, .0001f);
+//  PxMaterial* mMaterial = mPhysics->createMaterial(1000.f, 1000.f, 1000.f);
   PxMaterial* mMaterial = mPhysics->createMaterial(1.f, 1.f, 0.5f);
   for_list(mlr::Body, b, world.bodies) {
     if(s->actors.N > b_COUNT) {

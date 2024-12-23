@@ -10,7 +10,7 @@ from random import shuffle
 
 from mlr.share.projects.block_building.utils.block_utils import BlockParams, BlockPosition, BlockQuaternion, BlockShape
 from mlr.share.projects.block_building.utils.compute_utils import ComputeUtils
-from mlr.share.projects.block_building.utils.core_utils import NameUtils
+from mlr.share.projects.block_building.utils.core_utils import NameUtils, ConfigUtils
 from mlr.share.projects.block_building.utils.msg_utils import Msg
 from mlr.share.projects.block_building.utils.path_utils import PathUtils
 
@@ -129,6 +129,9 @@ class GFileUtils:
 
     @staticmethod
     def redefine_init_g_file(init_file_path, fin_file_path, block_names_list):
+        if ConfigUtils.DEBUG_PLANNER:
+            return
+
         with open(init_file_path) as init_file:
             init_file_data = init_file.read()
 
@@ -305,7 +308,7 @@ class GFileGenerator:
     TABLE_Y_LIM_MIN = -0.6
     TABLE_Y_LIM_MAX = 0.6
 
-    MIN_DIST_BETWEEN_BLOCKS = 0.1
+    MIN_DIST_BETWEEN_BLOCKS = 0.12
     LARGE_DIST_BETWEEN_BLOCKS = 0.3
 
     TABLE_CENTER = "TABLE_CENTER"
@@ -488,14 +491,14 @@ class GFileGenerator:
 
             final_block_loc_list = []
             for block_name, block_loc in zip(block_names_list, block_loc_list):
-                if block_name.startswith("b") and block_loc[1] > -0.01:
+                if block_name.startswith("b") and block_loc[1] > -0.005:
                     b_blocks_to_move.append(block_name)
-                if block_name.startswith("b") and block_loc[1] <= -0.01:
+                if block_name.startswith("b") and block_loc[1] <= -0.005:
                     final_b_block_loc_list.append(block_loc)
 
-                if block_name.startswith("c") and block_loc[1] < 0.01:
+                if block_name.startswith("c") and block_loc[1] < 0.005:
                     c_blocks_to_move.append(block_name)
-                if block_name.startswith("c") and block_loc[1] >= 0.01:
+                if block_name.startswith("c") and block_loc[1] >= 0.005:
                     final_c_block_loc_list.append(block_loc)
 
             for block_name, block_loc in zip(block_names_list, block_loc_list):

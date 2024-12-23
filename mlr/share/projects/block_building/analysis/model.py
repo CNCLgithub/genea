@@ -13,7 +13,6 @@ from mlr.share.projects.block_building.utils.path_utils import PathUtils
 
 class ModelType:
     PHYSICS_ON = "PHYSICS_ON"
-    PHYSICS_ON_PE = "PHYSICS_ON_PE"
     PHYSICS_ON_SSA = "PHYSICS_ON_SSA"
     PHYSICS_OFF = "PHYSICS_OFF"
     PHYSICS_OFF_SSA = "PHYSICS_OFF_SSA"
@@ -47,7 +46,7 @@ class ModelData(Experiment):
         participant = self._participants_by_participant_id_dict[participant_id]
         trial = Trial()
         trial.add_trial_data({TrialKeys.TRIAL_NAME: trial_name,
-                              TrialKeys.TRIAL_VALUE: trial_value})
+                              TrialKeys.TRIAL_SLIDER_VALUE: trial_value})
         participant.add_trial(trial)
 
     @staticmethod
@@ -58,7 +57,8 @@ class ModelData(Experiment):
         new_response_dict = {}
 
         trial_names_list = self.get_all_trial_names()
-        old_response_dict = self.get_min_trial_responses_dict(TrialKeys.TRIAL_VALUE, model_measure)
+        old_response_dict = self.get_min_trial_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE, model_measure)
+        prob_response_dict = self.get_prob_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure)
 
         for trials in trial_names_list:
             new_trial_name = trials[:-2]
@@ -77,7 +77,10 @@ class ModelData(Experiment):
                 new_response_dict[new_trial_name] = 0.0
                 continue
 
-            new_response_dict[new_trial_name] = trial_1 / (trial_1 + trial_2)
+            trial_1 = prob_response_dict[new_trial_name + "_1"]
+            trial_2 = prob_response_dict[new_trial_name + "_2"]
+
+            new_response_dict[new_trial_name] = trial_2 / (trial_1 + trial_2)
 
         return new_response_dict
 
@@ -85,7 +88,7 @@ class ModelData(Experiment):
         new_response_dict = {}
 
         trial_names_list = self.get_all_trial_names()
-        old_response_dict = self.get_min_trial_responses_dict(TrialKeys.TRIAL_VALUE, model_measure)
+        old_response_dict = self.get_prob_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure)
 
         for trials in trial_names_list:
             new_trial_name = trials[:-1]
@@ -122,7 +125,7 @@ class ModelData(Experiment):
             elif new_trial_name == "goal_c":
                 numerator = np.mean(trial_1)
             elif new_trial_name == "goal_d":
-                numerator = np.mean(trial_1)
+                numerator = np.mean(trial_2)
             elif new_trial_name == "goal_e":
                 numerator = np.mean(trial_1)
             elif new_trial_name == "goal_f":
@@ -252,18 +255,18 @@ class ModelData(Experiment):
         trial_names_list = ["action_" + chr(i) for i in range(ord('a'), ord('i') + 1)]
         trial_names_list += ["goal_" + chr(i) for i in range(ord('a'), ord('h') + 1)]
 
-        scores = [1,  # action_a
-                  0,  # action_b (flipped)
+        scores = [0.33,  # action_a
+                  1,  # action_b (flipped)
+                  1,
+                  1,  # action_d (flipped)
                   0,
-                  0,  # action_d (flipped)
+                  0,
                   1,
                   1,
-                  0,
-                  0,
                   .5,  # action_i (flipped)
                   .5,  # goal_a (flipped)
-                  0,   # goal_b
-                  0,   # goal_c (flipped)
+                  0.90,   # goal_b
+                  0.89,   # goal_c (flipped)
                   .5,  # goal_d (flipped)
                   .5,  # goal_e
                   .5,  # goal_f

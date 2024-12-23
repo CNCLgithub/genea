@@ -10,7 +10,7 @@ COLOR_LIST = ["#069285", "#701b1b", "#06454e", "#b15c47", "#79b5e0", "#6ed5c0"]
 
 class PlotUtils:
     @staticmethod
-    def draw_scatter_plot(x_list, y_list, title, x_label, y_label, x_lim=0.04, y_lim=0.04, annot=None, save_path=None):
+    def draw_scatter_plot(x_list, y_list, title, x_label, y_label, annot=None, save_path=None):
         x_list = np.array(x_list)
         y_list = np.array(y_list)
 
@@ -21,10 +21,9 @@ class PlotUtils:
         sns.set_palette("pastel")
         sns.color_palette("RdPu", 20)
         plt.grid(b=None)
-        # plt.gca().set_aspect('equal')
 
-        plt.xlim(min(x_list) - x_lim, max(x_list) + x_lim)
-        plt.ylim(min(y_list) - y_lim, max(y_list) + y_lim)
+        plt.xlim(min(x_list), max(x_list))
+        plt.ylim(min(y_list), max(y_list))
 
         slope, intercept, r, p, _ = stats.linregress(x=x_list, y=y_list)
 
@@ -149,3 +148,29 @@ class PlotUtils:
         else:
             plt.show()
             plt.close()
+
+    @staticmethod
+    def draw_blocks_table_plot(block_vertices_list, colors_list, names_list, is_diff=False):
+        plt.figure(dpi=1000)
+
+        for idx, (vertices, color, b_name) in enumerate(zip(block_vertices_list, colors_list, names_list)):
+            vertices_closed = np.vstack([vertices, vertices[0]])
+            if is_diff:
+                plt.plot(-vertices_closed[:, 0], vertices_closed[:, 1], '-', linewidth=0.1, color=color)
+                centroid_x = -np.mean(vertices_closed[:, 0])
+                centroid_y = np.mean(vertices_closed[:, 1])
+            else:
+                plt.plot(vertices_closed[:, 0], vertices_closed[:, 1], '-', linewidth=0.1, color=color)
+                centroid_x = np.mean(vertices_closed[:, 0])
+                centroid_y = np.mean(vertices_closed[:, 1])
+
+            plt.text(centroid_x, centroid_y, b_name, fontsize=8, color='black', ha='center', va='center')
+
+        plt.tight_layout()
+        plt.tick_params(width=0.1, length=0.1, which='both')
+        plt.xticks(np.round(np.arange(-.4, .45, 0.05), 2), np.round(np.arange(-.4, .45, 0.05), 2), size=1)
+        plt.yticks(np.round(np.arange(-.1, .35, 0.05), 2), np.round(np.arange(-.1, .35, 0.05), 2), size=1)
+        if is_diff:
+            plt.xticks(np.round(np.arange(-.8, .85, 0.05), 2), np.round(np.arange(-.8, .85, 0.05), 2), size=1)
+            plt.yticks(np.round(np.arange(-.4, .45, 0.05), 2), np.round(np.arange(-.4, .45, 0.05), 2), size=1)
+        plt.show()

@@ -625,23 +625,41 @@ double computeSumOfSquaredErrors(KOMO& komoObject){
 
 
 double computeKineticEnergy(KOMO& komoObject, mlr::KinematicWorld& initKinWorld,
-                            vector<string>& blockNamesList, vector<int>& checkpointTimesList){
+                            string plan, vector<int>& checkpointTimesList){
     double dt = 0.05;
     double totalKineticEnergy = 0;
     double previousKE = 0.;
     double mass = 1.0;
 
-    int index = 0;
+    bool is_left_used = false;
+    bool is_right_used = false;
+
+    // NOTE: this function is only capable of computing KE for single-action plans
+    vector<string> commandsList;
+    split(plan, PLAN_SEPARATOR, commandsList);
+    for(string command : commandsList) {
+        vector<string> robotMovesList;
+        split(command, COMMANDS_SEPARATOR, robotMovesList);
+        for(string robotMove : robotMovesList) {
+            vector<string> moveDetailsList;
+            split(robotMove, '_', moveDetailsList);
+
+            string moveName = moveDetailsList[0];
+            if(moveName == MOVE_GRAB_LEFT || moveName == MOVE_PLACE_LEFT || moveName == MOVE_FIX_LEFT) {
+                is_left_used = true;
+            } else if (moveName == MOVE_GRAB_RIGHT || moveName == MOVE_PLACE_RIGHT || moveName == MOVE_FIX_RIGHT) {
+                is_right_used = true;
+            }
+        }
+    }
 
     for(mlr::Body* b : initKinWorld.bodies){
 
-        string blockName(b->name);
+        string itemName(b->name);
 
-        if(isStringInList(blockNamesList, blockName)) {
+        if((is_left_used && itemName == "handL") || (is_right_used && itemName == "handR")) {
 
             previousKE = 0.;
-//            double initPE = 0.;
-//            double finalPE = 0.;
 
             for(uint timeT = 1; timeT < komoObject.MP->T; timeT++){
 
@@ -651,14 +669,6 @@ double computeKineticEnergy(KOMO& komoObject, mlr::KinematicWorld& initKinWorld,
                 mlr::Body* b0 = W0->getBodyByName(b->name);
                 mlr::Body* b1 = W1->getBodyByName(b->name);
 
-//                if (timeT == 1) {
-//                    initPE = mass * 9.8 * b0->X.pos.z;
-//                }
-//
-//                if (timeT == komoObject.MP->T - 1) {
-//                    finalPE = mass * 9.8 * b1->X.pos.z;
-//                }
-
                 double distanceBetweenBlocks = (b1->X.pos - b0->X.pos).length();
                 double velocity = distanceBetweenBlocks / dt;
                 double kineticEnergy = 0.5 * mass * (velocity * velocity);
@@ -666,8 +676,6 @@ double computeKineticEnergy(KOMO& komoObject, mlr::KinematicWorld& initKinWorld,
                 totalKineticEnergy += std::abs(kineticEnergy - previousKE) / dt;
                 previousKE = kineticEnergy;
             }
-
-//            totalKineticEnergy += (finalPE - initPE);  // add change in potential energy
         }
     }
 
@@ -742,9 +750,7 @@ int main(int argc,char** argv){
                                          blockNamesList, outCheckpointTimesList, grabbedBlockNamesList,
                                          outputGFilePath, finalFilePath, runSimulation, isDiff);
 
-    float kineticEnergyExpended = computeKineticEnergy(komoObject, initKinWorld,
-                                                       blockNamesList, outCheckpointTimesList);
-
+    float kineticEnergyExpended = computeKineticEnergy(komoObject, initKinWorld, planAsString, outCheckpointTimesList);
     printOutDataFile(kineticEnergyExpended, isUnstable, outputKEFilePath);
 
 //    float sumOfSquaredErrors = computeSumOfSquaredErrors(komoObject);
