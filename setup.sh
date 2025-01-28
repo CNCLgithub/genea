@@ -32,11 +32,11 @@ fi
 ## ==========================================================================
 ## ------------------------- singularity container setup ------------------- ##
 ## ==========================================================================
-if [[ "$*" =~ "cont_pull" ]] || [[ "$*" =~ "all" ]];then
+if [[ "$1" =~ "cont_pull" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Pulling singularity container..."
     wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EVysC-tuizdIgs9wmTrXYwoBjwkTOXNlF9kTLsRMfbPj4w?e=M4ZrLd&download=1" -O "${ENV[cont_init]}"
     wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EaFj9lg1b-5FseCdNFSJkcQB5VAYydkXVqjYYQu0LSeeJg?e=njvmDj&download=1" -O "${ENV[cont_main]}"
-elif [[ "$*" =~ "cont_build" ]];then
+elif [[ "$1" =~ "cont_build" ]];then
     echo_blue "Building apptainer container..."
     remove "${ENV[cont_main]}"
     sudo -E apptainer build "${ENV[cont_main]}" "${ENV[cont_def]}"
@@ -48,7 +48,7 @@ fi
 ## ==========================================================================
 ## ------------------------- python setup ---------------------------------- ##
 ## ==========================================================================
-if [[ "$*" =~ "python" ]] || [[ "$*" =~ "all" ]];then
+if [[ "$1" =~ "python" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Setting up Python venv..."
     singularity exec "${ENV[cont_main]}" bash -c "python -m venv ${ENV[env]}"
     ./run.sh "python -m pip install --upgrade pip"
@@ -61,15 +61,18 @@ if [[ "$*" =~ "python" ]] || [[ "$*" =~ "all" ]];then
     ./run.sh "python -m pip install click-help-colors==0.9.4"
     ./run.sh "python -m pip install shapely==2.0.6"
     ./run.sh "python -m pip install seaborn==0.13.2"
+    ./run.sh "python -m pip install python-dotenv==1.0.1"
+    ./run.sh "python -m pip install openai==1.60.1"
+    ./run.sh "python -m pip install puremagic==1.28"
 fi
 
 
 ## ==========================================================================
 ## ------------------------- data setup ------------------------------------ ##
 ## ==========================================================================
-if [[ "$*" =~ "data" ]] || [[ "$*" =~ "all" ]];then
+if [[ "$1" =~ "data" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Pulling data..."
-    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EU5kMTlcjEtJiT7VrRsJ85EBq7wzKnjrUVCwGi2rt6Gn4g?e=AIbwap&download=1" -O library.zip
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EU5kMTlcjEtJiT7VrRsJ85EBq7wzKnjrUVCwGi2rt6Gn4g?e=Od3cZ8&download=1" -O library.zip
     rm -rf mlr/share/projects/block_building/library
     chmod +777 library.zip
     unzip library.zip
