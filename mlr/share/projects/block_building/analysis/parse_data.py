@@ -98,6 +98,12 @@ class Parser:
             return model_data.get_diff_heuristics()
         elif ExperimentType.DIFFICULTY in experiment_type and model_type == ModelType.STABILITY:
             return model_data.get_diff_heuristics_stability(0.013)
+        elif ExperimentType.DIFFICULTY_DIFF in experiment_type and model_type == ModelType.VLM:
+            out_vlm_filepath = PathUtils.join(PathUtils.get_out_vlm_data_dirpath(), "out_diff_difficulty.csv")
+            return model_data.get_vlm_scores(out_vlm_filepath)
+        elif ExperimentType.DIFFICULTY_TIME in experiment_type and model_type == ModelType.VLM:
+            out_vlm_filepath = PathUtils.join(PathUtils.get_out_vlm_data_dirpath(), "out_diff_estimation.csv")
+            return model_data.get_vlm_scores(out_vlm_filepath)
 
         if experiment_type == ExperimentType.ACTION_GOAL and model_type == ModelType.PHYSICS_ON:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "action_goal_phy_ke.csv")
@@ -111,6 +117,9 @@ class Parser:
             return model_data.get_action_goal_heuristics()
         elif experiment_type == ExperimentType.ACTION_GOAL and model_type == ModelType.STABILITY:
             return model_data.get_action_goal_heuristics_stability()
+        elif experiment_type == ExperimentType.ACTION_GOAL and model_type == ModelType.VLM:
+            out_vlm_filepath = PathUtils.join(PathUtils.get_out_vlm_data_dirpath(), "out_action_goal.csv")
+            return model_data.get_vlm_scores(out_vlm_filepath)
 
         if experiment_type == ExperimentType.HANDS and model_type == ModelType.PHYSICS_ON:
             model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "hands_phy_ke.csv")
@@ -124,6 +133,9 @@ class Parser:
             return model_data.get_hand_heuristics()
         elif experiment_type == ExperimentType.HANDS and model_type == ModelType.STABILITY:
             return model_data.get_hand_heuristics_stability()
+        elif experiment_type == ExperimentType.HANDS and model_type == ModelType.VLM:
+            out_vlm_filepath = PathUtils.join(PathUtils.get_out_vlm_data_dirpath(), "out_hands.csv")
+            return model_data.get_vlm_scores(out_vlm_filepath)
 
         with open(model_data_file_path) as file:
             file_data = csv.reader(file)

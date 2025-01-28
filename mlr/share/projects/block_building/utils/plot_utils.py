@@ -20,16 +20,27 @@ class PlotUtils:
         sns.set_theme(style='whitegrid')
         sns.set_palette("pastel")
         sns.color_palette("RdPu", 20)
-        plt.grid(b=None)
 
-        plt.xlim(min(x_list), max(x_list))
-        plt.ylim(min(y_list), max(y_list))
+        x_min = min(x_list) - 0.1
+        x_max = max(x_list) + 0.1
+        y_min = min(y_list) - 2
+        y_max = max(y_list) + 2
+
+        # x_min = -0.02
+        # x_max = 1.02
+        # y_min = -2
+        # y_max = 102
+
+        plt.xlim(x_min, x_max)
+        plt.ylim(y_min, y_max)
+        # plt.grid(b=None)
 
         slope, intercept, r, p, _ = stats.linregress(x=x_list, y=y_list)
 
-        scatter_kws = {"color": "#12314e", "linewidth": 0, "s": 200, "zorder": 10}
+        scatter_kws = {"color": "#12314e", "linewidth": 0, "s": 200, "zorder": 10, 'clip_on': False}
 
         sns.regplot(x=x_list, y=y_list, line_kws={"color": "#a8a4a4"}, scatter_kws=scatter_kws, fit_reg=True)
+        sns.despine()
         plt.title(title)
         plt.xlabel(x_label)
         plt.ylabel(y_label)
@@ -38,7 +49,7 @@ class PlotUtils:
             if annot:
                 plt.annotate(annot[i], (x_list[i], y_list[i]))
 
-        plt.text(min(x_list), np.ceil(max(y_list)), 'r=' + str(np.mean(r)) + "; p=" + str(p), ha='left', va='top')
+        # plt.text(min(x_list), np.ceil(max(y_list)), 'r=' + str(np.mean(r)) + "; p=" + str(p), ha='left', va='top')
 
         if save_path:
             plt.savefig(save_path)

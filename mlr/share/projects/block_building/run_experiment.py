@@ -7,7 +7,9 @@ import time
 
 from itertools import repeat
 
-from mlr.share.projects.block_building.model.experiment import Experiment, ExpType
+from mlr.share.projects.block_building.model.exp import ExpType
+from mlr.share.projects.block_building.model.genea.exp import GeneaExperiment
+from mlr.share.projects.block_building.model.vlm.exp import VLMExperiment
 from mlr.share.projects.block_building.run_risk_test import run_risk_test
 from mlr.share.projects.block_building.utils.core_utils import ConfigUtils
 from mlr.share.projects.block_building.utils.path_utils import PathUtils
@@ -73,17 +75,17 @@ def run_exp_trials(exp_type, max_steps_per_plan=ConfigUtils.DEFAULT_MAX_STEPS_PE
 
             folder_counter = core_identifiers_list[core_identifier]
 
-            experiment = Experiment(exp_type=trial.get_exp_type(), exp_trial_num=trial.get_trial_name(),
-                                    exp_trial_move_num=trial.get_trial_move_number(),
-                                    folder_counter=folder_counter, max_steps_per_plan=max_steps_per_plan)
+            experiment = GeneaExperiment(exp_type=trial.get_exp_type(), exp_trial_num=trial.get_trial_name(),
+                                         exp_trial_move_num=trial.get_trial_move_number(),
+                                         folder_counter=folder_counter, max_steps_per_plan=max_steps_per_plan)
             experiment.run_experiment(first_block_names_to_grab=trial.get_trial_first_moves())
             core_identifiers_list[core_identifier] = experiment.get_folder_counter_value()
 
 
 def run_trial(trial, folder_counter, max_steps_per_plan=ConfigUtils.DEFAULT_MAX_STEPS_PER_PLAN):
-    experiment = Experiment(exp_type=trial.get_exp_type(), exp_trial_num=trial.get_trial_name(),
-                            exp_trial_move_num=trial.get_trial_move_number(),
-                            folder_counter=folder_counter, max_steps_per_plan=max_steps_per_plan)
+    experiment = GeneaExperiment(exp_type=trial.get_exp_type(), exp_trial_num=trial.get_trial_name(),
+                                 exp_trial_move_num=trial.get_trial_move_number(),
+                                 folder_counter=folder_counter, max_steps_per_plan=max_steps_per_plan)
     experiment.run_experiment(first_block_names_to_grab=trial.get_trial_first_moves())
 
 
@@ -109,6 +111,11 @@ def run_all_risk_test(exp_type, total_runs=1):
                                     seed_list))
 
 
+def run_vlm_experiments(exp_type):
+    experiment = VLMExperiment(exp_type=exp_type, exp_trials_list=get_trials_list(exp_type))
+    experiment.run_experiment()
+
+
 @click.command()
 @click.option("-n", "--num_runs", default="1", type=click.STRING, help="total number of runs per trial")
 @click.option("-r", "--run_risk", default=False, is_flag=True, help="run risk test only")
@@ -116,7 +123,8 @@ def run_all_risk_test(exp_type, total_runs=1):
 @click.option("-g", "--goal_inference", default=False, is_flag=True, help="run goal inference trials")
 @click.option("-e", "--effector_inference", default=False, is_flag=True, help="run number of hands trials")
 @click.option("-d", "--difficulty", default=False, is_flag=True, help="run action inference trials")
-def main(num_runs, run_risk, action_inference, goal_inference, effector_inference, difficulty):
+@click.option("-v", "--vlm", default=False, is_flag=True, help="run vlm experiment")
+def main(num_runs, run_risk, action_inference, goal_inference, effector_inference, difficulty, vlm):
     if run_risk:
         run_all_risk_test(ExpType.DIFFICULTY, total_runs=int(num_runs))
         return
@@ -135,6 +143,13 @@ def main(num_runs, run_risk, action_inference, goal_inference, effector_inferenc
 
     if difficulty:
         run_exp_trial_multiprocess(ExpType.DIFFICULTY, ConfigUtils.DIFF_MAX_STEPS_PER_PLAN, total_runs=int(num_runs))
+        return
+
+    if vlm:
+        run_vlm_experiments(ExpType.DIFFICULTY)
+        run_vlm_experiments(ExpType.ACTION)
+        run_vlm_experiments(ExpType.GOAL)
+        run_vlm_experiments(ExpType.HAND)
         return
 
 

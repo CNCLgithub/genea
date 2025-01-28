@@ -8,9 +8,9 @@ from shutil import copyfile
 
 import numpy as np
 
-from mlr.share.projects.block_building.model.blocks import Block
-from mlr.share.projects.block_building.model.planner.agent import RobotActions, RobotHand
-from mlr.share.projects.block_building.model.planner.env import Table
+from mlr.share.projects.block_building.model.genea.blocks import Block
+from mlr.share.projects.block_building.model.genea.planner.agent import RobotActions, RobotHand
+from mlr.share.projects.block_building.model.genea.planner.env import Table
 from mlr.share.projects.block_building.utils.compute_utils import ComputeUtils
 from mlr.share.projects.block_building.utils.core_utils import NameUtils, ConfigUtils
 from mlr.share.projects.block_building.utils.cpp_utils import CPPUtils

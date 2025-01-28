@@ -1,6 +1,6 @@
 import click
 
-from mlr.share.projects.block_building.model.experiment import Experiment
+from mlr.share.projects.block_building.model.genea.exp import GeneaExperiment
 from mlr.share.projects.block_building.utils.core_utils import ConfigUtils
 from mlr.share.projects.block_building.utils.cpp_utils import CPPUtils
 from mlr.share.projects.block_building.utils.file_utils import FileUtils, GFileGenerator
@@ -16,7 +16,7 @@ def run_risk_test(exp_trial_num, exp_type, num_iter, random_seed):
 
     final_g_file_path = PathUtils.join(PathUtils.get_fin_files_dirpath(), core_id + PathUtils.DOT_F_G)
 
-    block_names_list = "#".join(Experiment.get_block_names(exp_type=exp_type, exp_trial_num=exp_trial_num))
+    block_names_list = "#".join(GeneaExperiment.get_block_names(exp_type=exp_type, exp_trial_num=exp_trial_num))
 
     for i in range(1, int(num_iter) + 1):
         Msg.print_success("--> " + core_id + " " + str(i))

@@ -76,6 +76,7 @@ def run_leave_one_out_bootstrap(behavior_data):
 
 
 def run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict, save_filepath=None):
+    Msg.print_info("Running bootstrap analysis for experiment type: " + str(experiment_type))
     behavior_trial_key = TrialKeys.TRIAL_SLIDER_VALUE
     model_names_list = list(model_response_dict_dict.keys())
     trial_names_list = behavior_data.get_all_trial_names()
@@ -213,6 +214,8 @@ def run_analysis(experiment_type):
     phy_ssa_response_dict = phys_ssa_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
     no_phy_ssa_response_dict = no_phys_ssa_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
 
+    vlm_response_dict = Parser.parse_computational_data(experiment_type, ModelType.VLM)
+
     model_response_dict_dict = {
         "phy_on_energy": phy_energy_response_dict,
         "phy_off_energy": no_phy_energy_response_dict,
@@ -221,7 +224,8 @@ def run_analysis(experiment_type):
         "phy_on_ssa": phy_ssa_response_dict,
         "phy_off_ssa": no_phy_ssa_response_dict,
         "stability": stability_response_dict,
-        "heuristic": heuristics_response_dict
+        "heuristic": heuristics_response_dict,
+        "vlm": vlm_response_dict
         }
 
     # ----------- uncomment when running temperature analysis -----------

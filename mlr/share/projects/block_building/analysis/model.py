@@ -19,6 +19,8 @@ class ModelType:
     HEURISTICS = "HEURISTICS"
     STABILITY = "STABILITY"
 
+    VLM = "VLM"
+
 
 class ModelData(Experiment):
     TRIAL_NAME = 0
@@ -30,9 +32,6 @@ class ModelData(Experiment):
 
     ENERGY = "ENERGY"
     COST = "COST"
-    REPLAN_PROB = "REPLAN_PROBABILITY"
-    STABILITY = "STABILITY"
-    HEURISTIC = "HEURISTIC"
 
     def __init__(self):
         super(ModelData, self).__init__(None)
@@ -431,5 +430,15 @@ class ModelData(Experiment):
 
         for trial_name in trial_names_list:
             model_response_dict[trial_name] = z_scored_scores[trial_names_list.index(trial_name)]
+
+        return model_response_dict
+
+    @staticmethod
+    def get_vlm_scores(out_filepath):
+        model_response_dict = {}
+
+        out_file_data = FileUtils.read_csv_file(out_filepath)
+        for data in out_file_data:
+            model_response_dict[data[0]] = float(data[1])
 
         return model_response_dict

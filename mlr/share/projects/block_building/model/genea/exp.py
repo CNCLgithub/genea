@@ -1,5 +1,6 @@
-from mlr.share.projects.block_building.model.blocks import Block
-from mlr.share.projects.block_building.model.planner.search_tree import WorldStateTree
+from mlr.share.projects.block_building.model.exp import ExpType
+from mlr.share.projects.block_building.model.genea.blocks import Block
+from mlr.share.projects.block_building.model.genea.planner.search_tree import WorldStateTree
 from mlr.share.projects.block_building.utils.core_utils import NameUtils, ConfigUtils
 from mlr.share.projects.block_building.utils.cpp_utils import CPPUtils
 from mlr.share.projects.block_building.utils.file_utils import GFileUtils, FileUtils, GFileGenerator
@@ -7,28 +8,7 @@ from mlr.share.projects.block_building.utils.msg_utils import Msg
 from mlr.share.projects.block_building.utils.path_utils import PathUtils
 
 
-class ExpType:
-    GOAL = "goal"
-    ACTION = "action"
-
-    DIFFICULTY = "diff"
-    HAND = "hand"
-    MODEL = "model"
-
-    @staticmethod
-    def get_exp_type(input_string):
-        if input_string == ExpType.GOAL:
-            return ExpType.GOAL
-        if input_string == ExpType.ACTION:
-            return ExpType.ACTION
-        if input_string == ExpType.DIFFICULTY:
-            return ExpType.DIFFICULTY
-        if input_string == ExpType.HAND:
-            return ExpType.HAND
-        return ExpType.MODEL
-
-
-class Experiment:
+class GeneaExperiment:
     def __init__(self,
                  exp_type,
                  exp_trial_num,
@@ -220,7 +200,7 @@ class Experiment:
         return self.folder_counter
 
     def _init_block_names_list(self):
-        self._block_names_list = Experiment.get_block_names(self.exp_type, self.exp_trial_num)
+        self._block_names_list = GeneaExperiment.get_block_names(self.exp_type, self.exp_trial_num)
 
     def _load_blocks_from_g_files(self):
         if self._block_names_list is None:
@@ -332,13 +312,13 @@ class Experiment:
 
         self._initialize_experiment()
 
-        planner = Planner(exp_type=self.exp_type,
-                          exp_trial_num=self.exp_trial_num,
-                          is_diff=self.exp_type == ExpType.DIFFICULTY,
-                          init_blocks_list=self._init_blocks_list,
-                          max_steps_per_plan=self.max_steps_per_plan,
-                          folder_counter=self.folder_counter,
-                          is_one_hand_only_plan=is_one_hand_only_plan)
+        planner = GeneaPlanner(exp_type=self.exp_type,
+                               exp_trial_num=self.exp_trial_num,
+                               is_diff=self.exp_type == ExpType.DIFFICULTY,
+                               init_blocks_list=self._init_blocks_list,
+                               max_steps_per_plan=self.max_steps_per_plan,
+                               folder_counter=self.folder_counter,
+                               is_one_hand_only_plan=is_one_hand_only_plan)
         planner.run_planner(first_block_name_to_grab=first_block_names_to_grab)
 
         returned_moves = planner.get_all_valid_moves()
@@ -628,7 +608,7 @@ class Experiment:
             Msg.print_warn("WARN []: nothing to run for " + str(self.exp_type) + "_" + str(self.exp_trial_num))
 
 
-class Planner:
+class GeneaPlanner:
     def __init__(self, exp_type, exp_trial_num, is_diff,
                  init_blocks_list, max_steps_per_plan, folder_counter, is_one_hand_only_plan):
         self._exp_type = exp_type

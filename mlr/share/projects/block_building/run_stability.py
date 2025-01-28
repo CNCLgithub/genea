@@ -1,6 +1,6 @@
 import click
 
-from mlr.share.projects.block_building.model.experiment import Experiment
+from mlr.share.projects.block_building.model.genea.exp import GeneaExperiment
 from mlr.share.projects.block_building.utils.cpp_utils import CPPUtils
 from mlr.share.projects.block_building.utils.msg_utils import Msg
 from mlr.share.projects.block_building.utils.path_utils import PathUtils
@@ -51,7 +51,7 @@ def main(build_only, build_force,
     if run_final or run_init_to_final:
         out_file_path = PathUtils.join(PathUtils.get_fin_files_dirpath(), final_filename)
 
-    block_names_list = "#".join(Experiment.get_block_names(exp_type=exp_type, exp_trial_num=exp_trial_num))
+    block_names_list = "#".join(GeneaExperiment.get_block_names(exp_type=exp_type, exp_trial_num=exp_trial_num))
 
     if no_save:
         out_file_path = "0"
