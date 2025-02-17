@@ -1,5 +1,5 @@
 # Understanding Embodied Plans
-This repository contains the code that implements the computational model from the paper "The computational framework for understanding embodied plans".
+This repository contains the code that implements the computational model from the paper "A computational framework for understanding embodied plans".
 In addition, it contains information about the experiment and analysis scripts that were used to generate the data for the paper.
 
 ## Getting Started
