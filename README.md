@@ -80,18 +80,18 @@ To run the model on the studies specified in the `trials_list.csv` file, run the
 ```bash
 ./run.sh python run_experiment.py -a   # run action inference trials
 ./run.sh python run_experiment.py -g   # run goal inference trials
-./run.sh python run_experiment.py -e   # run effector inference (how many hands) trials
+./run.sh python run_experiment.py -e   # run embodiment strategies inference (how many hands) trials
 ./run.sh python run_experiment.py -d   # run difficulty trials
 ```
 
 The output of the model is stored in the `library/out_robot_data` directory. 
-Data from the action, goal and effector inference studies will be stored in the `overall_out.csv` file.
+Data from the action, goal and embodiment strategies inference studies will be stored in the `overall_out.csv` file.
 Data from the difficulty study will be stored in the `diff_overall_out.csv` file.
 All intermediate files generated during the model run will be stored in the `library/intermediate_files` directory.
 
 ## Analyze the results
 ```bash
 ./run.sh python perform_analysis.py -ag   # analyze action-goal inference data
-./run.sh python perform_analysis.py -e   # analyze effector inference data
+./run.sh python perform_analysis.py -e   # analyze embodiment strategies inference data
 ./run.sh python perform_analysis.py -d   # analyze difficulty data
 ```
