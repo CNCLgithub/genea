@@ -1,6 +1,7 @@
 #!/bin/bash
 
 
+cd "$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )" || exit
 . load_config.sh
 
 
@@ -17,10 +18,13 @@ Valid COMPONENTS:
     data: pull data"
 
 
-echo_blue () { echo -e "\033[0;36m $* \033[0m"; }
+echo_blue () { echo -e "\033[1;38;5;051m$* \033[0m"; }
 echo_orange () { echo -e "\033[1;38;5;202m$* \033[0m"; }
+echo_green () { echo -e "\033[1;38;5;047m$* \033[0m"; }
 remove(){ if [ -d "$1" ]; then rm -rf "$1"; fi }
 add(){ if [ ! -d "$1" ]; then mkdir -p "$1"; fi }
+
+ROOT=$PWD
 
 
 if [[ $# -eq 0 ]] || [[ "$*" =~ "--help" ]] || [[ "$*" =~ "-h" ]];then
@@ -30,7 +34,7 @@ fi
 
 
 ## ==========================================================================
-## ------------------------- singularity container setup ------------------- ##
+## ----------------------- singularity container setup ------------------- ##
 ## ==========================================================================
 if [[ "$1" =~ "cont_pull" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Pulling singularity container..."
@@ -41,34 +45,47 @@ elif [[ "$1" =~ "cont_build" ]];then
     remove "${ENV[cont_main]}"
     sudo -E apptainer build "${ENV[cont_main]}" "${ENV[cont_def]}"
 else
-    echo_orange "Not touching container"
+    echo_green "Not touching container"
 fi
 
 
 ## ==========================================================================
-## ------------------------- python setup ---------------------------------- ##
+## ----------------------- python setup ---------------------------------- ##
 ## ==========================================================================
 if [[ "$1" =~ "python" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Setting up Python venv..."
     singularity exec "${ENV[cont_main]}" bash -c "python -m venv ${ENV[env]}"
-    ./run.sh "python -m pip install --upgrade pip"
-    ./run.sh "python -m pip install pillow==10.4.0"
-    ./run.sh "python -m pip install numpy==1.24.4"
-    ./run.sh "python -m pip install scipy==1.10.1"
-    ./run.sh "python -m pip install scikit-learn==1.3.2"
-    ./run.sh "python -m pip install matplotlib==3.7.5"
-    ./run.sh "python -m pip install click==8.1.7"
-    ./run.sh "python -m pip install click-help-colors==0.9.4"
-    ./run.sh "python -m pip install shapely==2.0.6"
-    ./run.sh "python -m pip install seaborn==0.13.2"
-    ./run.sh "python -m pip install python-dotenv==1.0.1"
-    ./run.sh "python -m pip install openai==1.60.1"
-    ./run.sh "python -m pip install puremagic==1.28"
+    ./run.sh s "python -m pip install --upgrade pip"
+    ./run.sh s "python -m pip install pillow==10.4.0"
+    ./run.sh s "python -m pip install numpy==1.24.4"
+    ./run.sh s "python -m pip install scipy==1.10.1"
+    ./run.sh s "python -m pip install scikit-learn==1.3.2"
+    ./run.sh s "python -m pip install matplotlib==3.7.5"
+    ./run.sh s "python -m pip install click==8.1.7"
+    ./run.sh s "python -m pip install click-help-colors==0.9.4"
+    ./run.sh s "python -m pip install shapely==2.0.6"
+    ./run.sh s "python -m pip install seaborn==0.13.2"
+    ./run.sh s "python -m pip install python-dotenv==1.0.1"
+    ./run.sh s "python -m pip install openai==1.60.1"
+    ./run.sh s "python -m pip install puremagic==1.28"
+
+else
+    echo_green "Not touching python"
 fi
 
 
 ## ==========================================================================
-## ------------------------- data setup ------------------------------------ ##
+## ------------------------- submodules setup  --------------------------- ##
+## ==========================================================================
+if [[ "$*" =~ "subs" ]] || [[ "$*" =~ "all" ]];then
+    echo "Pulling submodules..."
+else
+    echo_green "Not touching submodules"
+fi
+
+
+## ==========================================================================
+## ----------------------- data setup ------------------------------------ ##
 ## ==========================================================================
 if [[ "$1" =~ "data" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Pulling data..."
@@ -79,5 +96,5 @@ if [[ "$1" =~ "data" ]] || [[ "$1" =~ "all" ]];then
     mv library mlr/share/projects/block_building
     rm -rf library.zip
 else
-    echo_orange "Not pulling any data"
+    echo_green "Not pulling any data"
 fi
