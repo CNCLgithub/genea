@@ -1,92 +1,51 @@
-class URDFCubeGenerator:
-    def __init__(self, name = "cube1", dimensions = (1.0,1.0,1.0), mass = 0.5, color = (1.0,0,0,1.0), position = (0,0,0)):
-        self.name = name
-        self.dimensions = dimensions
-        self.mass = mass
-        self.color = color
-        self.position = position
+import xmltodict
 
-    def generate_urdf_cube(self):
-
-        x, y, z = self.dimensions
-        r, g, b, a = self.color
-        px, py, pz = self.position
-
-        urdf = f"""
-        <robot name="{self.name}">
-            <link name="{self.name}_link">
-                <visual>
-                    <origin xyz="{px} {py} {pz}" rpy="0 0 0"/>
-                    <geometry>
-                        <box size="{x} {y} {z}"/>
-                    </geometry>
-                    <material name="cube_color">
-                        <color rgba="{r} {g} {b} {a}"/>
-                    </material>
-                </visual>
-
-                <inertial>
-                    <mass value="{self.mass}"/>
-                    <inertia ixx="0.1" iyy="0.1" izz="0.1" ixy="0.0" ixz="0.0" iyz="0.0"/>
-                </inertial>
-
-                <collision>
-                    <origin xyz="{px} {py} {pz}" rpy="0 0 0"/>
-                    <geometry>
-                        <box size="{x} {y} {z}"/>
-                    </geometry>
-                </collision>
-            </link>
-        </robot>
-        """.strip()
-
-        return urdf
+from mlr.share.projects.navigation.utils.file_utils import FileUtils
 
 
-class URDFCylinderGenerator:
-    def __init__(self, name="cylinder1", radius=0.5, height=1.0, mass=1.0, color=(1.0, 0, 0, 1.0), position=(0, 0, 0)):
-        self.name = name
-        self.radius = radius
-        self.height = height
-        self.mass = mass
-        self.color = color
-        self.position = position
-        
-    def generate_urdf_cylinder(self):
-        r, g, b, a = self.color
-        px, py, pz = self.position
-        
-        urdf = f"""
-        <robot name="{self.name}">
-            <link name="{self.name}_link">
-                <visual>
-                    <origin xyz="{px} {py} {pz}" rpy="0 0 0"/>
-                    <geometry>
-                        <!-- Cylinder geometry -->
-                        <cylinder radius="{self.radius}" length="{self.height}"/>
-                    </geometry>
-                    <material name="cylinder_color">
-                        <color rgba="{r} {g} {b} {a}"/>
-                    </material>
-                </visual>
+class _URDF:
+    def __init__(self, tag):
+        self._tag = tag
+        self._attributes = {}
+        self._child_urdf_dict = {}
 
-                <inertial>
-                    <mass value="{self.mass}"/>
-                    <inertia ixx="0.1" iyy="0.1" izz="0.1" ixy="0.0" ixz="0.0" iyz="0.0"/>
-                </inertial>
+        self._urdf_dict = {}
 
-                <collision>
-                    <origin xyz="{px} {py} {pz}" rpy="0 0 0"/>
-                    <geometry>
-                        <cylinder radius="{self.radius}" length="{self.height}"/>
-                    </geometry>
-                </collision>
-            </link>
-        </robot>
-        """.strip()
+    def add_attribute(self, key, value):
+        self._attributes["@" + key] = value
 
-        return urdf
-    
+    def add_child_urdf(self, input_urdf):
+        input_urdf_dict = input_urdf.get_urdf_dict()
+        if not self._child_urdf_dict:
+            self._child_urdf_dict = input_urdf_dict
+            return
+        self._child_urdf_dict = dict(self._child_urdf_dict, **input_urdf_dict)
+
+    def get_urdf_dict(self):
+        return{self._tag: dict(self._attributes, **self._child_urdf_dict)}
+
+
+class _URDFRobot(_URDF):
+    TAG = "robot"
+    ATTR_NAME = "name"
+
+    def __init__(self, robot_name):
+        super().__init__(_URDFRobot.TAG)
+        self.add_attribute(_URDFRobot.ATTR_NAME, robot_name)
+
+
+class URDFGenerator:
+    def __init__(self, urdf_filepath):
+        self._urdf_filepath = urdf_filepath
+        self._urdf = None
+
+    def get_urdf_xml(self):
+        xmltodict.unparse(self._urdf.get_urdf_dict(), pretty=True)
+
+    def save_urdf(self):
+        FileUtils.write_to_file(self._urdf_filepath, self.get_urdf_xml())
+
+
 class URDFViewer:
     # generate scenes here
     pass
