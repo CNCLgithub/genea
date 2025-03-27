@@ -13,11 +13,16 @@ cd "$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )" || exit
 
 CONT="${ENV['cont_main']}"
 
-if [ "$1" == "n" ]; then
+if [ "$1" == "n" ]; then  # navigation
+    . load_paths.sh
     PROJECT="navigation"
-elif [ "$1" == "bb" ]; then
+elif [ "$1" == "bb" ]; then  # block building
+    . load_paths.sh
     PROJECT="block_building"
-elif [ "$1" == "s" ]; then
+elif [ "$1" == "setup" ]; then  # executing setup
+    PROJECT=""
+elif [ "$1" == "x" ]; then
+    . load_paths.sh
     PROJECT=""
 else
     echo_orange "Invalid argument"
@@ -39,7 +44,7 @@ echo
 
 
 ${SING} "${BS}" "${CONT}" bash -c "source ${ENV['env']}/bin/activate \
-        && cd ${PWD}/mlr/share/projects/${PROJECT} \
+        && cd /project/mlr/share/projects/${PROJECT} \
         && exec ${COMMAND} \
         && cd /project \
         && deactivate"

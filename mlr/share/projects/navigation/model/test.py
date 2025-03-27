@@ -4,7 +4,7 @@ import numpy as np
 
 from pinocchio.robot_wrapper import RobotWrapper
 
-from utils.path_utils import PathUtils
+from mlr.share.projects.navigation.utils.path_utils import PathUtils
 
 model_info = robotoc.RobotModelInfo()
 model_info.urdf_path = PathUtils.create_path(PathUtils.get_library_dir_path(), "icub_description/urdf/icub.urdf")

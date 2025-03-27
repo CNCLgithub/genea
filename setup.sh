@@ -24,8 +24,6 @@ echo_green () { echo -e "\033[1;38;5;047m$* \033[0m"; }
 remove(){ if [ -d "$1" ]; then rm -rf "$1"; fi }
 add(){ if [ ! -d "$1" ]; then mkdir -p "$1"; fi }
 
-ROOT=$PWD
-
 
 if [[ $# -eq 0 ]] || [[ "$*" =~ "--help" ]] || [[ "$*" =~ "-h" ]];then
     echo "$usage"
@@ -54,20 +52,20 @@ fi
 ## ==========================================================================
 if [[ "$1" =~ "python" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Setting up Python venv..."
-    singularity exec "${ENV[cont_main]}" bash -c "python -m venv ${ENV[env]}"
-    ./run.sh s "python -m pip install --upgrade pip"
-    ./run.sh s "python -m pip install pillow==10.4.0"
-    ./run.sh s "python -m pip install numpy==1.24.4"
-    ./run.sh s "python -m pip install scipy==1.10.1"
-    ./run.sh s "python -m pip install scikit-learn==1.3.2"
-    ./run.sh s "python -m pip install matplotlib==3.7.5"
-    ./run.sh s "python -m pip install click==8.1.7"
-    ./run.sh s "python -m pip install click-help-colors==0.9.4"
-    ./run.sh s "python -m pip install shapely==2.0.6"
-    ./run.sh s "python -m pip install seaborn==0.13.2"
-    ./run.sh s "python -m pip install python-dotenv==1.0.1"
-    ./run.sh s "python -m pip install openai==1.60.1"
-    ./run.sh s "python -m pip install puremagic==1.28"
+    apptainer exec "${ENV[cont_main]}" bash -c "python -m venv ${ENV[env]}"
+    ./run.sh setup "python -m pip install --upgrade pip --no-cache-dir"
+    ./run.sh setup "python -m pip install pillow==10.4.0"
+    ./run.sh setup "python -m pip install numpy==1.24.4"
+    ./run.sh setup "python -m pip install scipy==1.10.1"
+    ./run.sh setup "python -m pip install scikit-learn==1.3.2"
+    ./run.sh setup "python -m pip install matplotlib==3.7.5"
+    ./run.sh setup "python -m pip install click==8.1.7"
+    ./run.sh setup "python -m pip install click-help-colors==0.9.4"
+    ./run.sh setup "python -m pip install shapely==2.0.6"
+    ./run.sh setup "python -m pip install seaborn==0.13.2"
+    ./run.sh setup "python -m pip install python-dotenv==1.0.1"
+    ./run.sh setup "python -m pip install openai==1.60.1"
+    ./run.sh setup "python -m pip install puremagic==1.28"
 
 else
     echo_green "Not touching python"
@@ -79,6 +77,17 @@ fi
 ## ==========================================================================
 if [[ "$*" =~ "subs" ]] || [[ "$*" =~ "all" ]];then
     echo "Pulling submodules..."
+
+    ROBOTOC_MAIN_PATH="${PWD}/mlr/share/projects/navigation/robotoc"
+    ROBOTOC_FILE_PATH="${ROBOTOC_MAIN_PATH}/bindings/python/pybind11/tools/pybind11Common.cmake"
+
+    git clone https://github.com/mayataka/robotoc.git "${ROBOTOC_MAIN_PATH}"
+    mkdir "${ROBOTOC_MAIN_PATH}"/build
+    ./run.sh n "bash -c 'cd robotoc/build && cmake .. -DCMAKE_BUILD_TYPE=Release -DOPTIMIZE_FOR_NATIVE=ON -DCMAKE_INSTALL_PREFIX=/home/jakiroshah/PycharmProjects/genea/venv'"
+    sed -i '213s/set(PYTHON_VERSION_MAJOR "${Python_VERSION_MAJOR}")/set(PYTHON_VERSION_MAJOR "${Python_VERSION_MAJOR}" PARENT_SCOPE)/' "${ROBOTOC_FILE_PATH}"
+    sed -i '214s/set(PYTHON_VERSION_MINOR "${Python_VERSION_MINOR}")/set(PYTHON_VERSION_MINOR "${Python_VERSION_MINOR}" PARENT_SCOPE)/' "${ROBOTOC_FILE_PATH}"
+    ./run.sh n "bash -c 'cd robotoc/build && make install -j$(nproc)'"
+    rm -rf "${ROBOTOC_MAIN_PATH}"
 else
     echo_green "Not touching submodules"
 fi

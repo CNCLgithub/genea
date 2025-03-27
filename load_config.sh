@@ -1,13 +1,9 @@
 #!/bin/bash
 
-# Loads config constants
-CFG_FILE="default.conf"
-# shellcheck disable=SC1090
-. "$CFG_FILE"
 
-# export the required path variables
-for i in "${!PATHS[@]}"
-do
-    printf "%s \u2190 %s\n" "${i}" "${PATHS[$i]}"
-    export "${i}=${PATHS[$i]}"
-done
+declare -gA ENV
+ENV[exec]=singularity
+ENV[cont_init]=cont_init.simg
+ENV[cont_main]=cont_main.sif
+ENV[cont_def]=apptainer_build.def
+ENV[env]=venv
