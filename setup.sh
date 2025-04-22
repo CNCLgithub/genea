@@ -66,7 +66,8 @@ if [[ "$1" =~ "python" ]] || [[ "$1" =~ "all" ]];then
     ./run.sh setup "python -m pip install python-dotenv==1.0.1"
     ./run.sh setup "python -m pip install openai==1.60.1"
     ./run.sh setup "python -m pip install puremagic==1.28"
-
+    ./run.sh setup "python -m pip install crocoddyl==3.0.1"
+    ./run.sh setup "python -m pip install mujoco==3.2.3"
 else
     echo_green "Not touching python"
 fi
@@ -77,17 +78,6 @@ fi
 ## ==========================================================================
 if [[ "$*" =~ "subs" ]] || [[ "$*" =~ "all" ]];then
     echo "Pulling submodules..."
-
-    ROBOTOC_MAIN_PATH="${PWD}/mlr/share/projects/navigation/robotoc"
-    ROBOTOC_FILE_PATH="${ROBOTOC_MAIN_PATH}/bindings/python/pybind11/tools/pybind11Common.cmake"
-
-    git clone https://github.com/mayataka/robotoc.git "${ROBOTOC_MAIN_PATH}"
-    mkdir "${ROBOTOC_MAIN_PATH}"/build
-    ./run.sh n "bash -c 'cd robotoc/build && cmake .. -DCMAKE_BUILD_TYPE=Release -DOPTIMIZE_FOR_NATIVE=ON -DCMAKE_INSTALL_PREFIX=/home/jakiroshah/PycharmProjects/genea/venv'"
-    sed -i '213s/set(PYTHON_VERSION_MAJOR "${Python_VERSION_MAJOR}")/set(PYTHON_VERSION_MAJOR "${Python_VERSION_MAJOR}" PARENT_SCOPE)/' "${ROBOTOC_FILE_PATH}"
-    sed -i '214s/set(PYTHON_VERSION_MINOR "${Python_VERSION_MINOR}")/set(PYTHON_VERSION_MINOR "${Python_VERSION_MINOR}" PARENT_SCOPE)/' "${ROBOTOC_FILE_PATH}"
-    ./run.sh n "bash -c 'cd robotoc/build && make install -j$(nproc)'"
-    rm -rf "${ROBOTOC_MAIN_PATH}"
 else
     echo_green "Not touching submodules"
 fi

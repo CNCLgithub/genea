@@ -12,9 +12,13 @@ class PathUtils:
         return os.path.join(path_elements_list[0], *path_elements_list[1:])
 
     @staticmethod
-    def get_root_dir_path():
+    def get_root_dirpath():
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     @staticmethod
-    def get_library_dir_path():
-        return os.path.join(PathUtils.get_root_dir_path(), "library")
+    def get_library_dirpath():
+        return os.path.join(PathUtils.get_root_dirpath(), "library")
+
+    @staticmethod
+    def get_platforms_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "platforms")

@@ -1,2 +1,6 @@
 class NavConfigUtils:
-    ROBOTOC_TIME_STEP = 0.05
+    FORCE_SCALING_FACTOR = 0.0001
+
+    PLATFORM_HEIGHT = 2.0
+
+    SIMULATION_TIME = 0.001

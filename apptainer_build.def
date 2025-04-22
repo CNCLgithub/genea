@@ -82,4 +82,3 @@ echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.
 apt-get update
 
 apt install -qqy robotpkg-py3*-pinocchio
-apt install robotpkg-py38-qt5-gepetto-viewer-corba -y
