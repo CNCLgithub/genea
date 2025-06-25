@@ -1,3 +1,5 @@
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 # Understanding Embodied Plans
 This repository contains the code that implements the computational model from the paper "A computational framework for understanding embodied plans".
 In addition, it contains information about the experiment and analysis scripts that were used to generate the data for the paper.
@@ -17,24 +19,24 @@ have either of these already installed, run the following commands:
 
 
 ### Setup
-Download the Apptainer containers
+Download the Apptainer containers (~ 5 mins)
 ```bash
 ./setup.sh cont_pull  
 ```
 
-Download and install all the necessary python packages
+Download and install all the necessary python packages (~ 5 mins)
 ```bash
 ./setup.sh python
 ```
 
-Download data for running the experiments and to perform analysis
+Download data for running the experiments and to perform analysis (~ 5 mins)
 ```bash
 ./setup.sh data
 ```
 
 ### Compile the codebase
 When running the code for the first time, you will need to compile CPP files in the codebase. 
-This is done by running the following command:
+This is done by running the following command (~ 5 mins):
 ```
 singularity exec cont_init.simg bash -c "cd mlr/share && make"
 ```
@@ -76,7 +78,7 @@ Use the `library/exp_data/trials_list.csv` file to specify the trials you want t
 - The second column is the number associated with the trial. 
 - The last column specifies the first actions that the model should consider (e.g., `['red']` means picking the red block; `['blue','yellow']` implies that the first action will involve picking both the blue and the yellow blocks). ""
 
-To run the model on the studies specified in the `trials_list.csv` file, run the following command:
+To run the model on the studies specified in the `trials_list.csv` file, run the following command (~ 20-30 mins, depending on the experiment):
 ```bash
 ./run.sh python run_experiment.py -a   # run action inference trials
 ./run.sh python run_experiment.py -g   # run goal inference trials
@@ -95,3 +97,9 @@ All intermediate files generated during the model run will be stored in the `lib
 ./run.sh python perform_analysis.py -e   # analyze embodiment strategies inference data
 ./run.sh python perform_analysis.py -d   # analyze difficulty data
 ```
+
+## 🖥️ System Requirements
+
+This project has been tested on Linux (Ubuntu 18.04 and 20.04), however, you should be able to use any operating system supported by [Apptainer](https://apptainer.org/docs/user/main/introduction.html).
+
+---
