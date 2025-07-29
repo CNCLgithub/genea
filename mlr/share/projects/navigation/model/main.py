@@ -1,10 +1,9 @@
 import crocoddyl
 import numpy as np
-import pinocchio
 import time
 
 from mlr.share.projects.navigation.model.jump_task import JumpTask
-from mlr.share.projects.navigation.model.stimuli import Stimuli, StimuliPairs
+from mlr.share.projects.navigation.model.stimuli import Stimuli
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
@@ -45,14 +44,14 @@ class NavModel:
 
     def add_jump_task(self):
         platform_names_list = self._scene.get_platform_names_list()
-        platform_pairs = ComputeUtils.get_unique_combinations(platform_names_list, 2)
 
         jump_length = 0.0
-        for idx1, idx2 in platform_pairs:
-            jump_length += self._scene.get_gap_between_platforms(platform_names_list[idx1], platform_names_list[idx2])
-        jump_length /= len(platform_pairs)
-        jump_x, jump_y = ComputeUtils.sample_trunc_normal_circular(0.0, .6, 0.75)
-        print(jump_x, jump_y, jump_length)
+        jump_length += self._scene.get_gap_between_platforms(platform_names_list[0], platform_names_list[1])
+
+        platform_x, platform_y = self._scene.get_platform_surface_measures(platform_names_list[1])
+
+        jump_x = ComputeUtils.sample_trunc_normal(0.0, -platform_x, platform_x, 0.75)
+        jump_y = ComputeUtils.sample_trunc_normal(0.0, -platform_y, platform_y, 0.75)
         jump_vector = np.array([jump_length + jump_x, jump_y, 0.0])
 
         jump_task = JumpTask()
@@ -62,20 +61,36 @@ class NavModel:
         self._nav_task_list.append(jump_task)
         self._add_solver(jump_task)
 
+    def _show_force_simulation(self):
+        display = crocoddyl.MeshcatDisplay(self._agent.get_agent())
+        display.rate = -1
+        display.freq = 1
+        while True:
+            for task_solver in enumerate(self._nav_task_solver):
+                display.displayFromSolver(task_solver)
+            time.sleep(1.0)
+
     def run_dynamics(self):
-        stimuli_dirpath = self._scene.get_stimuli_dirpath()
+        if ConfigUtils.NAV_MODEL_SHOW_FORCE_SIMULATION:
+            self._show_force_simulation()
+
+        platform_nav_pose_dict = {}
+
         _, ground_urdf_rel_filepath = self._scene.get_ground_urdf_filepath()
 
         for task_solver in self._nav_task_solver:
             nav_forces = CrocoddylUtils.get_forces_list(task_solver)
 
             pybullet_utils = PyBulletUtils(True)
-            pybullet_utils.add_load_urdf(stimuli_dirpath, ground_urdf_rel_filepath, is_fixed=True)
+            pybullet_utils.add_load_urdf(self._scene.get_stimuli_dirpath(), ground_urdf_rel_filepath, is_fixed=True)
             for platform_name in self._scene.get_platform_names_list():
                 _, urdf_rel_filepath = self._scene.get_platform_urdf_filepath(platform_name)
-                pybullet_utils.add_load_urdf(stimuli_dirpath, urdf_rel_filepath)
+                pybullet_utils.add_load_urdf(self._scene.get_stimuli_dirpath(), urdf_rel_filepath)
 
             platform_ids = pybullet_utils.get_platform_ids_list()
+            for p_id in platform_ids:
+                platform_nav_pose_dict[p_id] = [pybullet_utils.get_pose(p_id)]
+
             for p_id, forces_list in zip(platform_ids, ComputeUtils.chunkify_list(nav_forces, len(platform_ids))):
                 for forces in forces_list:
                     if len(forces) == 0:
@@ -84,19 +99,18 @@ class NavModel:
                     pybullet_utils.add_force_to_object(p_id, forces[1])  # force from the right foot
 
             pybullet_utils.step_simulation()
+
+            for p_id in platform_ids:
+                platform_nav_pose_dict[p_id].append(pybullet_utils.get_pose(p_id))
+
+            for p_id, p_pose_list in platform_nav_pose_dict.items():
+                start_pose = p_pose_list[0]
+                final_pose = p_pose_list[-1]
+
+                is_stable = pybullet_utils.is_pose_similar(start_pose, final_pose)
+                print(is_stable)
+
             pybullet_utils.end_simulation()
-
-        if ConfigUtils.NAV_MODEL_SHOW_FORCE_SIMULATION:
-            display = crocoddyl.MeshcatDisplay(self._agent.get_agent())
-            display.rate = -1
-            display.freq = 1
-            while True:
-                for task_solver in enumerate(self._nav_task_solver):
-                    display.displayFromSolver(task_solver)
-                time.sleep(1.0)
-
-    def compute_stability(self):
-        new_position, new_orientation = p.getBasePositionAndOrientation(boxId)
 
 
 def run_pair_jumps():

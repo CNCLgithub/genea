@@ -72,6 +72,36 @@ class Platform:
     def create_platform(self, *platform_args):
         pass
 
+    def get_platform_surface_measures(self):
+        part1 = self._platform_name.split("_")[1]
+        part2 = self._platform_name.split("_")[2]
+
+        if part1 == PlatformType.CUBOIDAL_CUBE:
+            if part2 == PlatformType.NOT_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_NORMAL
+            if part2 == PlatformType.TOP_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL / 2.0, Platform.PLATFORM_SIZE_NORMAL / 2.0
+            if part2 == PlatformType.BOT_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_NORMAL
+
+        if part1 == PlatformType.CUBOIDAL_WIDE:
+            if part2 == PlatformType.NOT_SCALED:
+                return Platform.PLATFORM_SIZE_SCALED, Platform.PLATFORM_SIZE_NORMAL
+            if part2 == PlatformType.TOP_SCALED:
+                return Platform.PLATFORM_SIZE_SCALED / 2.0, Platform.PLATFORM_SIZE_NORMAL / 2.0
+            if part2 == PlatformType.BOT_SCALED:
+                return Platform.PLATFORM_SIZE_SCALED, Platform.PLATFORM_SIZE_NORMAL
+
+        if part1 == PlatformType.CUBOIDAL_LONG:
+            if part2 == PlatformType.NOT_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
+            if part2 == PlatformType.TOP_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL / 2.0, Platform.PLATFORM_SIZE_SCALED / 2.0
+            if part2 == PlatformType.BOT_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
+
+        return self._platform_pose.get_rotation().get_rotation_as_np_array()[2]
+
 
 class PlatformBPYUtils:
     @staticmethod
@@ -124,7 +154,6 @@ class PlatformBPYUtils:
     @staticmethod
     def save_platform_as_stl(platform: Platform):
         stl_filepath = platform.get_platform_filepath()
-        # _FileUtils.create_dir(stl_filepath)
 
         PlatformBPYUtils.bpy_object_mode()
         bpy.ops.export_mesh.stl(filepath=stl_filepath, use_selection=True)

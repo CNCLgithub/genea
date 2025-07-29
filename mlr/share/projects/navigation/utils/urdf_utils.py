@@ -47,15 +47,9 @@ class URDFGenerator:
         return xmltodict.parse(FileUtils.read_file(urdf_filepath))
 
     @staticmethod
-    def get_object_names_list(urdf_filepath):
-        object_names_list = []
-
+    def get_object_name(urdf_filepath):
         urdf_dict = URDFGenerator._urdf_to_dict(urdf_filepath)
-        for link_dict in urdf_dict["robot"]["link"]:
-            object_name = link_dict["@name"]
-            object_names_list.append(object_name)
-
-        return object_names_list
+        return urdf_dict["robot"]["link"]["@name"]
 
     @staticmethod
     def get_object_pos_rot_list(urdf_filepath):

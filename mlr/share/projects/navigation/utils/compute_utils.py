@@ -1,7 +1,8 @@
-from itertools import combinations
-
 import numpy as np
 import scipy.stats as stats
+
+from itertools import combinations
+from scipy.spatial.transform import Rotation
 
 
 class ComputeUtils:
@@ -38,3 +39,11 @@ class ComputeUtils:
     @staticmethod
     def compute_l2_distance(list1, list2):
         return np.linalg.norm(np.array(list1) - np.array(list2))
+
+    @staticmethod
+    def compute_angle_magnitude(rpy1, rpy2):
+        r1 = Rotation.from_euler('xyz', rpy1)
+        r2 = Rotation.from_euler('xyz', rpy2)
+
+        relative_rot = r1.inv() * r2
+        return np.degrees(relative_rot.magnitude())
