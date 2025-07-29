@@ -4,7 +4,7 @@ import pinocchio
 from crocoddyl import DifferentialActionDataContactFwdDynamics, DifferentialActionDataContactInvDynamics, \
     ActionDataImpulseFwdDynamics, StdVec_DiffActionData, ActionModelImpulseFwdDynamics
 
-from mlr.share.projects.navigation.utils.config_utils import NavConfigUtils
+from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
 from mlr.share.projects.navigation.utils.navigation_utils import NavForce, NavPose, NavPosition, NavRotation
 
 
@@ -58,7 +58,7 @@ class CrocoddylUtils:
                 nav_rot = NavRotation(force_rot[0], force_rot[1], force_rot[2])
 
                 force_pose = NavPose(nav_pos, nav_rot)
-                force_magnitude = np.linalg.norm(force_wrench.linear) / NavConfigUtils.FORCE_SCALING_FACTOR
+                force_magnitude = np.linalg.norm(force_wrench.linear) / ConfigUtils.CROCODDYL_FORCE_SCALING_FACTOR
                 forces_list.append(NavForce(force_pose, force_magnitude))
 
         return forces_list
