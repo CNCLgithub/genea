@@ -1,49 +1,53 @@
 import bpy
 import os
+import math
 from mathutils import Vector
 
-FRAME_COUNT = 150
-DIR =  "C:/Users/ldebb/Desktop/Yale Job/Projects/Embodied_plans/"
-STL_PATH = DIR + "/Obstacles/Scenes/All_scenes/Scene4.stl"
-CAMERA_DIST = 15
+# PARAMETERS TO CHANGE
+FRAME_COUNT = 300
+DIR = "C:/Users/ldebb/Desktop/ISC Lab/Projects/Embodied_plans"
+STL_PATH = DIR + "/Obstacles/Scenes/All_scenes/Scene5.stl"
+# change this according to width of scene, larger EMPTY_DIST = longer scene
+EMPTY_DIST = 3
+# change this according to zoom: smaller CAMERA_DIST = more zoomed out
+CAMERA_DIST = 1
 
-class FileLoader:
-    def __init__(self, filepath):
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(f"File not found: {filepath}") 
-        self.filepath = filepath
-            
-    def import_stl(self):
-        bpy.ops.wm.stl_import(filepath=self.filepath)
-                
-      
-class SceneBounds:
-    def __init__(self, filepath):
-        self.loader = FileLoader(filepath)
-        self.obj = None
-        self.bounds = {}
 
-    def load(self):
-        self.loader.import_stl()
-        self.obj = bpy.context.active_object
-        self.bounds = self._get_bounds()
+def _import_stl(filepath):
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"File not found: {filepath}")
+    bpy.ops.wm.stl_import(filepath=filepath)
 
-    def _get_bounds(self):
-        corners = [self.obj.matrix_world @ Vector(corner) for corner in self.obj.bound_box]
-        x = [v.x for v in corners]
-        y = [v.y for v in corners]
-        z = [v.z for v in corners]
-        return {"x": (min(x), max(x)), "y": (min(y), max(y)), "z": (min(z), max(z))}
 
-    def get_bounds(self):
-        return self.bounds["x"], self.bounds["y"], self.bounds["z"]
+def _get_bounds():
+    obj = bpy.context.active_object
 
-    def get_object(self):
-        return self.obj
-    
+    corners = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+    x = [v.x for v in corners]
+    y = [v.y for v in corners]
+    z = [v.z for v in corners]
+
+    return {"x": (min(x), max(x)), "y": (min(y), max(y)), "z": (min(z), max(z))}
+
+
+def _create_ellipse(obj, x_bounds, y_bounds, distance, height, frame_count):
+    major_axis = (x_bounds[1] - x_bounds[0]) / distance
+    minor_axis = (y_bounds[1] - y_bounds[0]) / distance
+    center_x = (x_bounds[1] + x_bounds[0]) / 2
+    center_y = (y_bounds[1] + y_bounds[0]) / 2
+    z = height
+
+    for i in range(frame_count + 1):
+        theta = (2 * math.pi * i) / frame_count
+        x = center_x + major_axis * math.cos(theta)
+        y = center_y + minor_axis * math.sin(theta)
+        obj.location = (x, y, z)
+        obj.keyframe_insert(data_path="location", frame=1 + i)
+
+
 class SetMaterials:
-    def __init__(self, material_name="Material", color=(1, 1, 1, 1)):
-        self.material_name = material_name
+    def __init__(self, color=(1, 1, 1, 1)):
+        self.material_name = "Material"
         self.color = color
         self.material = None
 
@@ -72,13 +76,13 @@ class SetMaterials:
         if obj.data.materials:
             obj.data.materials[0] = self.material
         else:
-            obj.data.materials.append(self.material)    
+            obj.data.materials.append(self.material)
 
 
 class SceneLighting:
     def __init__(self):
         pass
-    
+
     def create_light(self, name, light_type, energy, location, rotation=(0, 0, 0)):
         light_data = bpy.data.lights.new(name=name, type=light_type)
         light_data.energy = energy
@@ -99,7 +103,7 @@ class SceneLighting:
             location=(10, -10, 10),
             rotation=(0.7, 0.0, 0.7)
         )
-        
+
         # Fill light (softens shadows)
         self.create_light(
             name="FillLight",
@@ -109,67 +113,38 @@ class SceneLighting:
         )
 
 
-class AnimateArc:
-    def __init__(self, obj, x_bounds, y_bounds, z_bounds, frame_count):
-        self.obj = obj
+class CameraSetup:
+    def __init__(self, target, x_bounds, y_bounds, z_bounds, frame_count):
+        self.target = target
         self.x_bounds = x_bounds
         self.y_bounds = y_bounds
         self.z_bounds = z_bounds
         self.frame_count = frame_count
-
-    def _parabola(self, t, y_peak):
-        return 4 * y_peak * t * (1 - t)
-
-    def animate(self):
-        x0 = -self.x_bounds[0]
-        x1 = -self.x_bounds[1]
-        y_peak = self.y_bounds[1] + CAMERA_DIST
-        z = self.z_bounds[1]/4*3
-
-        total_frames = self.frame_count * 2
-
-        for i in range(total_frames + 1):
-            if i < self.frame_count:
-                t = i / self.frame_count
-                x = (1 - t) * x0 + t * x1
-            else: # reverse direction
-                t = (i - self.frame_count) / self.frame_count
-                x = (1 - t) * x1 + t * x0
-                t = 1 - t  
-
-            y = self._parabola(t, y_peak)
-            self.obj.location = (x, y, z)
-            self.obj.keyframe_insert(data_path="location", frame=1 + i)
-
-
-class CameraSetup:
-    def __init__(self, target, y_bounds, z_bounds):
-        self.target = target
-        self.y_bounds = y_bounds
-        self.z_bounds = z_bounds
+        self.empty = None
         self.camera = None
+
+    def create_empty(self):
+        bpy.ops.object.empty_add()
+        self.empty = bpy.context.active_object
+        _create_ellipse(self.empty, self.x_bounds, self.y_bounds, EMPTY_DIST, 0, self.frame_count)
 
     def create_camera(self):
         bpy.ops.object.camera_add()
         self.camera = bpy.context.active_object
-        self.camera.location.z = self.z_bounds[1]
-        self.camera.location.y = self.y_bounds[1] + CAMERA_DIST*1.5
+        height = self.z_bounds[1] * 4
+        _create_ellipse(self.camera, self.x_bounds, self.y_bounds, CAMERA_DIST, height, self.frame_count)
 
-        constraint = self.camera.constraints.new(type="TRACK_TO")
-        constraint.target = self.target
-        constraint.track_axis = 'TRACK_NEGATIVE_Z'
-        constraint.up_axis = 'UP_Y'
-
-        bpy.context.scene.camera = self.camera
-        
-        bpy.context.scene.frame_end = FRAME_COUNT*2
+        if self.empty:
+            self.camera.constraints.new(type='TRACK_TO')
+            self.camera.constraints["Track To"].target = self.empty
+            self.camera.constraints["Track To"].track_axis = 'TRACK_NEGATIVE_Z'
+            self.camera.constraints["Track To"].up_axis = 'UP_Y'
 
 
 class SetScene:
-    def __init__(self, stl_path, frame_count, material_name="White"):
+    def __init__(self, stl_path, frame_count):
         self.stl_path = stl_path
         self.frame_count = frame_count
-        self.material_name = material_name
         self.scene = None
         self.obj = None
         self.x_bounds = None
@@ -182,7 +157,6 @@ class SetScene:
         self.load_scene()
         self.apply_material()
         self.setup_lighting()
-        self.add_empty_and_animate()
         self.setup_camera()
 
     def clear_scene(self):
@@ -190,13 +164,16 @@ class SetScene:
         bpy.ops.object.delete(use_global=False)
 
     def load_scene(self):
-        self.scene = SceneBounds(self.stl_path)
-        self.scene.load()
-        self.obj = self.scene.get_object()
-        self.x_bounds, self.y_bounds, self.z_bounds = self.scene.get_bounds()
+        _import_stl(self.stl_path)
+        self.obj = bpy.context.active_object
+
+        bounds = _get_bounds()
+        self.x_bounds = bounds["x"]
+        self.y_bounds = bounds["y"]
+        self.z_bounds = bounds["z"]
 
     def apply_material(self):
-        set_materials = SetMaterials(material_name=self.material_name)
+        set_materials = SetMaterials()
         set_materials.create_or_get_material()
         set_materials.assign_to_object(bpy.context.active_object)
 
@@ -204,20 +181,18 @@ class SetScene:
         lighting = SceneLighting()
         lighting.set_basic_light()
 
-    def add_empty_and_animate(self):
-        bpy.ops.object.empty_add()
-        self.empty = bpy.context.active_object
-        arc = AnimateArc(self.empty, self.x_bounds, self.y_bounds, self.z_bounds, self.frame_count)
-        arc.animate()
-
     def setup_camera(self):
-        camera_setup = CameraSetup(target=self.empty, y_bounds=self.y_bounds, z_bounds=self.z_bounds)
+        camera_setup = CameraSetup(target=self.empty, x_bounds=self.x_bounds, y_bounds=self.y_bounds,
+                                   z_bounds=self.z_bounds, frame_count=FRAME_COUNT)
+        camera_setup.create_empty()
         camera_setup.create_camera()
-        
+        self.empty = camera_setup.empty
+
 
 class VideoRenderer:
     def __init__(self, output_path, file_name="animation", fps=24, resolution=(1920, 1080)):
         self.scene = bpy.context.scene
+        self.scene.frame_end = FRAME_COUNT
         self.output_path = output_path
         self.file_name = file_name
         self.fps = fps
@@ -235,17 +210,17 @@ class VideoRenderer:
     def render(self):
         self.configure_render_settings()
         bpy.ops.render.render(animation=True)
-        
+
 
 def main():
-
     # Set Scene
-    set_scene = SetScene(STL_PATH, FRAME_COUNT, material_name = "White")
+    set_scene = SetScene(STL_PATH, FRAME_COUNT)
     set_scene.setup()
-    
+
     # Render video
     renderer = VideoRenderer(output_path=DIR)
-    # renderer.render()
+    # UNCOMMENT THIS NEXT LINE TO MAKE VIDEO
+#   renderer.render()
 
 
 if __name__ == "__main__":
