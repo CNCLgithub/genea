@@ -43,8 +43,6 @@ class PlatformType:
 
 
 class Platform:
-    PLATFORM_MASS = 7.0
-
     PLATFORM_SIZE_NORMAL = 4.0
     PLATFORM_SIZE_SCALED = 2.4
     PLATFORM_HEIGHT = 4.0
@@ -54,20 +52,23 @@ class Platform:
 
     def __init__(self, platform_name, platform_pose, platform_color=None):
         self._platform_name = platform_name
-        self._platform_pose = platform_pose
+        self._platform_pose_list = [platform_pose]
         self._platform_color = platform_color
 
     def get_platform_name(self):
         return self._platform_name
-
-    def get_platform_pose(self):
-        return self._platform_pose
 
     def get_platform_color(self):
         return self._platform_color
 
     def get_platform_filepath(self):
         return os.path.join(PLATFORM_DIRPATH, self._platform_name + ".stl")
+
+    def get_platform_pose(self, pose_index=-1):
+        return self._platform_pose_list[pose_index]
+
+    def add_platform_pose(self, platform_pose):
+        self._platform_pose_list.append(platform_pose)
 
     def create_platform(self, *platform_args):
         pass
@@ -100,7 +101,7 @@ class Platform:
             if part2 == PlatformType.BOT_SCALED:
                 return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
 
-        return self._platform_pose.get_rotation().get_rotation_as_np_array()[2]
+        return None, None
 
 
 class PlatformBPYUtils:
@@ -220,8 +221,8 @@ class CuboidPlatform(Platform):
         super().__init__(platform_name, platform_pose, platform_color)
 
     def create_platform(self, platform_width, platform_length, platform_height, top_scale=1.0, bottom_scale=1.0):
-        bpy.ops.mesh.primitive_cube_add(location=self._platform_pose.get_position().get_position_as_list(),
-                                        rotation=self._platform_pose.get_rotation().get_rotation_as_list(),
+        bpy.ops.mesh.primitive_cube_add(location=self._platform_pose_list.get_position().get_position_as_list(),
+                                        rotation=self._platform_pose_list.get_rotation().get_rotation_as_list(),
                                         size=1)
 
         obj = bpy.context.object
@@ -259,8 +260,8 @@ class CylinderPlatform(Platform):
 
     def create_platform(self, platform_radius, platform_height, top_scale=1.0, bottom_scale=1.0):
         bpy.ops.mesh.primitive_cylinder_add(radius=platform_radius,
-                                            location=self._platform_pose.get_position().get_position_as_list(),
-                                            rotation=self._platform_pose.get_rotation().get_rotation_as_list())
+                                            location=self._platform_pose_list.get_position().get_position_as_list(),
+                                            rotation=self._platform_pose_list.get_rotation().get_rotation_as_list())
 
         obj = bpy.context.object
 
@@ -298,8 +299,8 @@ class RoundedCuboidPlatform(Platform):
     def create_platform(self, platform_width, platform_length, platform_height,
                         top_scale=1.0, bottom_scale=1.0,
                         bevel_width=.05, bevel_segments=2):
-        bpy.ops.mesh.primitive_cube_add(location=self._platform_pose.get_position().get_position_as_list(),
-                                        rotation=self._platform_pose.get_rotation().get_rotation_as_list(),
+        bpy.ops.mesh.primitive_cube_add(location=self._platform_pose_list.get_position().get_position_as_list(),
+                                        rotation=self._platform_pose_list.get_rotation().get_rotation_as_list(),
                                         size=1)
 
         obj = bpy.context.object

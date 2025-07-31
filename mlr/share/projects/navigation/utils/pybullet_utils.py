@@ -30,8 +30,8 @@ class PyBulletUtils:
             pybullet.connect(pybullet.DIRECT)
 
         pybullet.setGravity(0, 0, -9.81)
-        pybullet.setPhysicsEngineParameter(fixedTimeStep=ConfigUtils.PYBULLET_SIMULATION_TIME, numSubSteps=1)
-        pybullet.setTimeStep(ConfigUtils.PYBULLET_SIMULATION_TIME)
+        pybullet.setPhysicsEngineParameter(fixedTimeStep=ConfigUtils.PYBULLET_SIMULATION_TIME_STEP, numSubSteps=1)
+        pybullet.setTimeStep(ConfigUtils.PYBULLET_SIMULATION_TIME_STEP)
 
     def add_load_urdf(self, urdf_dirpath, urdf_rel_filepath, is_fixed=False):
         pybullet.setAdditionalSearchPath(urdf_dirpath)
@@ -49,14 +49,14 @@ class PyBulletUtils:
         return NavPose(NavPosition(*position), NavRotation(*pybullet.getEulerFromQuaternion(orientation)))
 
     @staticmethod
-    def step_simulation(sim_time_secs=10):
+    def run_simulation(sim_time_secs):
         start_time = time.time()
         while pybullet.isConnected() and (time.time() - start_time < sim_time_secs):
             pybullet.stepSimulation()
             time.sleep(1. / 240.)
 
     @staticmethod
-    def end_simulation():
+    def close():
         pybullet.disconnect()
 
     @staticmethod
@@ -69,7 +69,7 @@ class PyBulletUtils:
         pybullet.applyExternalForce(platform_id, -1, force_rot, force_pos, pybullet.LINK_FRAME)
 
     @staticmethod
-    def is_pose_similar(start_pose, final_pose):
+    def get_pose_diff(start_pose, final_pose):
         start_pos = start_pose.get_position().get_position_as_np_array()
         final_pos = final_pose.get_position().get_position_as_np_array()
         pos_diff = ComputeUtils.compute_l2_distance(start_pos, final_pos)
@@ -78,6 +78,4 @@ class PyBulletUtils:
         final_rot = final_pose.get_rotation().get_rotation_as_np_array()
         rot_diff = ComputeUtils.compute_angle_magnitude(start_rot, final_rot)
 
-        if pos_diff < ConfigUtils.PYBULLET_POS_THRESHOLD and rot_diff < ConfigUtils.PYBULLET_ROT_THRESHOLD:
-            return True
-        return False
+        return pos_diff, rot_diff

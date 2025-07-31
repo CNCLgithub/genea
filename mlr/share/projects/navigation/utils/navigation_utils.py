@@ -86,19 +86,6 @@ class NavAgent:
         return [self.get_joint_pos(frame_id) for frame_id in self.get_joint_frame_id_list()]
 
 
-class NavTask:
-    JUMP = "jump"
-
-    def __init__(self, task_type):
-        self._task_type = task_type
-
-    def get_task_type(self):
-        return self._task_type
-
-    def get_task_solver(self, agent: NavAgent, current_pose):
-        pass
-
-
 class NavPosition:
     def __init__(self, x, y, z):
         self._pos_x = x
@@ -164,13 +151,24 @@ class NavForce:
         return self._force_pose
 
 
-class NavPlatform:
-    def __init__(self, platform_name, platform_pose: NavPose):
-        self._platform_name = platform_name
-        self._platform_pose = platform_pose
+class NavTask:
+    JUMP = "jump"
 
-    def get_platform_position(self) -> NavPosition:
-        return self._platform_pose.get_position()
+    def __init__(self, task_type):
+        self._task_type = task_type
+        self._task_solver = None
 
-    def get_platform_rotation(self) -> NavRotation:
-        return self._platform_pose.get_rotation()
+    def set_task_solver(self, task_solver):
+        self._task_solver = task_solver
+
+    def get_task_type(self):
+        return self._task_type
+
+    def get_task_problem(self, agent: NavAgent, current_pose):
+        pass
+
+    def get_task_solver(self):
+        return self._task_solver
+
+    def get_task_cost(self):
+        return self._task_solver.cost

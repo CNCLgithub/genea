@@ -29,7 +29,7 @@ class JumpTask(NavTask):
     def get_jump_height(self):
         return self._jump_height
 
-    def get_task_solver(self, agent: NavAgent, current_pose):
+    def get_task_problem(self, agent: NavAgent, current_pose):
         jump_problem = GeneaJumpProblem(agent)
         return jump_problem.create_jump_problem(current_pose, self.get_jump_vector(), self.get_jump_height())
 

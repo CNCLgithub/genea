@@ -24,6 +24,10 @@ class PathUtils:
         return os.path.join(PathUtils.get_root_dirpath(), "library")
 
     @staticmethod
+    def get_out_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "out")
+
+    @staticmethod
     def get_platforms_dirpath():
         return os.path.join(PathUtils.get_library_dirpath(), "platforms")
 

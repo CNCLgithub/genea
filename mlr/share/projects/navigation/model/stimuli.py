@@ -44,18 +44,12 @@ class Stimuli:
     def get_platform_names_list(self):
         return list(self._platforms_dict.keys())
 
-    def get_platform_surface_measures(self, platform_name):
+    def get_platform_by_name(self, platform_name):
         if platform_name not in self._platforms_dict:
             Msg.print_error(f"ERROR [Stimuli]: Platform {platform_name} not found.")
             assert False
 
-        platform = self._platforms_dict[platform_name]
-        return platform.get_platform_surface_measures()
-
-    def _add_platform(self, platform_name, platform: Platform):
-        if platform not in self._platforms_dict:
-            self._platforms_dict[platform_name] = platform
-        self._platforms_dict[platform_name] = platform
+        return self._platforms_dict[platform_name]
 
     @staticmethod
     def make_platform_name(object_index, object_name):
@@ -75,7 +69,10 @@ class Stimuli:
             platform_pos, platform_rot = URDFGenerator.get_object_pos_rot_list(urdf_filepath)
             platform_pose = NavPose(NavPosition(*platform_pos), NavRotation(*platform_rot))
             platform = Platform(platform_name, platform_pose)
-            self._add_platform(platform_name, platform)
+
+            if platform not in self._platforms_dict:
+                self._platforms_dict[platform_name] = platform
+            self._platforms_dict[platform_name] = platform
 
     def get_gap_between_platforms(self, platform_name1, platform_name2):
         if platform_name1 not in self._platforms_dict or platform_name2 not in self._platforms_dict:
@@ -141,7 +138,7 @@ class StimuliPairs(Stimuli):
             urdf_generator.add_object(Stimuli.make_platform_name(1, p_start_name),
                                       start_pose.get_position().get_position_as_str(),
                                       start_pose.get_rotation().get_rotation_as_str(),
-                                      Platform.PLATFORM_MASS, platform_start_filename)
+                                      ConfigUtils.STIMULI_PLATFORM_MASS, platform_start_filename)
             urdf_generator.save_urdf()
 
             # ----------------- make platform 2 -----------------
@@ -153,17 +150,17 @@ class StimuliPairs(Stimuli):
                 urdf_generator.add_object(Stimuli.make_platform_name(2, p_final_name),
                                           wide_wide_final_pose.get_position().get_position_as_str(),
                                           wide_wide_final_pose.get_rotation().get_rotation_as_str(),
-                                          Platform.PLATFORM_MASS, platform_final_filename)
+                                          ConfigUtils.STIMULI_PLATFORM_MASS, platform_final_filename)
             elif is_first_wide or is_second_wide:
                 urdf_generator.add_object(Stimuli.make_platform_name(2, p_final_name),
                                           wide_std_final_pose.get_position().get_position_as_str(),
                                           wide_std_final_pose.get_rotation().get_rotation_as_str(),
-                                          Platform.PLATFORM_MASS, platform_final_filename)
+                                          ConfigUtils.STIMULI_PLATFORM_MASS, platform_final_filename)
             else:
                 urdf_generator.add_object(Stimuli.make_platform_name(2, p_final_name),
                                           final_pose.get_position().get_position_as_str(),
                                           final_pose.get_rotation().get_rotation_as_str(),
-                                          Platform.PLATFORM_MASS, platform_final_filename)
+                                          ConfigUtils.STIMULI_PLATFORM_MASS, platform_final_filename)
             urdf_generator.save_urdf()
 
 
