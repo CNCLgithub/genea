@@ -61,8 +61,9 @@ class PyBulletUtils:
 
     @staticmethod
     def add_force_to_object(platform_id, force: NavForce):
+        force_mag = ComputeUtils.sample_uniform(1.0, ConfigUtils.PYBULLET_FORCE_MAG_MULTIPLIER, 1)
         force_pos = force.get_force_pose().get_position().get_position_as_np_array()
-        force_rot = force.get_force_pose().get_rotation().get_rotation_as_np_array()
+        force_rot = force.get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
 
         pybullet.addUserDebugText("X", force_pos, textColorRGB=[1, 0, 0], textSize=1.5)
 

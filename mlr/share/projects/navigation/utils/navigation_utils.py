@@ -38,6 +38,9 @@ class NavAgent:
     def get_right_joint_name(self):
         return self._right_joint_name
 
+    def get_total_mass(self):
+        return sum([inertial.mass for inertial in self.get_agent_model().inertias])
+
     def get_nv(self):
         return self.get_agent_model().nv
 

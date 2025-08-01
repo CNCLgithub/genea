@@ -58,7 +58,7 @@ class NavModel:
     def has_stimuli_moved(start_pose, final_pose):
         pos_diff, rot_diff = PyBulletUtils.get_pose_diff(start_pose, final_pose)
 
-        if pos_diff < ConfigUtils.PYBULLET_POS_THRESHOLD and rot_diff < ConfigUtils.PYBULLET_ROT_THRESHOLD:
+        if pos_diff < ConfigUtils.PYBULLET_POS_THRESHOLD or rot_diff < ConfigUtils.PYBULLET_ROT_THRESHOLD:
             Msg.print_info(f"INFO [NavModel]: platform stable -- pos={pos_diff}, rot={rot_diff}")
             return False, pos_diff, rot_diff
 
@@ -72,11 +72,11 @@ class NavModel:
         jump_length += self._scene.get_gap_between_platforms(platform1, platform2)
 
         platform_x, platform_y = self._scene.get_platform_by_name(platform2).get_platform_surface_measures()
-        platform_x = max(platform_x, 1.0)
-        platform_y = max(platform_y, 1.0)
+        platform_x /= 2.0
+        platform_y /= 2.0
 
-        jump_x = ComputeUtils.sample_trunc_normal(0.0, -platform_x, platform_x, 0.75)
-        jump_y = ComputeUtils.sample_trunc_normal(0.0, -platform_y, platform_y, 0.75)
+        jump_x = ComputeUtils.sample_trunc_normal(0.0, -platform_x, platform_x, 1.0)
+        jump_y = ComputeUtils.sample_trunc_normal(0.0, -platform_y, platform_y, 1.0)
         jump_vector = np.array([jump_length + jump_x, jump_y, 0.0])
 
         print(jump_vector)
@@ -155,7 +155,8 @@ def run_pair_jumps(total_runs=10):
     stimuli_pairs_dirpath_list = FileUtils.get_dir_list_in_directory(PathUtils.get_stimuli_pairs_dirpath())
 
     for stimuli_pair_dirpath in stimuli_pairs_dirpath_list:
-        print(FileUtils.get_basename(stimuli_pair_dirpath))
+        if "cube_std_long_std" not in FileUtils.get_basename(stimuli_pair_dirpath):
+            continue
         for run_num in range(1, total_runs):
             nav_model = NavModel(NavAgent.TALOS_LEGS, stimuli_pair_dirpath, out_filepath)
             nav_model.add_jump_task()

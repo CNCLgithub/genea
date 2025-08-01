@@ -14,6 +14,10 @@ class ComputeUtils:
         return list(combinations(range(len(input_list)), length_of_combinations))
 
     @staticmethod
+    def sample_uniform(min_value, max_value, size=1):
+        return np.random.uniform(min_value, max_value, size).tolist()
+
+    @staticmethod
     def sample_trunc_normal(mu, bound_min, bound_max, sigma=1.0):
         lower = (bound_min - mu) / sigma
         upper = (bound_max - mu) / sigma

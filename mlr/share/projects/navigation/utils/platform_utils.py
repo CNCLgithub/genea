@@ -43,8 +43,8 @@ class PlatformType:
 
 
 class Platform:
-    PLATFORM_SIZE_NORMAL = 4.0
-    PLATFORM_SIZE_SCALED = 2.4
+    PLATFORM_SIZE_NORMAL = 3.0
+    PLATFORM_SIZE_SCALED = 2.0
     PLATFORM_HEIGHT = 4.0
 
     PLATFORM_BEVEL_WIDTH = 0.75
@@ -216,82 +216,6 @@ class PlatformColor:
         return self._color_rgba
 
 
-class CuboidPlatform(Platform):
-    def __init__(self, platform_name, platform_pose, platform_color):
-        super().__init__(platform_name, platform_pose, platform_color)
-
-    def create_platform(self, platform_width, platform_length, platform_height, top_scale=1.0, bottom_scale=1.0):
-        bpy.ops.mesh.primitive_cube_add(location=self._platform_pose_list.get_position().get_position_as_list(),
-                                        rotation=self._platform_pose_list.get_rotation().get_rotation_as_list(),
-                                        size=1)
-
-        obj = bpy.context.object
-
-        if obj.data.materials:
-            obj.data.materials[0] = PlatformBPYUtils.get_bpy_material(self)
-        else:
-            obj.data.materials.append(PlatformBPYUtils.get_bpy_material(self))
-
-        obj.scale = (platform_width, platform_length, platform_height)
-        bpy.ops.object.transform_apply(scale=True)
-
-        PlatformBPYUtils.bpy_edit_mode()
-
-        mesh = bmesh.from_edit_mesh(obj.data)
-
-        mesh_top_verts = max(v.co.z for v in mesh.verts)
-        mesh_bot_verts = min(v.co.z for v in mesh.verts)
-        for v in mesh.verts:
-            if abs(v.co.z - mesh_top_verts) < 1e-5:
-                v.co.x *= top_scale
-                v.co.y *= top_scale
-            elif abs(v.co.z - mesh_bot_verts) < 1e-5:
-                v.co.x *= bottom_scale
-                v.co.y *= bottom_scale
-
-        bmesh.update_edit_mesh(obj.data)
-
-        PlatformBPYUtils.bpy_object_mode()
-
-
-class CylinderPlatform(Platform):
-    def __init__(self, platform_name, platform_pose, platform_color):
-        super().__init__(platform_name, platform_pose, platform_color)
-
-    def create_platform(self, platform_radius, platform_height, top_scale=1.0, bottom_scale=1.0):
-        bpy.ops.mesh.primitive_cylinder_add(radius=platform_radius,
-                                            location=self._platform_pose_list.get_position().get_position_as_list(),
-                                            rotation=self._platform_pose_list.get_rotation().get_rotation_as_list())
-
-        obj = bpy.context.object
-
-        if obj.data.materials:
-            obj.data.materials[0] = PlatformBPYUtils.get_bpy_material(self)
-        else:
-            obj.data.materials.append(PlatformBPYUtils.get_bpy_material(self))
-
-        obj.scale[2] = platform_height
-        bpy.ops.object.transform_apply(scale=True)
-
-        PlatformBPYUtils.bpy_edit_mode()
-
-        mesh = bmesh.from_edit_mesh(obj.data)
-
-        mesh_top_verts = max(v.co.z for v in mesh.verts)
-        mesh_bot_verts = min(v.co.z for v in mesh.verts)
-        for v in mesh.verts:
-            if abs(v.co.z - mesh_top_verts) < 1e-5:
-                v.co.x *= top_scale
-                v.co.y *= top_scale
-            elif abs(v.co.z - mesh_bot_verts) < 1e-5:
-                v.co.x *= bottom_scale
-                v.co.y *= bottom_scale
-
-        bmesh.update_edit_mesh(obj.data)
-
-        PlatformBPYUtils.bpy_object_mode()
-
-
 class RoundedCuboidPlatform(Platform):
     def __init__(self, platform_name, platform_pose, platform_color):
         super().__init__(platform_name, platform_pose, platform_color)
@@ -299,8 +223,8 @@ class RoundedCuboidPlatform(Platform):
     def create_platform(self, platform_width, platform_length, platform_height,
                         top_scale=1.0, bottom_scale=1.0,
                         bevel_width=.05, bevel_segments=2):
-        bpy.ops.mesh.primitive_cube_add(location=self._platform_pose_list.get_position().get_position_as_list(),
-                                        rotation=self._platform_pose_list.get_rotation().get_rotation_as_list(),
+        bpy.ops.mesh.primitive_cube_add(location=self.get_platform_pose().get_position().get_position_as_list(),
+                                        rotation=self.get_platform_pose().get_rotation().get_rotation_as_list(),
                                         size=1)
 
         obj = bpy.context.object
@@ -379,7 +303,6 @@ def make_rounded_cubical_platforms(pose, color):
     PlatformBPYUtils.save_platform_as_stl(platform)
 
 
-
 def make_rounded_cuboidal_platforms(pose, color):
     height = Platform.PLATFORM_HEIGHT
 
@@ -401,13 +324,13 @@ def make_rounded_cuboidal_platforms(pose, color):
     PlatformBPYUtils.bpy_clear()
     platform_name = PlatformType.get_platform_name(platform_type_wide, PlatformType.TOP_SCALED)
     platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_scaled, size_normal, height, .5, 1., bw, bs)
+    platform.create_platform(size_scaled, size_normal, height, .6, 1., bw, bs)
     PlatformBPYUtils.save_platform_as_stl(platform)
 
     PlatformBPYUtils.bpy_clear()
     platform_name = PlatformType.get_platform_name(platform_type_wide, PlatformType.BOT_SCALED)
     platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_scaled, size_normal, height, 1., .5, bw, bs)
+    platform.create_platform(size_scaled, size_normal, height, 1., .6, bw, bs)
     PlatformBPYUtils.save_platform_as_stl(platform)
 
     PlatformBPYUtils.bpy_clear()
@@ -419,13 +342,13 @@ def make_rounded_cuboidal_platforms(pose, color):
     PlatformBPYUtils.bpy_clear()
     platform_name = PlatformType.get_platform_name(platform_type_long, PlatformType.TOP_SCALED)
     platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_normal, size_scaled, height, .5, 1., bw, bs)
+    platform.create_platform(size_normal, size_scaled, height, .6, 1., bw, bs)
     PlatformBPYUtils.save_platform_as_stl(platform)
 
     PlatformBPYUtils.bpy_clear()
     platform_name = PlatformType.get_platform_name(platform_type_long, PlatformType.BOT_SCALED)
     platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_normal, size_scaled, height, 1., .5, bw, bs)
+    platform.create_platform(size_normal, size_scaled, height, 1., .6, bw, bs)
     PlatformBPYUtils.save_platform_as_stl(platform)
 
 
