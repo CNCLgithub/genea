@@ -40,27 +40,9 @@ class PathUtils:
         return os.path.join(PathUtils.get_library_dirpath(), "stimuli")
 
     @staticmethod
+    def get_stimuli_set_dirpath(stimuli_set_name):
+        return os.path.join(PathUtils.get_stimuli_dirpath(), stimuli_set_name)
+
+    @staticmethod
     def get_misc_dirpath():
         return os.path.join(PathUtils.get_library_dirpath(), "misc")
-
-    @staticmethod
-    def get_stimuli_urdf_dirpath(stimuli_dirpath):
-        return os.path.join(stimuli_dirpath, "urdf")
-
-    @staticmethod
-    def get_stimuli_meshes_dirpath(stimuli_dirpath):
-        return os.path.join(stimuli_dirpath, "meshes")
-
-    @staticmethod
-    def get_stimuli_pairs_dirpath(stimuli_name=None):
-        if stimuli_name is None:
-            return os.path.join(PathUtils.get_stimuli_dirpath(), "pairs")
-        return os.path.join(PathUtils.get_stimuli_dirpath(), "pairs", stimuli_name)
-
-    @staticmethod
-    def get_stimuli_pairs_meshes_dirpath(stimuli_name):
-        return PathUtils.get_stimuli_meshes_dirpath(PathUtils.get_stimuli_pairs_dirpath(stimuli_name))
-
-    @staticmethod
-    def get_stimuli_pairs_urdf_dirpath(stimuli_name):
-        return PathUtils.get_stimuli_urdf_dirpath(PathUtils.get_stimuli_pairs_dirpath(stimuli_name))

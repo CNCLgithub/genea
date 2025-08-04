@@ -47,12 +47,12 @@ class URDFGenerator:
         return xmltodict.parse(FileUtils.read_file(urdf_filepath))
 
     @staticmethod
-    def get_object_name(urdf_filepath):
+    def get_element_name(urdf_filepath):
         urdf_dict = URDFGenerator._urdf_to_dict(urdf_filepath)
         return urdf_dict["robot"]["link"]["@name"]
 
     @staticmethod
-    def get_object_pos_rot_list(urdf_filepath):
+    def get_element_pos_rot_list(urdf_filepath):
         urdf_dict = URDFGenerator._urdf_to_dict(urdf_filepath)
 
         obj_pos = urdf_dict["robot"]["link"]["inertial"]["origin"]["@xyz"].split(" ")
@@ -63,23 +63,23 @@ class URDFGenerator:
 
         return obj_pos, obj_rot
 
-    def add_object(self, obj_name, obj_pos_str, obj_rot_str, obj_mass, obj_mesh_filename):
+    def add_element(self, element_name, element_pos_str, element_rot_str, element_mass, element_mesh_filename):
         link = _URDF("link")
-        link.add_attribute("name", obj_name)
+        link.add_attribute("name", element_name)
 
         mesh = _URDF("mesh")
-        mesh.add_attribute("filename", "meshes/" + obj_mesh_filename)
+        mesh.add_attribute("filename", "meshes/" + element_mesh_filename)
         mesh.add_attribute("scale", "1 1 1")
 
         geometry = _URDF("geometry")
         geometry.add_child_urdf(mesh)
 
         origin = _URDF("origin")
-        origin.add_attribute("xyz", obj_pos_str)
-        origin.add_attribute("rpy", obj_rot_str)
+        origin.add_attribute("xyz", element_pos_str)
+        origin.add_attribute("rpy", element_rot_str)
 
         mass = _URDF("mass")
-        mass.add_attribute("value", obj_mass)
+        mass.add_attribute("value", element_mass)
 
         inertia = _URDF("inertia")
         inertia.add_attribute("ixx", "0.4167")
@@ -108,16 +108,16 @@ class URDFGenerator:
 
         self._urdf.add_child_urdf(link)
 
-    def add_joint(self, parent_obj, child_obj, joint_pos_str, joint_type):
+    def add_joint(self, parent_element, child_element, joint_pos_str, joint_type):
         joint = _URDF("joint")
-        joint.add_attribute("name", f"{child_obj}_joint")
+        joint.add_attribute("name", f"{child_element}_joint")
         joint.add_attribute("type", joint_type)
 
         parent = _URDF("parent")
-        parent.add_attribute("link", parent_obj)
+        parent.add_attribute("link", parent_element)
 
         child = _URDF("child")
-        child.add_attribute("link", child_obj)
+        child.add_attribute("link", child_element)
 
         origin = _URDF("origin")
         origin.add_attribute("xyz", joint_pos_str)
