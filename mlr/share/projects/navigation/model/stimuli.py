@@ -39,7 +39,7 @@ class StimuliPairs(StimuliSet):
             platform_start_filename = p_start_name + ".stl"
             platform_final_filename = p_final_name + ".stl"
 
-            stim_item = StimulusItem(stim_name,StimuliSet("pairs"))
+            stim_item = StimulusItem(stim_name, StimuliSet("pairs"))
             stim_item.add_ground_plane(ground_pose)
             stim_item.add_platform(1, start_pose, platform_start_filename)
 

@@ -3,7 +3,7 @@ import numpy as np
 import time
 
 from mlr.share.projects.navigation.model.jump_task import JumpTask
-from mlr.share.projects.navigation.model.stimuli import Stimuli
+from mlr.share.projects.navigation.model.stimuli import StimuliPairs
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
@@ -12,6 +12,7 @@ from mlr.share.projects.navigation.utils.navigation_utils import NavAgent, NavTa
 from mlr.share.projects.navigation.utils.pybullet_utils import PyBulletUtils
 from mlr.share.projects.navigation.utils.path_utils import PathUtils
 from mlr.share.projects.navigation.utils.crocoddyl_utils import CrocoddylUtils
+from mlr.share.projects.navigation.utils.stimuli_utils import StimulusItem
 
 
 class NavModel:
@@ -21,7 +22,7 @@ class NavModel:
         self._agent_init_pose = self._agent.get_x0()
         self._agent_current_pose = self._agent.get_x0()
 
-        self._scene = Stimuli(nav_scene_dirpath)
+        self._scene = StimulusItem(nav_scene_dirpath, StimuliPairs())
         self._scene.load_stimuli_from_library()
 
         self._nav_task_list = []
@@ -66,7 +67,8 @@ class NavModel:
         return True, pos_diff, rot_diff
 
     def add_jump_task(self):
-        platform1, platform2 = self._scene.get_platform_names_list()
+        platforms_list = self._scene.get_platform_names_list()
+        platform1, platform2 = platforms_list[0], platforms_list[1]
 
         jump_length = 0.0
         jump_length += self._scene.get_gap_between_platforms(platform1, platform2)
@@ -92,16 +94,16 @@ class NavModel:
         if ConfigUtils.NAV_MODEL_VIEW_KINEMATICS:
             self._view_kinematics()
 
-        _, ground_urdf_rel_filepath = self._scene.get_ground_urdf_filepath()
+        ground_rel_filepath = self._scene.get_urdf_rel_filepath(self._scene.get_platform_ground_name())
 
         for nav_task in self._nav_task_list:
             nav_forces = CrocoddylUtils.get_forces_list(nav_task.get_task_solver())
 
             pybullet_utils = PyBulletUtils(ConfigUtils.NAV_MODEL_VIEW_DYNAMICS)
-            pybullet_utils.add_load_urdf(self._scene.get_stimuli_dirpath(), ground_urdf_rel_filepath, is_fixed=True)
+            pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), ground_rel_filepath, is_fixed=True)
             for platform_name in self._scene.get_platform_names_list():
-                _, urdf_rel_filepath = self._scene.get_platform_urdf_filepath(platform_name)
-                pybullet_utils.add_load_urdf(self._scene.get_stimuli_dirpath(), urdf_rel_filepath)
+                platform_rel_filepath = self._scene.get_urdf_rel_filepath(platform_name)
+                pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), platform_rel_filepath)
 
             platform_ids = pybullet_utils.get_platform_ids_list()
 
@@ -133,7 +135,7 @@ class NavModel:
                 final_pose = platform.get_platform_pose(-1)
                 has_moved, pos_diff, rot_diff = self.has_stimuli_moved(start_pose, final_pose)
 
-                out_data = [self._scene.get_stimuli_name(),
+                out_data = [self._scene.get_stimulus_item_name(),
                             nav_task.get_task_type(),
                             platform_name,
                             run_num,
@@ -152,7 +154,7 @@ def run_pair_jumps(total_runs=10):
     FileUtils.create_dir(out_dirpath, do_force_create=False)
     out_filepath = PathUtils.join(out_dirpath, "out_data.csv")
 
-    stimuli_pairs_dirpath_list = FileUtils.get_dir_list_in_directory(PathUtils.get_stimuli_pairs_dirpath())
+    stimuli_pairs_dirpath_list = FileUtils.get_dir_list_in_directory(StimuliPairs().get_stimuli_set_dirpath())
 
     for stimuli_pair_dirpath in stimuli_pairs_dirpath_list:
         if "cube_std_long_std" not in FileUtils.get_basename(stimuli_pair_dirpath):

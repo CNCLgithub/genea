@@ -51,9 +51,16 @@ class StimulusItem:
 
     def get_urdf_dirpath(self):
         return PathUtils.join(self.get_stimulus_item_dirpath(), "urdf")
+
+    @staticmethod
+    def _get_urdf_filename(platform_name, with_extension=True):
+        filename = platform_name.split("_")[0]
+        if with_extension:
+            return filename + ".urdf"
+        return filename
     
     def get_urdf_filepath(self, platform_name):
-        return URDFGenerator.get_urdf_filepath(self.get_urdf_dirpath(), platform_name)
+        return URDFGenerator.get_urdf_filepath(self.get_urdf_dirpath(), self._get_urdf_filename(platform_name))
 
     def get_urdf_rel_filepath(self, platform_name):
         return PathUtils.get_relative_path(self.get_urdf_filepath(platform_name), self.get_stimulus_item_dirpath())
@@ -61,8 +68,14 @@ class StimulusItem:
     def get_meshes_dirpath(self):
         return PathUtils.join(self.get_stimulus_item_dirpath(), "meshes")
 
-    def get_platform_names_list(self):
-        return list(self._platforms_dict.keys())
+    def get_platform_ground_name(self):
+        return list(set(self.get_platform_names_list(False)) - set(self.get_platform_names_list(True)))[0]
+
+    def get_platform_names_list(self, exclude_ground=True):
+        return_list = list(sorted(self._platforms_dict.keys()))
+        if exclude_ground:
+            return [p for p in return_list if not p.startswith(StimulusItem.ELEMENT_GROUND)]
+        return return_list
 
     def get_platform_by_name(self, platform_name):
         if platform_name not in self._platforms_dict:
@@ -72,7 +85,7 @@ class StimulusItem:
         return self._platforms_dict[platform_name]
 
     @staticmethod
-    def get_idx_element_name(element_index, element_name, element_mesh_filename=None):
+    def _get_idx_element_name(element_index, element_name, element_mesh_filename=None):
         if element_mesh_filename is None:
             return element_name + str(element_index)
         return element_name + str(element_index) + "_" + element_mesh_filename.split(".")[0]
@@ -87,8 +100,8 @@ class StimulusItem:
         FileUtils.copy_file(element_mesh_filepath, self.get_meshes_dirpath())
 
         # add URDF
-        urdf_generator = URDFGenerator(self.get_idx_element_name(element_index, element_name), self.get_urdf_dirpath())
-        urdf_generator.add_element(self.get_idx_element_name(element_index, element_name, element_mesh_filename),
+        urdf_generator = URDFGenerator(self._get_idx_element_name(element_index, element_name), self.get_urdf_dirpath())
+        urdf_generator.add_element(self._get_idx_element_name(element_index, element_name, element_mesh_filename),
                                    element_pose.get_position().get_position_as_str(),
                                    element_pose.get_rotation().get_rotation_as_str(),
                                    element_mass, element_mesh_filename)
