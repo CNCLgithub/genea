@@ -41,6 +41,37 @@ class PlatformType:
     def get_platform_name(shape_type, scale_type):
         return shape_type + "_" + str(scale_type)
 
+    @staticmethod
+    def get_platform_surface_measures(platform_name):
+        part1 = platform_name.split("_")[0]
+        part2 = platform_name.split("_")[1]
+
+        if part1 == PlatformType.CUBOIDAL_CUBE:
+            if part2 == PlatformType.NOT_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_NORMAL
+            if part2 == PlatformType.TOP_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL / 2.0, Platform.PLATFORM_SIZE_NORMAL / 2.0
+            if part2 == PlatformType.BOT_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_NORMAL
+
+        if part1 == PlatformType.CUBOIDAL_WIDE:
+            if part2 == PlatformType.NOT_SCALED:
+                return Platform.PLATFORM_SIZE_SCALED, Platform.PLATFORM_SIZE_NORMAL
+            if part2 == PlatformType.TOP_SCALED:
+                return Platform.PLATFORM_SIZE_SCALED / 2.0, Platform.PLATFORM_SIZE_NORMAL / 2.0
+            if part2 == PlatformType.BOT_SCALED:
+                return Platform.PLATFORM_SIZE_SCALED, Platform.PLATFORM_SIZE_NORMAL
+
+        if part1 == PlatformType.CUBOIDAL_LONG:
+            if part2 == PlatformType.NOT_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
+            if part2 == PlatformType.TOP_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL / 2.0, Platform.PLATFORM_SIZE_SCALED / 2.0
+            if part2 == PlatformType.BOT_SCALED:
+                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
+
+        return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED * 2.5  # start and final platform
+
 
 class Platform:
     PLATFORM_SIZE_NORMAL = 3.0
@@ -72,36 +103,6 @@ class Platform:
 
     def create_platform(self, *platform_args):
         pass
-
-    def get_platform_surface_measures(self):
-        part1 = self._platform_name.split("_")[1]
-        part2 = self._platform_name.split("_")[2]
-
-        if part1 == PlatformType.CUBOIDAL_CUBE:
-            if part2 == PlatformType.NOT_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_NORMAL
-            if part2 == PlatformType.TOP_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL / 2.0, Platform.PLATFORM_SIZE_NORMAL / 2.0
-            if part2 == PlatformType.BOT_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_NORMAL
-
-        if part1 == PlatformType.CUBOIDAL_WIDE:
-            if part2 == PlatformType.NOT_SCALED:
-                return Platform.PLATFORM_SIZE_SCALED, Platform.PLATFORM_SIZE_NORMAL
-            if part2 == PlatformType.TOP_SCALED:
-                return Platform.PLATFORM_SIZE_SCALED / 2.0, Platform.PLATFORM_SIZE_NORMAL / 2.0
-            if part2 == PlatformType.BOT_SCALED:
-                return Platform.PLATFORM_SIZE_SCALED, Platform.PLATFORM_SIZE_NORMAL
-
-        if part1 == PlatformType.CUBOIDAL_LONG:
-            if part2 == PlatformType.NOT_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
-            if part2 == PlatformType.TOP_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL / 2.0, Platform.PLATFORM_SIZE_SCALED / 2.0
-            if part2 == PlatformType.BOT_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
-
-        return None, None
 
 
 class PlatformBPYUtils:
@@ -275,6 +276,26 @@ class RoundedCuboidPlatform(Platform):
         PlatformBPYUtils.bpy_object_mode()
 
 
+def make_start_final_platforms(pose, color):
+    platform_x, platform_y = PlatformType.get_platform_surface_measures("start")
+    cube_height = Platform.PLATFORM_HEIGHT
+
+    bw = Platform.PLATFORM_BEVEL_WIDTH
+    bs = Platform.PLATFORM_BEVEL_SEGMENTS
+
+    PlatformBPYUtils.bpy_clear()
+    platform_name = "start"
+    platform = RoundedCuboidPlatform(platform_name, pose, color)
+    platform.create_platform(platform_x, platform_y, cube_height, 1., 1., bw, bs)
+    PlatformBPYUtils.save_platform_as_stl(platform)
+
+    PlatformBPYUtils.bpy_clear()
+    platform_name = "final"
+    platform = RoundedCuboidPlatform(platform_name, pose, color)
+    platform.create_platform(platform_x, platform_y, cube_height, 1., 1., bw, bs)
+    PlatformBPYUtils.save_platform_as_stl(platform)
+
+
 def make_rounded_cubical_platforms(pose, color):
     platform_type_cube = PlatformType.CUBOIDAL_CUBE
 
@@ -355,9 +376,10 @@ def make_rounded_cuboidal_platforms(pose, color):
 def main():
     default_pose = PlatformPose(PlatformPosition(0.0, 0.0, 0.0))
     default_color = PlatformColor("gray", (0.625, 0.625, 0.625, 1.0))
-    
+
     make_rounded_cubical_platforms(default_pose, default_color)
     make_rounded_cuboidal_platforms(default_pose, default_color)
+    make_start_final_platforms(default_pose, default_color)
 
 
 if __name__ == '__main__':

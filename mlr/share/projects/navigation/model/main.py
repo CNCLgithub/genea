@@ -67,13 +67,13 @@ class NavModel:
         return True, pos_diff, rot_diff
 
     def add_jump_task(self):
-        platforms_list = self._scene.get_platform_names_list()
-        platform1, platform2 = platforms_list[0], platforms_list[1]
+        platform_keys_list = self._scene.get_platform_keys_list()
+        platform_key1, platform_key2 = platform_keys_list[0], platform_keys_list[1]
 
         jump_length = 0.0
-        jump_length += self._scene.get_gap_between_platforms(platform1, platform2)
+        jump_length += self._scene.get_gap_between_platforms(platform_key1, platform_key2)
 
-        platform_x, platform_y = self._scene.get_platform_by_name(platform2).get_platform_surface_measures()
+        platform_x, platform_y = self._scene.get_platform_surface_measures(platform_key2)
         platform_x /= 2.0
         platform_y /= 2.0
 
@@ -94,22 +94,22 @@ class NavModel:
         if ConfigUtils.NAV_MODEL_VIEW_KINEMATICS:
             self._view_kinematics()
 
-        ground_rel_filepath = self._scene.get_urdf_rel_filepath(self._scene.get_platform_ground_name())
+        ground_rel_filepath = self._scene.get_urdf_rel_filepath(self._scene.get_platform_ground_key())
 
         for nav_task in self._nav_task_list:
             nav_forces = CrocoddylUtils.get_forces_list(nav_task.get_task_solver())
 
             pybullet_utils = PyBulletUtils(ConfigUtils.NAV_MODEL_VIEW_DYNAMICS)
             pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), ground_rel_filepath, is_fixed=True)
-            for platform_name in self._scene.get_platform_names_list():
-                platform_rel_filepath = self._scene.get_urdf_rel_filepath(platform_name)
+            for platform_key in self._scene.get_platform_keys_list():
+                platform_rel_filepath = self._scene.get_urdf_rel_filepath(platform_key)
                 pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), platform_rel_filepath)
 
             platform_ids = pybullet_utils.get_platform_ids_list()
 
             # store poses before dynamics
-            for p_name, p_id in zip(self._scene.get_platform_names_list(), platform_ids):
-                self._scene.get_platform_by_name(p_name).add_platform_pose(pybullet_utils.get_pose(p_id))
+            for p_key, p_id in zip(self._scene.get_platform_keys_list(), platform_ids):
+                self._scene.get_platform_by_key(p_key).add_platform_pose(pybullet_utils.get_pose(p_id))
 
             for p_id, forces_list in zip(platform_ids, ComputeUtils.chunkify_list(nav_forces, len(platform_ids))):
                 for forces in forces_list:
@@ -121,15 +121,15 @@ class NavModel:
             pybullet_utils.run_simulation(ConfigUtils.PYBULLET_SIMULATION_TIME)
 
             # store poses before dynamics
-            for p_name, p_id in zip(self._scene.get_platform_names_list(), platform_ids):
-                self._scene.get_platform_by_name(p_name).add_platform_pose(pybullet_utils.get_pose(p_id))
+            for p_key, p_id in zip(self._scene.get_platform_keys_list(), platform_ids):
+                self._scene.get_platform_by_key(p_key).add_platform_pose(pybullet_utils.get_pose(p_id))
 
             pybullet_utils.close()
 
     def save_result_to_outfile(self, run_num):
         for nav_task in self._nav_task_list:
-            for platform_name in self._scene.get_platform_names_list():
-                platform = self._scene.get_platform_by_name(platform_name)
+            for platform_key in self._scene.get_platform_keys_list():
+                platform = self._scene.get_platform_by_key(platform_key)
 
                 start_pose = platform.get_platform_pose(0)
                 final_pose = platform.get_platform_pose(-1)
@@ -137,7 +137,7 @@ class NavModel:
 
                 out_data = [self._scene.get_stimulus_item_name(),
                             nav_task.get_task_type(),
-                            platform_name,
+                            platform_key,
                             run_num,
                             nav_task.get_task_cost(),
                             pos_diff,

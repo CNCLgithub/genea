@@ -1,25 +1,155 @@
 from itertools import product
 
 from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
-from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.navigation_utils import NavPosition, NavPose
-from mlr.share.projects.navigation.utils.path_utils import PathUtils
 from mlr.share.projects.navigation.utils.platform_utils import PlatformType, Platform
 from mlr.share.projects.navigation.utils.stimuli_utils import StimuliSet, StimulusItem
+
+
+class Counter:
+    def __init__(self, start: int = 0):
+        self._value = start
+
+    def __call__(self):
+        return self._value
+
+    def __iadd__(self, increment: int):
+        self._value += increment
+        return self
+
+
+class StimuliDiff(StimuliSet):
+    def __init__(self):
+        super().__init__("diff")
+
+    def _get_platform_interval(self):
+        return
+
+    @staticmethod
+    def _get_platform_height():
+        return Platform.PLATFORM_HEIGHT / 2.  # scaled down for blender
+
+    @staticmethod
+    def _add_platform_pose():
+        return NavPose(NavPosition(0.0, 0.0, -StimuliDiff._get_platform_height()))
+
+    @staticmethod
+    def _get_next_platform_pose(stim_item: StimulusItem, platform_name):
+        prev_key = stim_item.get_platform_key_by_index(-1)
+
+        x = stim_item.get_platform_by_key(prev_key).get_platform_pose().get_position().get_x()
+
+        prev_x, _ = stim_item.get_platform_surface_measures(prev_key)
+        next_x, _ = PlatformType.get_platform_surface_measures(platform_name)
+
+        new_loc = x + prev_x / 2.0 + ConfigUtils.STIMULI_PLATFORM_GAP + next_x / 2.0
+        return NavPose(NavPosition(new_loc, 0.0, -StimuliDiff._get_platform_height()))
+
+    def _get_stim_item_name(self, stim_counter):
+        return self.get_stimuli_set_name() + f"_{stim_counter}"
+
+    def _make_stimuli(self, stim_counter, platform_names_list):
+        stim_item = StimulusItem(self._get_stim_item_name(stim_counter()), self)
+
+        stim_item.add_start_platform(NavPose(NavPosition(0.0, 0.0, -StimuliDiff._get_platform_height())))
+        for platform_index, platform_name in enumerate(platform_names_list, 1):
+            platform_pose = self._get_next_platform_pose(stim_item, platform_name)
+            platform_filename = platform_name + ".stl"
+            stim_item.add_platform(platform_index, platform_pose, platform_filename)
+        stim_item.add_final_platform(self._get_next_platform_pose(stim_item, "final_final"))
+
+        stim_center_x = stim_item.get_stim_item_center_x()
+        stim_item.add_ground_plane(NavPose(NavPosition(stim_center_x, 0.0, -StimuliDiff._get_platform_height() * 2)))
+
+        stim_counter += 1
+
+    def make_stimuli1(self, stim_counter):
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli2(self, stim_counter):
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli3(self, stim_counter):
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli4(self, stim_counter):
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli5(self, stim_counter):
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli6(self, stim_counter):
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli7(self, stim_counter):
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
+
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED)]
+        self._make_stimuli(stim_counter, platform_list)
 
 
 class StimuliPairs(StimuliSet):
     def __init__(self):
         super().__init__("pairs")
 
-    @staticmethod
-    def _get_available_platform_names_list():
-        platforms_dirpath = PathUtils.get_platforms_dirpath()
-        platform_names = FileUtils.get_files_in_directory(platforms_dirpath)
-        return [FileUtils.get_basename(name).split(".")[0] for name in platform_names]
-
-    @staticmethod
-    def make_platform_pairs():
+    def make_platform_pairs(self):
         std_half_size = Platform.PLATFORM_SIZE_NORMAL / 2.0
         wide_half_size = Platform.PLATFORM_SIZE_SCALED / 2.0
 
@@ -34,12 +164,12 @@ class StimuliPairs(StimuliSet):
         wide_std_final_pose = NavPose(NavPosition(wide_std_final_loc, 0.0, -Platform.PLATFORM_HEIGHT / 2.0))
         wide_wide_final_pose = NavPose(NavPosition(wide_wide_final_loc, 0.0, -Platform.PLATFORM_HEIGHT / 2.0))
 
-        for (p_start_name, p_final_name) in list(product(StimuliPairs._get_available_platform_names_list(), repeat=2)):
+        for (p_start_name, p_final_name) in list(product(StimuliSet.get_available_platform_names_list(), repeat=2)):
             stim_name = p_start_name + "_" + p_final_name
             platform_start_filename = p_start_name + ".stl"
             platform_final_filename = p_final_name + ".stl"
 
-            stim_item = StimulusItem(stim_name, StimuliSet("pairs"))
+            stim_item = StimulusItem(stim_name, self)
             stim_item.add_ground_plane(ground_pose)
             stim_item.add_platform(1, start_pose, platform_start_filename)
 
@@ -54,7 +184,10 @@ class StimuliPairs(StimuliSet):
 
 
 def main():
-    StimuliPairs.make_platform_pairs()
+    # StimuliPairs().make_platform_pairs()
+
+    stim_counter = Counter(1)
+    StimuliDiff().make_stimuli1(stim_counter)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,7 @@
 import os
 
+from Cython import returns
+
 
 class PathUtils:
     SLASH = "/"
@@ -10,6 +12,13 @@ class PathUtils:
         if isinstance(path_elements_list, (list, tuple)) and len(path_elements_list) == 1:
             return path_elements_list[0]
         return os.path.join(path_elements_list[0], *path_elements_list[1:])
+
+    @staticmethod
+    def get_parent_dirpath(input_dirpath, levels_up_counter=1):
+        return_dirpath = input_dirpath
+        for _ in range(levels_up_counter):
+            return_dirpath = os.path.dirname(return_dirpath)
+        return return_dirpath
 
     @staticmethod
     def get_relative_path(path_to, path_from):

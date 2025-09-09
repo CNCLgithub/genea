@@ -95,6 +95,12 @@ class NavPosition:
         self._pos_y = y
         self._pos_z = z
 
+    def add_x(self, x):
+        self._pos_x += x
+
+    def set_x(self, new_x):
+        self._pos_x = new_x
+
     def get_x(self):
         return self._pos_x
 

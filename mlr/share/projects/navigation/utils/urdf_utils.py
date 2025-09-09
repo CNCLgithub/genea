@@ -1,4 +1,10 @@
+import numpy as np
+import trimesh
 import xmltodict
+from reportlab.lib.colors import blueviolet
+
+from trimesh.visual import TextureVisuals
+from trimesh.visual.material import SimpleMaterial
 
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.path_utils import PathUtils
@@ -32,6 +38,15 @@ class _URDF:
 
 
 class URDFGenerator:
+    ELEMENT_START = "a"
+    ELEMENT_FINAL = "z"
+    ELEMENT_PLATFORM = "p"
+    ELEMENT_GROUND = "g"
+
+    ELEMENT_GROUND_OBJ_FILENAME = "ground.obj"
+    ELEMENT_START_OBJ_FILENAME = "stage_start.obj"
+    ELEMENT_FINAL_OBJ_FILENAME = "stage_final.obj"
+
     def __init__(self, urdf_name, urdf_dirpath):
         self._urdf = _URDF("robot")
         self._urdf.add_attribute("name", urdf_name)
@@ -138,3 +153,80 @@ class URDFGenerator:
 
     def save_urdf(self):
         FileUtils.write_to_file(self._urdf_filepath, self.get_urdf_xml())
+
+    def save_as_stl(self, out_filename="stim"):
+        base_dirpath = PathUtils.get_parent_dirpath(self._urdf_filepath, 2)
+        out_obj_filepath = PathUtils.join(base_dirpath, "meshes", out_filename + ".obj")
+
+        urdf_elements_list = self._urdf.get_urdf_dict()["robot"]["link"]
+        if not isinstance(urdf_elements_list, list):
+            urdf_elements_list = [urdf_elements_list]
+
+        blue_material = SimpleMaterial(name='stim_blue', diffuse=[0.2, 0.2, 0.8])
+        blue_material.name = "stim_blue"
+
+        brown_material = SimpleMaterial(name='stim_brown', diffuse=[0.2, 0.1, 0.07])
+        brown_material.name = "stim_brown"
+
+        gray_material = SimpleMaterial(name='stim_gray', diffuse=[0.2, 0.2, 0.2])
+        gray_material.name = "stim_gray"
+
+        black_material = SimpleMaterial(name='stim_black', diffuse=[0.05, 0.05, 0.05])
+        black_material.name = "stim_black"
+
+        green_material = SimpleMaterial(name='stim_green', diffuse=[0.2, 0.8, 0.2])
+        green_material.name = "stim_green"
+
+        white_material = SimpleMaterial(name='stim_white', diffuse=[0.8, 0.8, 0.8])
+        white_material.name = "stim_white"
+
+        scene = trimesh.Scene()
+
+        # add agent
+        mesh = trimesh.load(PathUtils.join(PathUtils.get_misc_dirpath(), "agent.obj"))
+        mesh.apply_scale(0.4)
+        mesh.visual = TextureVisuals(material=gray_material)
+        scene.add_geometry(mesh)
+
+        # add platforms
+        for urdf_element in urdf_elements_list:
+            urdf_element_name = urdf_element["@name"].split("_")[0]
+
+            urdf_visual = urdf_element.get("visual", None)
+            if urdf_visual is None:
+                continue
+
+            urdf_geom = urdf_visual["geometry"]["mesh"]
+
+            mesh_filepath = PathUtils.join(base_dirpath, urdf_geom["@filename"])
+            mesh = trimesh.load(mesh_filepath)
+
+            scale = [float(v) for v in urdf_geom.get("@scale", "1 1 1").split()]
+            mesh.apply_scale(scale)
+
+            origin = urdf_visual.get("origin", {})
+            xyz = [float(v) for v in origin.get("@xyz", "0 0 0").split()]
+            roll, pitch, yaw = [float(v) for v in origin.get("@rpy", "0 0 0").split()]
+
+            rot_x = trimesh.transformations.rotation_matrix(roll, [1, 0, 0])
+            rot_y = trimesh.transformations.rotation_matrix(pitch, [0, 1, 0])
+            rot_z = trimesh.transformations.rotation_matrix(yaw, [0, 0, 1])
+
+            pos_mat = trimesh.transformations.translation_matrix(xyz)
+            rot_mat = trimesh.transformations.concatenate_matrices(rot_z, rot_y, rot_x)
+            aln_mat = trimesh.transformations.rotation_matrix(np.deg2rad(-90), [1, 0, 0])
+            pose_transform = trimesh.transformations.concatenate_matrices(rot_mat, aln_mat, pos_mat)
+            mesh.apply_transform(pose_transform)
+
+            if "a" in urdf_element_name:
+                mesh.visual = TextureVisuals(material=blue_material)
+            elif "g" in urdf_element_name:
+                mesh.visual = TextureVisuals(material=brown_material)
+            elif "z" in urdf_element_name:
+                mesh.visual = TextureVisuals(material=green_material)
+            else:
+                mesh.visual = TextureVisuals(material=white_material)
+
+            scene.add_geometry(mesh)
+
+        scene.export(out_obj_filepath)
