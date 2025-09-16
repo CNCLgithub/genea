@@ -188,6 +188,7 @@ def main():
 
     stim_counter = Counter(1)
     StimuliDiff().make_stimuli1(stim_counter)
+    StimuliDiff().make_stimuli2(stim_counter)
 
 
 if __name__ == '__main__':

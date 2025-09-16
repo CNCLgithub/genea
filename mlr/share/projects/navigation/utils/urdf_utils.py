@@ -187,6 +187,7 @@ class URDFGenerator:
         mesh.apply_scale(0.4)
         mesh.visual = TextureVisuals(material=gray_material)
         scene.add_geometry(mesh)
+        scene.export(out_obj_filepath)
 
         # add platforms
         for urdf_element in urdf_elements_list:
