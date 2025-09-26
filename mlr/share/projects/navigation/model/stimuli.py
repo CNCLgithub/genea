@@ -63,86 +63,69 @@ class StimuliDiff(StimuliSet):
 
         stim_counter += 1
 
-    def make_stimuli1(self, stim_counter):
+    def _make_special_set(self, stim_counter, special_shape, special_scale):
         platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(special_shape, special_scale),
                          PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
         self._make_stimuli(stim_counter, platform_list)
 
-    def make_stimuli2(self, stim_counter):
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
-        self._make_stimuli(stim_counter, platform_list)
-
-    def make_stimuli3(self, stim_counter):
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
-        self._make_stimuli(stim_counter, platform_list)
-
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
+        platform_list = [PlatformType.get_platform_name(special_shape, special_scale),
                          PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
                          PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
         self._make_stimuli(stim_counter, platform_list)
 
         platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
                          PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED)]
-        self._make_stimuli(stim_counter, platform_list)
-
-    def make_stimuli4(self, stim_counter):
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED)]
-        self._make_stimuli(stim_counter, platform_list)
-
-    def make_stimuli5(self, stim_counter):
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
-        self._make_stimuli(stim_counter, platform_list)
-
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
+                         PlatformType.get_platform_name(special_shape, special_scale)]
         self._make_stimuli(stim_counter, platform_list)
 
         platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
                          PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
-        self._make_stimuli(stim_counter, platform_list)
-
-    def make_stimuli6(self, stim_counter):
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED)]
-        self._make_stimuli(stim_counter, platform_list)
-
-    def make_stimuli7(self, stim_counter):
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
-        self._make_stimuli(stim_counter, platform_list)
-
-        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED),
+                         PlatformType.get_platform_name(special_shape, special_scale),
                          PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
                          PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
         self._make_stimuli(stim_counter, platform_list)
 
+        platform_list = [PlatformType.get_platform_name(special_shape, special_scale),
+                         PlatformType.get_platform_name(special_shape, special_scale),
+                         PlatformType.get_platform_name(special_shape, special_scale)]
+        self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli_01(self, stim_counter):
         platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
                          PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
-                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED)]
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED),
+                         PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
         self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli_02(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)
+
+    def make_stimuli_03(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_CUBE, PlatformType.TOP_SCALED)
+
+    def make_stimuli_04(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_CUBE, PlatformType.BOT_SCALED)
+
+    def make_stimuli_05(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_WIDE, PlatformType.NOT_SCALED)
+
+    def make_stimuli_06(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_WIDE, PlatformType.TOP_SCALED)
+
+    def make_stimuli_07(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_WIDE, PlatformType.BOT_SCALED)
+
+    def make_stimuli_08(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_LONG, PlatformType.NOT_SCALED)
+
+    def make_stimuli_09(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_LONG, PlatformType.TOP_SCALED)
+
+    def make_stimuli_10(self, stim_counter):
+        self._make_special_set(stim_counter, PlatformType.CUBOIDAL_LONG, PlatformType.BOT_SCALED)
 
 
 class StimuliPairs(StimuliSet):
@@ -187,8 +170,16 @@ def main():
     # StimuliPairs().make_platform_pairs()
 
     stim_counter = Counter(1)
-    StimuliDiff().make_stimuli1(stim_counter)
-    StimuliDiff().make_stimuli2(stim_counter)
+    StimuliDiff().make_stimuli_01(stim_counter)
+    StimuliDiff().make_stimuli_02(stim_counter)
+    StimuliDiff().make_stimuli_03(stim_counter)
+    StimuliDiff().make_stimuli_04(stim_counter)
+    StimuliDiff().make_stimuli_05(stim_counter)
+    StimuliDiff().make_stimuli_06(stim_counter)
+    StimuliDiff().make_stimuli_07(stim_counter)
+    StimuliDiff().make_stimuli_08(stim_counter)
+    StimuliDiff().make_stimuli_09(stim_counter)
+    StimuliDiff().make_stimuli_10(stim_counter)
 
 
 if __name__ == '__main__':

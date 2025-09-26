@@ -1,7 +1,6 @@
 import numpy as np
 import trimesh
 import xmltodict
-from reportlab.lib.colors import blueviolet
 
 from trimesh.visual import TextureVisuals
 from trimesh.visual.material import SimpleMaterial
@@ -168,9 +167,6 @@ class URDFGenerator:
         brown_material = SimpleMaterial(name='stim_brown', diffuse=[0.2, 0.1, 0.07])
         brown_material.name = "stim_brown"
 
-        gray_material = SimpleMaterial(name='stim_gray', diffuse=[0.2, 0.2, 0.2])
-        gray_material.name = "stim_gray"
-
         black_material = SimpleMaterial(name='stim_black', diffuse=[0.05, 0.05, 0.05])
         black_material.name = "stim_black"
 
@@ -185,7 +181,7 @@ class URDFGenerator:
         # add agent
         mesh = trimesh.load(PathUtils.join(PathUtils.get_misc_dirpath(), "agent.obj"))
         mesh.apply_scale(0.4)
-        mesh.visual = TextureVisuals(material=gray_material)
+        mesh.visual = TextureVisuals(material=white_material)
         scene.add_geometry(mesh)
         scene.export(out_obj_filepath)
 
