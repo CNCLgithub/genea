@@ -308,7 +308,7 @@ class StimuliBPYUtils:
 
         color_ramp = mat.node_tree.nodes.new(type='ShaderNodeValToRGB')
         dark_shade = random.uniform(0.01, 0.05)
-        light_shade = random.uniform(0.1, 0.4)
+        light_shade = random.uniform(0.28, 0.4)
         color_ramp.color_ramp.elements[0].color = (dark_shade, dark_shade, dark_shade, 1)
         color_ramp.color_ramp.elements[1].color = (light_shade, light_shade, light_shade, 1)
 

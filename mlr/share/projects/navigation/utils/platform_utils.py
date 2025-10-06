@@ -42,7 +42,10 @@ class PlatformType:
         return shape_type + "_" + str(scale_type)
 
     @staticmethod
-    def get_platform_surface_measures(platform_name):
+    def get_platform_surface_measures(platform_name=None):
+        if platform_name is None:
+            return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED * 2.5
+
         part1 = platform_name.split("_")[0]
         part2 = platform_name.split("_")[1]
 
@@ -277,7 +280,7 @@ class RoundedCuboidPlatform(Platform):
 
 
 def make_start_final_platforms(pose, color):
-    platform_x, platform_y = PlatformType.get_platform_surface_measures("start")
+    platform_x, platform_y = PlatformType.get_platform_surface_measures()
     cube_height = Platform.PLATFORM_HEIGHT
 
     bw = Platform.PLATFORM_BEVEL_WIDTH

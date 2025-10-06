@@ -41,9 +41,13 @@ class StimuliDiff(StimuliSet):
 
         prev_x, _ = stim_item.get_platform_surface_measures(prev_key)
         next_x, _ = PlatformType.get_platform_surface_measures(platform_name)
+        default_x, _ = PlatformType.get_platform_surface_measures()
 
-        new_loc = x + prev_x / 2.0 + ConfigUtils.STIMULI_PLATFORM_GAP + next_x / 2.0
-        return NavPose(NavPosition(new_loc, 0.0, -StimuliDiff._get_platform_height()))
+        new_x = x + prev_x / 2.0 + ConfigUtils.STIMULI_PLATFORM_GAP + next_x / 2.0
+        if prev_x < default_x and next_x < default_x:
+            new_x = x + max(prev_x, next_x) / 2.0 + ConfigUtils.STIMULI_PLATFORM_GAP + default_x / 2.0
+
+        return NavPose(NavPosition(new_x, 0.0, -StimuliDiff._get_platform_height()))
 
     def _get_stim_item_name(self, stim_counter):
         return self.get_stimuli_set_name() + f"_{stim_counter}"
@@ -89,6 +93,10 @@ class StimuliDiff(StimuliSet):
         platform_list = [PlatformType.get_platform_name(special_shape, special_scale),
                          PlatformType.get_platform_name(special_shape, special_scale),
                          PlatformType.get_platform_name(special_shape, special_scale)]
+        self._make_stimuli(stim_counter, platform_list)
+
+    def make_stimuli_00(self, stim_counter):
+        platform_list = [PlatformType.get_platform_name(PlatformType.CUBOIDAL_CUBE, PlatformType.NOT_SCALED)]
         self._make_stimuli(stim_counter, platform_list)
 
     def make_stimuli_01(self, stim_counter):
@@ -167,9 +175,10 @@ class StimuliPairs(StimuliSet):
 
 
 def main():
-    # StimuliPairs().make_platform_pairs()
+    StimuliPairs().make_platform_pairs()
 
-    stim_counter = Counter(1)
+    stim_counter = Counter(0)
+    StimuliDiff().make_stimuli_00(stim_counter)
     StimuliDiff().make_stimuli_01(stim_counter)
     StimuliDiff().make_stimuli_02(stim_counter)
     StimuliDiff().make_stimuli_03(stim_counter)
