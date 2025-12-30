@@ -37,6 +37,10 @@ class PathUtils:
         return os.path.join(PathUtils.get_library_dirpath(), "out")
 
     @staticmethod
+    def get_out_nav_data_dirpath():
+        return os.path.join(PathUtils.get_out_dirpath(), "nav_data")
+
+    @staticmethod
     def get_platforms_dirpath():
         return os.path.join(PathUtils.get_library_dirpath(), "platforms")
 

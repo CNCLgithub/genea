@@ -117,12 +117,23 @@ class StimulusItem:
             if element_name == URDFGenerator.ELEMENT_GROUND:
                 continue
 
+            if element_name == "stim":
+                continue
+
             platform_key = URDFGenerator.get_element_name(urdf_filepath)
             platform_pos, platform_rot = URDFGenerator.get_element_pos_rot_list(urdf_filepath)
             platform_pose = NavPose(NavPosition(*platform_pos), NavRotation(*platform_rot))
             self._platforms_dict[platform_key] = Platform(platform_key, platform_pose)
 
-    def get_stimulus_item_name(self):
+    @staticmethod
+    def is_platform_movable(platform_key):
+        if platform_key.startswith(URDFGenerator.ELEMENT_PLATFORM):
+            return True
+        return False
+
+    def get_stimulus_item_name(self, basename_only=False):
+        if basename_only:
+            return FileUtils.get_basename(self._stimulus_item_name)
         return self._stimulus_item_name
 
     def get_stimulus_item_dirpath(self):
@@ -132,7 +143,7 @@ class StimulusItem:
         return PathUtils.join(self.get_stimulus_item_dirpath(), "urdf")
 
     def get_urdf_filepath(self, platform_key):
-        return URDFGenerator.get_urdf_filepath(self.get_urdf_dirpath(), self._get_urdf_filename(platform_key))
+        return URDFGenerator.get_urdf_filepath(self.get_urdf_dirpath(), self._get_urdf_filename(platform_key, False))
 
     def get_urdf_rel_filepath(self, platform_key):
         return PathUtils.get_relative_path(self.get_urdf_filepath(platform_key), self.get_stimulus_item_dirpath())

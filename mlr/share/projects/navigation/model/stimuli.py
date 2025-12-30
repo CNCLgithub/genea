@@ -173,6 +173,16 @@ class StimuliPairs(StimuliSet):
             else:
                 stim_item.add_platform(2, final_pose, platform_final_filename)
 
+    @staticmethod
+    def get_platform_pairs_name(platform1: Platform, platform2: Platform):
+        platform1_name = platform1.get_platform_name()
+        platform2_name = platform2.get_platform_name()
+
+        platform1_name = "_".join(platform1_name.split("_")[1:])
+        platform2_name = "_".join(platform2_name.split("_")[1:])
+
+        return platform1_name + "_" + platform2_name
+
 
 def main():
     StimuliPairs().make_platform_pairs()
