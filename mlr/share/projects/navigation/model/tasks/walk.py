@@ -8,9 +8,10 @@ from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavAge
 
 
 class WalkTask(NavTask):
-    def __init__(self):
+    def __init__(self, is_first_step=False):
         super().__init__(NavTask.WALK)
 
+        self._is_first_step = is_first_step
         self._step_length = 0.0
         self._step_height = 0.0
 
@@ -20,6 +21,9 @@ class WalkTask(NavTask):
     def set_step_height(self, step_height: float):
         self._step_height = step_height
 
+    def is_first_step(self):
+        return self._is_first_step
+
     def get_step_length(self):
         return self._step_length
 
@@ -27,8 +31,8 @@ class WalkTask(NavTask):
         return self._step_height
 
     def get_task_problem(self, agent: NavAgent, current_pose):
-        walk_problem = WalkProblem(agent)
-        return walk_problem.create_walk_problem(current_pose, self.get_step_length(), self.get_step_height())
+        p = WalkProblem(agent)
+        return p.create_walk_problem(current_pose, self.get_step_length(), self.get_step_height(), self.is_first_step())
 
 
 class WalkProblem(NavProblem):
@@ -47,7 +51,7 @@ class WalkProblem(NavProblem):
 
         return np.array([x_value, 0.0, z_value])
 
-    def create_walk_problem(self, current_pose, step_length, step_height):
+    def create_walk_problem(self, current_pose, step_length, step_height, is_first_step):
         pose0 = current_pose[: self._agent.get_nq()]
         pinocchio.forwardKinematics(self._agent.get_agent_model(), self._agent.get_agent_data(), pose0)
         pinocchio.updateFramePlacements(self._agent.get_agent_model(), self._agent.get_agent_data())
@@ -66,20 +70,26 @@ class WalkProblem(NavProblem):
             nav_constraint.add_r_contact_constraint()
             walk_stand_phase.append(self.create_foot_action_phase(nav_constraint))
 
+        right_step_len = step_length
+        if is_first_step:
+            right_step_len = step_length * 0.5
+
         walk_tread_right_phase = []
         for step_index in range(1, total_steps + 1):
-            com_vec = np.array([step_index * 0.5 * step_length / total_steps, 0.0, 0.0]) * 0.5 + com_ref
-            disp_vec = self._get_disp_vec(step_index, 0.5 * step_length, step_height, total_steps)
+            com_vec = np.array([step_index * right_step_len / total_steps, 0.0, 0.0]) * 0.5 + com_ref
+            disp_vec = self._get_disp_vec(step_index, right_step_len, step_height, total_steps)
             nav_constraint = NavProblemConstraints(self._agent)
             nav_constraint.add_l_contact_constraint()
             nav_constraint.add_r_swing_constraint(disp_vec)
             nav_constraint.add_com_constraint(com_vec)
             walk_tread_right_phase.append(self.create_foot_action_phase(nav_constraint))
 
-        d_vec = self._get_disp_vec(total_steps, 0.5 * step_length, step_height, total_steps)
+        disp_vec = self._get_disp_vec(total_steps, right_step_len, step_height, total_steps)
         nav_constraint = NavProblemConstraints(self._agent)
-        nav_constraint.add_r_swing_constraint(d_vec)
+        nav_constraint.add_r_swing_constraint(disp_vec)
         walk_tread_right_phase.append(self.create_foot_impulse_phase(nav_constraint))
+
+        com_ref[0] += step_length * 0.5
 
         walk_tread_left_phase = []
         for step_index in range(1, total_steps + 1):
@@ -91,9 +101,9 @@ class WalkProblem(NavProblem):
             nav_constraint.add_com_constraint(com_vec)
             walk_tread_left_phase.append(self.create_foot_action_phase(nav_constraint))
 
-        d_vec = self._get_disp_vec(total_steps, step_length, step_height, total_steps)
+        disp_vec = self._get_disp_vec(total_steps, step_length, step_height, total_steps)
         nav_constraint = NavProblemConstraints(self._agent)
-        nav_constraint.add_l_swing_constraint(d_vec)
+        nav_constraint.add_l_swing_constraint(disp_vec)
         walk_tread_left_phase.append(self.create_foot_impulse_phase(nav_constraint))
 
         walk_problem_list += walk_stand_phase + walk_tread_right_phase

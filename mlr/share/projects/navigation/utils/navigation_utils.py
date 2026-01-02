@@ -33,7 +33,7 @@ class NavAgent:
         return self._right_foot_joint_name
 
     def _get_joint_frame_id(self, joint_name):
-        return self.get_agent().getFrameId(joint_name)
+        return self.get_agent_model().getFrameId(joint_name)
 
     def _get_joint_pos(self, joint_frame_id):
         return self.get_agent_data().oMf[joint_frame_id].translation
@@ -216,6 +216,9 @@ class NavProblemConstraints:
         self._contact_constraints_list.append(_NavConstraint(joint_id=joint_id))
 
     def _add_swing_constraint(self, joint_id, joint_pos, disp_vector):
+        if not isinstance(disp_vector, np.ndarray):
+            Msg.print_error("ERROR [NavProblem]: displacement vector must be specified as an np array")
+            assert False
         self._swing_constraints_list.append(_NavConstraint(joint_id, joint_pos, disp_vector))
 
     def add_l_contact_constraint(self):
@@ -271,8 +274,8 @@ class NavProblem:
 
         com_vec = nav_constraints.get_com_constraint()
         if isinstance(com_vec, np.ndarray):
-            com_residual = crocoddyl.ResidualModelCoMPosition(self._agent.get_state(), com_vec, self._agent.get_nu())
-            com_cost = crocoddyl.CostModelResidual(self._agent.get_state(), com_residual)
+            com_res = crocoddyl.ResidualModelCoMPosition(self._agent.get_state(), com_vec, self._agent.get_nu())
+            com_cost = crocoddyl.CostModelResidual(self._agent.get_state(), com_res)
             costs_list.addCost("com_track", com_cost, 1e6)
 
         for f_id in contacts_frame_id_list:
@@ -293,8 +296,8 @@ class NavProblem:
 
         for f_id, f_pos, f_disp_vec in zip(swing_frame_id_list, swing_pos_list, swing_disp_vec_list):
             pos = pinocchio.SE3(np.eye(3), f_pos + f_disp_vec)
-            f_residual = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, self._agent.get_nu())
-            f_cost = crocoddyl.CostModelResidual(self._agent.get_state(), f_residual)
+            f_res = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, self._agent.get_nu())
+            f_cost = crocoddyl.CostModelResidual(self._agent.get_state(), f_res)
             costs_list.addCost(str(f_id) + "_foot_track", f_cost, 1e6)
 
         state_nv = self._agent.get_state().nv
@@ -304,8 +307,8 @@ class NavProblem:
         s_cost = crocoddyl.CostModelResidual(self._agent.get_state(), s_act, s_res)
         costs_list.addCost("state_cost", s_cost, 1e1)
 
-        ctrl_residual = crocoddyl.ResidualModelControl(self._agent.get_state(), self._agent.get_nu())
-        ctrl_cost = crocoddyl.CostModelResidual(self._agent.get_state(), ctrl_residual)
+        ctrl_res = crocoddyl.ResidualModelControl(self._agent.get_state(), self._agent.get_nu())
+        ctrl_cost = crocoddyl.CostModelResidual(self._agent.get_state(), ctrl_res)
         costs_list.addCost("ctrl_cost", ctrl_cost, 1e-1)
 
         diff_action_model = crocoddyl.DifferentialActionModelContactFwdDynamics(self._agent.get_state(),
@@ -316,29 +319,27 @@ class NavProblem:
 
         return crocoddyl.IntegratedActionModelEuler(diff_action_model, control, ConfigUtils.NAV_PROBLEM_TIME_STEP)
 
-    def create_foot_impulse_phase(self, l_contact=False, r_contact=False, disp_vec=None):
-        contacts_frame_id_list, contacts_frame_pos_list = self._get_contacts_details_list(l_contact, r_contact)
-
-        if not isinstance(disp_vec, np.ndarray):
-            Msg.print_error("ERROR [NavProblem]: displacement vector must be specified as an np array")
-            assert False
+    def create_foot_impulse_phase(self, nav_constraints):
+        foot_frame_id_list = nav_constraints.get_swing_constraints_frame_id_list()
+        foot_pos_list = nav_constraints.get_swing_constraints_pos_list()
+        foot_disp_vec_list = nav_constraints.get_swing_constraints_disp_vec_list()
 
         costs_list = crocoddyl.CostModelSum(self._agent.get_state(), 0)
 
-        for f_id, f_pos in zip(contacts_frame_id_list, contacts_frame_pos_list):
-            pos = pinocchio.SE3(np.eye(3), f_pos + disp_vec)
-            fp_residual = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, 0)
-            fp_cost = crocoddyl.CostModelResidual(self._agent.get_state(), fp_residual)
+        for f_id, f_pos, f_disp_vec in zip(foot_frame_id_list, foot_pos_list, foot_disp_vec_list):
+            pos = pinocchio.SE3(np.eye(3), f_pos + f_disp_vec)
+            fp_res = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, 0)
+            fp_cost = crocoddyl.CostModelResidual(self._agent.get_state(), fp_res)
             costs_list.addCost(str(f_id) + "_foot_track", fp_cost, 1e8)
 
         state_weights = np.array([1.0] * 6 + [0.1] * (self._agent.get_nv() - 6) + [10] * self._agent.get_nv())
-        state_activation = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
-        state_residual = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_state0(), 0)
-        state_cost = crocoddyl.CostModelResidual(self._agent.get_state(), state_activation, state_residual)
+        state_act = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
+        state_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_state0(), 0)
+        state_cost = crocoddyl.CostModelResidual(self._agent.get_state(), state_act, state_res)
         costs_list.addCost("state_cost", state_cost, 1e1)
 
         impulses_list = crocoddyl.ImpulseModelMultiple(self._agent.get_state())
-        for f_id in contacts_frame_id_list:
+        for f_id in foot_frame_id_list:
             contact_model = crocoddyl.ImpulseModel6D(self._agent.get_state(), f_id, pinocchio.LOCAL_WORLD_ALIGNED)
             impulses_list.addImpulse(str(f_id) + "_impulse", contact_model)
 
@@ -348,15 +349,15 @@ class NavProblem:
 
         return impulse_model
 
-    def create_foot_pseudo_impulse_phase(self, l_contact=False, r_contact=False, disp_vec=None):
-        contacts_frame_id_list, contacts_frame_pos_list = self._get_contacts_details_list(l_contact, r_contact)
+    def create_foot_pseudo_impulse_phase(self, nav_constraints):
+        foot_contacts_frame_id_list = nav_constraints.get_contact_constraints_frame_id_list()
 
-        if not isinstance(disp_vec, np.ndarray):
-            Msg.print_error("ERROR [NavProblem]: displacement vector must be specified as an np array")
-            assert False
+        foot_frame_id_list = nav_constraints.get_swing_constraints_frame_id_list()
+        foot_pos_list = nav_constraints.get_swing_constraints_pos_list()
+        foot_disp_vec_list = nav_constraints.get_swing_constraints_disp_vec_list()
 
         contacts_list = crocoddyl.ContactModelMultiple(self._agent.get_state(), self._agent.get_nu())
-        for f_id in contacts_frame_id_list:
+        for f_id in foot_contacts_frame_id_list:
             contact_model = crocoddyl.ContactModel6D(self._agent.get_state(),
                                                      f_id,
                                                      pinocchio.SE3.Identity(),  # noqa
@@ -366,33 +367,34 @@ class NavProblem:
             contacts_list.addContact(str(f_id) + "_contact", contact_model)
 
         costs_list = crocoddyl.CostModelSum(self._agent.get_state(), self._agent.get_nu())
-        for f_id in contacts_frame_id_list:
+        for f_id in foot_contacts_frame_id_list:
             wc = crocoddyl.WrenchCone(np.eye(3), ConfigUtils.NAV_PROBLEM_FRICTION_COEFFICIENT, np.array([0.1, 0.05]))
             wc_res = crocoddyl.ResidualModelContactWrenchCone(self._agent.get_state(), f_id, wc, self._agent.get_nu())
             wc_act = crocoddyl.ActivationModelQuadraticBarrier(crocoddyl.ActivationBounds(wc.lb, wc.ub))
             wc_cost = crocoddyl.CostModelResidual(self._agent.get_state(), wc_act, wc_res)
             costs_list.addCost(str(f_id) + "_wrench_cone", wc_cost, 1e1)
 
-        for f_id, f_pos in zip(contacts_frame_id_list, contacts_frame_pos_list):
-            pos = pinocchio.SE3(np.eye(3), f_pos + disp_vec)
-            f_residual = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, self._agent.get_nu())
-            fv_residual = crocoddyl.ResidualModelFrameVelocity(self._agent.get_state(), f_id,
-                                                               pinocchio.Motion.Zero(),
-                                                               pinocchio.LOCAL_WORLD_ALIGNED,
-                                                               self._agent.get_nu())
-            f_cost = crocoddyl.CostModelResidual(self._agent.get_state(), f_residual)
-            fv_cost = crocoddyl.CostModelResidual(self._agent.get_state(), fv_residual)
+        for f_id, f_pos, f_disp_vec in zip(foot_frame_id_list, foot_pos_list, foot_disp_vec_list):
+            pos = pinocchio.SE3(np.eye(3), f_pos + f_disp_vec)
+            f_res = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, self._agent.get_nu())
+            fv_res = crocoddyl.ResidualModelFrameVelocity(self._agent.get_state(), f_id,
+                                                          pinocchio.Motion.Zero(),
+                                                          pinocchio.LOCAL_WORLD_ALIGNED,
+                                                          self._agent.get_nu())
+            f_cost = crocoddyl.CostModelResidual(self._agent.get_state(), f_res)
+            fv_cost = crocoddyl.CostModelResidual(self._agent.get_state(), fv_res)
             costs_list.addCost(str(f_id) + "_foot_track", f_cost, 1e8)
             costs_list.addCost(str(f_id) + "_foot_impulse", fv_cost, 1e6)
 
-        state_weights = np.array([500.0] * 3 + [0.01] * (self._agent.get_nv() - 6) + [10] * self._agent.get_nv())
+        state_nv = self._agent.get_state().nv
+        state_weights = np.array([0] * 3 + [500.0] * 3 + [0.01] * (state_nv - 6) + [10] * state_nv)
         s_act = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
         s_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_state0(), self._agent.get_nu())
         state_cost = crocoddyl.CostModelResidual(self._agent.get_state(), s_act, s_res)
         costs_list.addCost("state_cost", state_cost, 1e1)
 
-        ctrl_residual = crocoddyl.ResidualModelControl(self._agent.get_state(), self._agent.get_nu())
-        ctrl_cost = crocoddyl.CostModelResidual(self._agent.get_state(), ctrl_residual)
+        ctrl_res = crocoddyl.ResidualModelControl(self._agent.get_state(), self._agent.get_nu())
+        ctrl_cost = crocoddyl.CostModelResidual(self._agent.get_state(), ctrl_res)
         costs_list.addCost("ctrl_cost", ctrl_cost, 1e-3)
 
         diff_action_model = crocoddyl.DifferentialActionModelContactFwdDynamics(self._agent.get_state(),
