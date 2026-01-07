@@ -4,6 +4,7 @@ import pinocchio
 
 from example_robot_data.robots_loader import TalosLegsLoader
 
+from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 
@@ -149,6 +150,17 @@ class NavPose:
 
     def get_rotation(self):
         return self._rotation
+
+    def get_pose_diff(self, other_pose):
+        start_pos = self.get_position().get_position_as_np_array()
+        final_pos = other_pose.get_position().get_position_as_np_array()
+        pos_diff = ComputeUtils.compute_l2_distance(start_pos, final_pos)
+
+        start_rot = self.get_rotation().get_rotation_as_np_array()
+        final_rot = other_pose.get_rotation().get_rotation_as_np_array()
+        rot_diff = ComputeUtils.compute_angle_magnitude(start_rot, final_rot)
+
+        return pos_diff, rot_diff
 
 
 class NavForce:

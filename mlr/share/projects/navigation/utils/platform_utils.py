@@ -67,16 +67,17 @@ class PlatformType:
 
         if part1 == PlatformType.CUBOIDAL_LONG:
             if part2 == PlatformType.NOT_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
+                return Platform.PLATFORM_SIZE_LONG, Platform.PLATFORM_SIZE_SCALED
             if part2 == PlatformType.TOP_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL / 2.0, Platform.PLATFORM_SIZE_SCALED / 2.0
+                return Platform.PLATFORM_SIZE_LONG / 2.0, Platform.PLATFORM_SIZE_SCALED / 2.0
             if part2 == PlatformType.BOT_SCALED:
-                return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED
+                return Platform.PLATFORM_SIZE_LONG, Platform.PLATFORM_SIZE_SCALED
 
         return Platform.PLATFORM_SIZE_NORMAL, Platform.PLATFORM_SIZE_SCALED * 2.5  # start and final platform
 
 
 class Platform:
+    PLATFORM_SIZE_LONG = 4.0
     PLATFORM_SIZE_NORMAL = 3.0
     PLATFORM_SIZE_SCALED = 2.0
     PLATFORM_HEIGHT = 4.0
@@ -89,6 +90,12 @@ class Platform:
         self._platform_pose_list = [platform_pose]
         self._platform_color = platform_color
 
+    def add_platform_pose(self, platform_pose):
+        self._platform_pose_list.append(platform_pose)
+
+    def create_platform(self, *platform_args):
+        pass
+
     def get_platform_name(self):
         return self._platform_name
 
@@ -100,12 +107,6 @@ class Platform:
 
     def get_platform_pose(self, pose_index=-1):
         return self._platform_pose_list[pose_index]
-
-    def add_platform_pose(self, platform_pose):
-        self._platform_pose_list.append(platform_pose)
-
-    def create_platform(self, *platform_args):
-        pass
 
 
 class PlatformBPYUtils:
@@ -330,6 +331,7 @@ def make_rounded_cubical_platforms(pose, color):
 def make_rounded_cuboidal_platforms(pose, color):
     height = Platform.PLATFORM_HEIGHT
 
+    size_long = Platform.PLATFORM_SIZE_LONG
     size_normal = Platform.PLATFORM_SIZE_NORMAL
     size_scaled = Platform.PLATFORM_SIZE_SCALED
 
@@ -339,40 +341,40 @@ def make_rounded_cuboidal_platforms(pose, color):
     platform_type_wide = PlatformType.CUBOIDAL_WIDE
     platform_type_long = PlatformType.CUBOIDAL_LONG
 
-    PlatformBPYUtils.bpy_clear()
-    platform_name = PlatformType.get_platform_name(platform_type_wide, PlatformType.NOT_SCALED)
-    platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_scaled, size_normal, height, 1., 1., bw, bs)
-    PlatformBPYUtils.save_platform_as_stl(platform)
-
-    PlatformBPYUtils.bpy_clear()
-    platform_name = PlatformType.get_platform_name(platform_type_wide, PlatformType.TOP_SCALED)
-    platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_scaled, size_normal, height, .6, 1., bw, bs)
-    PlatformBPYUtils.save_platform_as_stl(platform)
-
-    PlatformBPYUtils.bpy_clear()
-    platform_name = PlatformType.get_platform_name(platform_type_wide, PlatformType.BOT_SCALED)
-    platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_scaled, size_normal, height, 1., .6, bw, bs)
-    PlatformBPYUtils.save_platform_as_stl(platform)
+    # PlatformBPYUtils.bpy_clear()
+    # platform_name = PlatformType.get_platform_name(platform_type_wide, PlatformType.NOT_SCALED)
+    # platform = RoundedCuboidPlatform(platform_name, pose, color)
+    # platform.create_platform(size_scaled, size_normal, height, 1., 1., bw, bs)
+    # PlatformBPYUtils.save_platform_as_stl(platform)
+    #
+    # PlatformBPYUtils.bpy_clear()
+    # platform_name = PlatformType.get_platform_name(platform_type_wide, PlatformType.TOP_SCALED)
+    # platform = RoundedCuboidPlatform(platform_name, pose, color)
+    # platform.create_platform(size_scaled, size_normal, height, .6, 1., bw, bs)
+    # PlatformBPYUtils.save_platform_as_stl(platform)
+    #
+    # PlatformBPYUtils.bpy_clear()
+    # platform_name = PlatformType.get_platform_name(platform_type_wide, PlatformType.BOT_SCALED)
+    # platform = RoundedCuboidPlatform(platform_name, pose, color)
+    # platform.create_platform(size_scaled, size_normal, height, 1., .6, bw, bs)
+    # PlatformBPYUtils.save_platform_as_stl(platform)
 
     PlatformBPYUtils.bpy_clear()
     platform_name = PlatformType.get_platform_name(platform_type_long, PlatformType.NOT_SCALED)
     platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_normal, size_scaled, height, 1., 1., bw, bs)
+    platform.create_platform(size_long, size_scaled, height, 1., 1., bw, bs)
     PlatformBPYUtils.save_platform_as_stl(platform)
 
     PlatformBPYUtils.bpy_clear()
     platform_name = PlatformType.get_platform_name(platform_type_long, PlatformType.TOP_SCALED)
     platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_normal, size_scaled, height, .6, 1., bw, bs)
+    platform.create_platform(size_long, size_scaled, height, .6, 1., bw, bs)
     PlatformBPYUtils.save_platform_as_stl(platform)
 
     PlatformBPYUtils.bpy_clear()
     platform_name = PlatformType.get_platform_name(platform_type_long, PlatformType.BOT_SCALED)
     platform = RoundedCuboidPlatform(platform_name, pose, color)
-    platform.create_platform(size_normal, size_scaled, height, 1., .6, bw, bs)
+    platform.create_platform(size_long, size_scaled, height, 1., .6, bw, bs)
     PlatformBPYUtils.save_platform_as_stl(platform)
 
 

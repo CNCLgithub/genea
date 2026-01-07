@@ -136,6 +136,27 @@ class StimuliDiff(StimuliSet):
         self._make_special_set(stim_counter, PlatformType.CUBOIDAL_LONG, PlatformType.BOT_SCALED)
 
 
+class StimuliSingle(StimuliSet):
+    def __init__(self):
+        super().__init__("single")
+
+    def make_platform_pairs(self):
+        long_half_size = Platform.PLATFORM_SIZE_NORMAL / 2.0
+
+        ground_pose = NavPose(NavPosition(0.0, 0.0, -Platform.PLATFORM_HEIGHT))
+        start_pose = NavPose(NavPosition(long_half_size - long_half_size / 8, 0.0, -Platform.PLATFORM_HEIGHT / 2.0))
+
+        for stim_name in StimuliSet.get_available_platform_names_list():
+            if "long" not in stim_name:
+                continue
+
+            platform_filename = stim_name + ".stl"
+
+            stim_item = StimulusItem(stim_name, self)
+            stim_item.add_ground_plane(ground_pose)
+            stim_item.add_platform(1, start_pose, platform_filename)
+
+
 class StimuliPairs(StimuliSet):
     def __init__(self):
         super().__init__("pairs")
@@ -185,20 +206,21 @@ class StimuliPairs(StimuliSet):
 
 
 def main():
-    StimuliPairs().make_platform_pairs()
-
-    stim_counter = Counter(0)
-    StimuliDiff().make_stimuli_00(stim_counter)
-    StimuliDiff().make_stimuli_01(stim_counter)
-    StimuliDiff().make_stimuli_02(stim_counter)
-    StimuliDiff().make_stimuli_03(stim_counter)
-    StimuliDiff().make_stimuli_04(stim_counter)
-    StimuliDiff().make_stimuli_05(stim_counter)
-    StimuliDiff().make_stimuli_06(stim_counter)
-    StimuliDiff().make_stimuli_07(stim_counter)
-    StimuliDiff().make_stimuli_08(stim_counter)
-    StimuliDiff().make_stimuli_09(stim_counter)
-    StimuliDiff().make_stimuli_10(stim_counter)
+    StimuliSingle().make_platform_pairs()
+    # StimuliPairs().make_platform_pairs()
+    #
+    # stim_counter = Counter(0)
+    # StimuliDiff().make_stimuli_00(stim_counter)
+    # StimuliDiff().make_stimuli_01(stim_counter)
+    # StimuliDiff().make_stimuli_02(stim_counter)
+    # StimuliDiff().make_stimuli_03(stim_counter)
+    # StimuliDiff().make_stimuli_04(stim_counter)
+    # StimuliDiff().make_stimuli_05(stim_counter)
+    # StimuliDiff().make_stimuli_06(stim_counter)
+    # StimuliDiff().make_stimuli_07(stim_counter)
+    # StimuliDiff().make_stimuli_08(stim_counter)
+    # StimuliDiff().make_stimuli_09(stim_counter)
+    # StimuliDiff().make_stimuli_10(stim_counter)
 
 
 if __name__ == '__main__':
