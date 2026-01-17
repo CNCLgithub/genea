@@ -81,3 +81,18 @@ if [[ "$1" =~ "data" ]] || [[ "$1" =~ "all" ]];then
 else
     echo_orange "Not pulling any data"
 fi
+
+
+## ==========================================================================
+## ------------------------- pdf to jpeg --------------------------------- ##
+## ==========================================================================
+if [[ "$1" =~ "pdftojpg" ]];then
+    echo_blue "Converting PDFs to JPEGs..."
+    for fn in "$2"/*.pdf; do
+        basename="${fn%.pdf}"
+        pdftoppm -jpeg "$fn" "$basename"
+        if [ -f "${basename}-1.jpg" ]; then
+            mv "${basename}-1.jpg" "${basename}.jpg"
+        fi
+    done
+fi

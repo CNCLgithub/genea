@@ -41,6 +41,10 @@ class PathUtils:
         return os.path.join(PathUtils.get_library_dirpath(), "out_robot_data")
 
     @staticmethod
+    def get_out_vlm_data_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "out_vlm_data")
+
+    @staticmethod
     def get_init_files_dirpath():
         return os.path.join(PathUtils.get_library_dirpath(), "init_files")
 
@@ -51,6 +55,14 @@ class PathUtils:
     @staticmethod
     def get_fin_files_dirpath():
         return os.path.join(PathUtils.get_library_dirpath(), "fin_files")
+
+    @staticmethod
+    def get_vlm_files_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "vlm_files")
+
+    @staticmethod
+    def get_vlm_exp_data_dirpath():
+        return os.path.join(PathUtils.get_vlm_files_dirpath(), "vlm_exp_data")
 
     @staticmethod
     def get_risk_files_dirpath(noise_value=None):

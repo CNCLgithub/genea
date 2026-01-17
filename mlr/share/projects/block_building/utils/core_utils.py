@@ -19,6 +19,8 @@ class ConfigUtils:
     NOISE_GAUSSIAN_STD = 0.01
     NOISE_THRESHOLD = 0.018  # if changed, remember to change this in run_physx.cpp as well
 
+    OPENAI_MODEL_NAME = "gpt-4o-2024-11-20"
+
 
 class NameUtils:
     NAME_RED = "red"
