@@ -42,3 +42,12 @@ class PlotUtils:
         else:
             plt.show()
             plt.close()
+
+    @staticmethod
+    def draw_histogram_plot(samples_list,  bins, title, x_label, y_label):
+        plt.figure()
+        plt.hist(samples_list, bins=bins, density=True)
+        plt.title(title)
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        plt.show()

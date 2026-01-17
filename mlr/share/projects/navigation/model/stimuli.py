@@ -141,10 +141,11 @@ class StimuliSingle(StimuliSet):
         super().__init__("single")
 
     def make_platform_pairs(self):
-        long_half_size = Platform.PLATFORM_SIZE_NORMAL / 2.0
+        long_pos_x = Platform.PLATFORM_SIZE_LONG / 2.0
+        long_pos_x -= Platform.PLATFORM_SIZE_LONG / ConfigUtils.NAV_MODEL_SINGLE_PLATFORM_MULTIPLIER
 
         ground_pose = NavPose(NavPosition(0.0, 0.0, -Platform.PLATFORM_HEIGHT))
-        start_pose = NavPose(NavPosition(long_half_size - long_half_size / 8, 0.0, -Platform.PLATFORM_HEIGHT / 2.0))
+        start_pose = NavPose(NavPosition(long_pos_x, 0.0, -Platform.PLATFORM_HEIGHT / 2.0))
 
         for stim_name in StimuliSet.get_available_platform_names_list():
             if "long" not in stim_name:

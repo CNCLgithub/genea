@@ -3,6 +3,7 @@ import numpy as np
 import time
 
 from enum import Enum
+from typing import List
 
 from mlr.share.projects.navigation.model.stimuli import StimuliPairs
 from mlr.share.projects.navigation.model.tasks.jump import JumpTask
@@ -14,6 +15,7 @@ from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 from mlr.share.projects.navigation.utils.navigation_utils import NavAgent, NavTask
 from mlr.share.projects.navigation.utils.path_utils import PathUtils
+from mlr.share.projects.navigation.utils.platform_utils import Platform, PlatformType
 from mlr.share.projects.navigation.utils.pybullet_utils import PyBulletUtils
 from mlr.share.projects.navigation.utils.stimuli_utils import StimulusItem
 
@@ -106,6 +108,7 @@ class NavModel:
         self._scene.load_stimuli_from_library()
 
         self._nav_task_list = []
+        self._nav_task_stability_list = []
 
     def _setup_task_solver(self, nav_task: NavTask):
         solver = crocoddyl.SolverFDDP(nav_task.get_task_problem(self._agent, self._agent_current_pose))
@@ -133,6 +136,44 @@ class NavModel:
                 display.displayFromSolver(nav_task.get_task_solver())
             time.sleep(1.0)
 
+    def _query_on_platform_surface(self, platform_key, query_x, query_y, is_single_platform=False):
+        platform_length = self._get_platform_length(platform_key)
+        platform_width = self._get_platform_width(platform_key)
+
+        if is_single_platform:
+            if abs(query_x) > platform_length:
+                return False
+        else:
+            if abs(query_x) > platform_length / 2.0:
+                return False
+
+        if abs(query_y) > platform_width / 2.0:
+            return False
+
+        return True
+
+    def _get_platform_length(self, platform_key):
+        return self._scene.get_platform_surface_measures(platform_key)[0]
+
+    def _get_platform_width(self, platform_key):
+        return self._scene.get_platform_surface_measures(platform_key)[0]
+
+    def _get_delta_x(self, platform_key, is_single_platform=False, do_skew=True):
+        p_length = self._get_platform_length(platform_key)
+
+        if is_single_platform:
+            p_length -= 2 * p_length / ConfigUtils.NAV_MODEL_SINGLE_PLATFORM_MULTIPLIER
+        else:
+            p_length /= 2
+
+        if do_skew:
+            return ComputeUtils.sample_skew_normal(p_length, ConfigUtils.NAV_MODEL_SIGMA, ConfigUtils.NAV_MODEL_ALPHA)
+        return ComputeUtils.sample_normal(p_length, ConfigUtils.NAV_MODEL_SIGMA / 2)
+
+    def _get_delta_y(self, platform_key):
+        self._get_platform_width(platform_key) / 2
+        return ComputeUtils.sample_normal(0.0, ConfigUtils.NAV_MODEL_SIGMA / 2)
+
     @staticmethod
     def has_stimuli_moved(start_pose, final_pose):
         pos_diff, rot_diff = start_pose.get_pose_diff(final_pose)
@@ -146,18 +187,25 @@ class NavModel:
 
     def add_jump_task(self):
         platform_keys_list = self._scene.get_platform_keys_list()
-        platform_key1, platform_key2 = platform_keys_list[0], platform_keys_list[1]
+        is_single_platform = len(platform_keys_list) == 1
 
-        jump_length = 0.0
-        jump_length += self._scene.get_gap_between_platforms(platform_key1, platform_key2)
+        if is_single_platform:
+            delta_platform_key = platform_keys_list[0]
+            jump_cleft = 0.0
+        else:
+            delta_platform_key = platform_keys_list[1]
+            jump_cleft = self._scene.get_gap_between_platforms(platform_keys_list[0], platform_keys_list[1])
 
-        platform_x, platform_y = self._scene.get_platform_surface_measures(platform_key2)
-        platform_x /= 2.0
-        platform_y /= 2.0
+        instability_count = 0
+        while True:
+            jump_delta_x = self._get_delta_x(delta_platform_key, is_single_platform=is_single_platform)
+            jump_delta_y = self._get_delta_y(platform_keys_list[0])
+            if self._query_on_platform_surface(delta_platform_key, jump_delta_x, jump_delta_y):
+                break
 
-        jump_x = ComputeUtils.sample_trunc_normal(0.0, -platform_x, platform_x, 1.0)
-        jump_y = ComputeUtils.sample_trunc_normal(0.0, -platform_y, platform_y, 1.0)
-        jump_vector = np.array([jump_length + jump_x, jump_y, 0.0])
+            instability_count += 1
+
+        jump_vector = np.array([jump_cleft + jump_delta_x, jump_delta_y, 0.0])
 
         jump_task = JumpTask()
         jump_task.set_jump_height(ConfigUtils.NAV_MODEL_JUMP_HEIGHT)
@@ -165,16 +213,18 @@ class NavModel:
 
         self._setup_task_solver(jump_task)
         self._nav_task_list.append(jump_task)
+        self._nav_task_stability_list.append(instability_count)
 
     def add_walk_task(self):
-        platform_keys_list = self._scene.get_platform_keys_list()
-        platform_key1 = platform_keys_list[0]
+        platform_key = self._scene.get_platform_keys_list()[0]
 
-        platform_x_len = self._scene.get_platform_surface_measures(platform_key1)[0]
+        instability_count = 0
+        while True:
+            walk_distance = self._get_delta_x(platform_key, is_single_platform=True, do_skew=False)
+            if self._query_on_platform_surface(platform_key, walk_distance, 0.0):
+                break
 
-        walk_distance = 0.0
-        walk_distance += platform_x_len
-        walk_distance -= platform_x_len / 4
+            instability_count += 1
 
         total_steps = max(1, int(walk_distance // ConfigUtils.NAV_MODEL_STEP_LENGTH))
         step_length = walk_distance / total_steps
@@ -186,6 +236,7 @@ class NavModel:
 
             self._setup_task_solver(walk_task)
             self._nav_task_list.append(walk_task)
+            self._nav_task_stability_list.append(instability_count)
 
     def run_dynamics(self):
         if ConfigUtils.NAV_MODEL_VIEW_KINEMATICS:
@@ -270,36 +321,41 @@ class NavModel:
             nav_out_data.save_nav_out_data_to_file()
 
 
-# class NavPlanner:
-#     def __init__(self, stim_item: StimulusItem):
-#         self._stim_item = stim_item
-#
-#         self._stim_platform_pairs_dirpath_list = self._load_stim_platform_pairs_dirpath_list()
-#
-#     def _load_stim_platform_pairs_dirpath_list(self):
-#         platform_pairs_dirpath_list = []
-#
-#         stim_platform_keys_list = self._stim_item.get_platform_keys_list()
-#         stim_platform_keys_list = [key for key in stim_platform_keys_list if StimulusItem.is_platform_movable(key)]
-#
-#         for platform_key1, platform_key2 in zip(stim_platform_keys_list, stim_platform_keys_list[1:]):
-#             platform1 = self._stim_item.get_platform_by_key(platform_key1)
-#             platform2 = self._stim_item.get_platform_by_key(platform_key2)
-#
-#             platform_pairs_name = StimuliPairs.get_platform_pairs_name(platform1, platform2)
-#             platform_pairs_dirpath = PathUtils.join(StimuliPairs().get_stimuli_set_dirpath(), platform_pairs_name)
-#
-#             platform_pairs_dirpath_list.append(platform_pairs_dirpath)
-#
-#         return platform_pairs_dirpath_list
-#
-#     def _run_stim_pair(self, stim_platform_pairs_dirpath):
-#         nav_model = NavModel(NavAgent.TALOS_LEGS, stim_platform_pairs_dirpath)
-#         nav_model.run_dynamics()
-#
-#     def run_planner(self):
-#         for stim_pair_dirpath in self._stim_platform_pairs_dirpath_list:
+class NavPlanner:
+    def __init__(self, stim_item: StimulusItem):
+        self._stim_item = stim_item
 
+        self._stim_platforms_list: List[Platform] = self._load_stim_platforms_list()
+
+    def _load_stim_platforms_list(self):
+        ordered_platforms_list = []
+
+        stim_platform_keys_list = self._stim_item.get_platform_keys_list()
+        stim_platform_keys_list = [key for key in stim_platform_keys_list if StimulusItem.is_platform_movable(key)]
+
+        for platform_key in stim_platform_keys_list:
+            platform = self._stim_item.get_platform_by_key(platform_key)
+            ordered_platforms_list.append(platform)
+
+        return ordered_platforms_list
+
+    @staticmethod
+    def _get_next_nav_tasks_list(platform_name):
+        return_nav_task_list = [NavTask.JUMP]
+        if PlatformType.CUBOIDAL_LONG in platform_name:
+            return_nav_task_list.append(NavTask.WALK)
+        return return_nav_task_list
+
+    def run_planner(self):
+        for platform_index, curr_platform in enumerate(self._stim_platforms_list[:-1]):
+            for nav_task in self._get_next_nav_tasks_list(curr_platform.get_platform_name()):
+                nav_model = NavModel(NavAgent.TALOS_LEGS, StimulusItem(stimuli_pair_dirpath, StimuliPairs()))
+
+                if nav_task == NavTask.JUMP:
+                    next_platform_name = self._stim_platforms_list[platform_index + 1].get_platform_name()
+                    nav_model.add_jump_task()
+                elif nav_task == NavTask.WALK:
+                    nav_model.run_dynamics()
 
 
     # @staticmethod

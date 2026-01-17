@@ -18,10 +18,25 @@ class ComputeUtils:
         return np.random.uniform(min_value, max_value, size).tolist()
 
     @staticmethod
+    def sample_normal(mu, sigma):
+        return np.random.normal(mu, sigma)
+
+    @staticmethod
     def sample_trunc_normal(mu, bound_min, bound_max, sigma=1.0):
         lower = (bound_min - mu) / sigma
         upper = (bound_max - mu) / sigma
-        return stats.truncnorm.rvs(lower, upper, loc=mu, scale=sigma, size=1).tolist()[0]
+        return stats.truncnorm.rvs(lower, upper, loc=mu, scale=sigma, size=1).item()
+
+    @staticmethod
+    def sample_skew_normal(mu, sigma, alpha):
+        """
+        NOTE:
+
+        alpha > 0  → right-skewed
+        alpha < 0  → left-skewed
+        alpha = 0  → normal distribution
+        """
+        return stats.skewnorm.rvs(alpha, loc=mu, scale=sigma, size=1).item()
 
     @staticmethod
     def sample_trunc_normal_circular(center, bound_radius, sigma=1.0):

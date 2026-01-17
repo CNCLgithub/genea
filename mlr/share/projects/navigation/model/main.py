@@ -8,15 +8,15 @@ from mlr.share.projects.navigation.utils.stimuli_utils import StimulusItem
 class Experiment:
     @staticmethod
     def run_jump_test():
-        stimuli_pair_dirpath = FileUtils.get_dir_list_in_directory(StimuliPairs().get_stimuli_set_dirpath())[0]
+        stimuli_pair_dirpath = FileUtils.get_dir_list_in_directory(StimuliPairs().get_stimuli_set_dirpath())[2]
         nav_model = NavModel(NavAgent.TALOS_LEGS, StimulusItem(stimuli_pair_dirpath, StimuliPairs()))
         nav_model.add_jump_task()
         nav_model.run_dynamics()
 
     @staticmethod
     def run_walk_test():
-        stimuli_pair_dirpath = FileUtils.get_dir_list_in_directory(StimuliSingle().get_stimuli_set_dirpath())[1]
-        nav_model = NavModel(NavAgent.TALOS_LEGS, StimulusItem(stimuli_pair_dirpath, StimuliSingle()))
+        stimuli_single_dirpath = FileUtils.get_dir_list_in_directory(StimuliSingle().get_stimuli_set_dirpath())[1]
+        nav_model = NavModel(NavAgent.TALOS_LEGS, StimulusItem(stimuli_single_dirpath, StimuliSingle()))
         nav_model.add_walk_task()
         nav_model.run_dynamics()
 
@@ -46,4 +46,4 @@ class Experiment:
 
 
 if __name__ == '__main__':
-    Experiment.run_walk_test()
+    Experiment.run_pair_platforms()
