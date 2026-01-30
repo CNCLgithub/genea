@@ -56,11 +56,11 @@ class Parser:
         db_table_name = experiment.get_db_table_name()
 
         metadata = MetaData()
-        metadata.bind = create_engine("sqlite:///" + db_path)
+        engine = create_engine(f"sqlite:///{db_path}")
 
-        table = Table(db_table_name, metadata, autoload=True)
+        table = Table(db_table_name, metadata, autoload_with=engine)
         table_selected = table.select()
-        table_rows = table_selected.execute()
+        table_rows = engine.connect().execute(table_selected).mappings().all()
 
         table_data = []
         psiturk_statuses = [3, 4, 5, 7]
@@ -82,7 +82,7 @@ class Parser:
 
     @staticmethod
     def parse_computational_data(experiment_type, model_type):
-        model_data = ModelData()
+        model_data = ModelData(model_type)
 
         model_data_file_path = PathUtils.join(PathUtils.get_out_robot_data_dirpath(), "overall_out.csv")
 

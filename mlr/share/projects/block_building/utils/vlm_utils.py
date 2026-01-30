@@ -44,6 +44,8 @@ class OpenAIUtils:
                 "content": [asst_message]
             }
 
+        return None
+
     @staticmethod
     def get_text_content(input_prompt):
         if isinstance(input_prompt, list):

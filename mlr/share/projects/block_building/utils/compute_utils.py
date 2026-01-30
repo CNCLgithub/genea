@@ -50,3 +50,21 @@ class ComputeUtils:
     @staticmethod
     def zscore_list(input_list):
         return list(stats.zscore(input_list))
+
+    @staticmethod
+    def get_spearmanr(list1, list2, with_p_value=False):
+        """
+        returns the spearman r and p-value as a list
+        """
+        if with_p_value:
+            return stats.spearmanr(list1, list2)
+        return stats.spearmanr(list1, list2)[0]
+
+    @staticmethod
+    def get_pearsonr(list1, list2, with_p_value=False):
+        """
+        returns the pearson r and p-value as a list
+        """
+        if with_p_value:
+            return stats.pearsonr(list1, list2)
+        return stats.pearsonr(list1, list2)[0]

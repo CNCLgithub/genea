@@ -104,7 +104,7 @@ class OpenAIPlanner(VLMPlanner):
                 content = OpenAIUtils.get_img_content(input_prompt=trial["prompt"], img_filename=img_filepath)
                 openai_message.append(OpenAIUtils.construct_message(usr_message=content))
 
-        x = FileUtils.write_as_json(openai_message)
+        FileUtils.write_as_json(openai_message)
         return self._run_openai_model(openai_message)
 
     def run_experiment(self):

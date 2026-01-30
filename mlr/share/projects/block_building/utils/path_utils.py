@@ -33,6 +33,10 @@ class PathUtils:
         return os.path.join(PathUtils.get_library_dirpath(), "exp_data")
 
     @staticmethod
+    def get_out_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "out")
+
+    @staticmethod
     def get_out_human_data_dirpath():
         return os.path.join(PathUtils.get_library_dirpath(), "out_human_data")
 
@@ -42,7 +46,7 @@ class PathUtils:
 
     @staticmethod
     def get_out_vlm_data_dirpath():
-        return os.path.join(PathUtils.get_library_dirpath(), "out_vlm_data")
+        return os.path.join(PathUtils.get_library_dirpath(), "out_vlm_data", "gpt_5")
 
     @staticmethod
     def get_init_files_dirpath():
@@ -69,3 +73,11 @@ class PathUtils:
         if noise_value is not None:
             return os.path.join(PathUtils.get_library_dirpath(), "risk_files_" + str(noise_value))
         return os.path.join(PathUtils.get_library_dirpath(), "risk_files")
+
+    @staticmethod
+    def get_out_files_dirpath():
+        return os.path.join(PathUtils.get_out_dirpath(), "files")
+
+    @staticmethod
+    def get_out_plots_dirpath():
+        return os.path.join(PathUtils.get_out_dirpath(), "plots")

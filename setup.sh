@@ -64,6 +64,7 @@ if [[ "$1" =~ "python" ]] || [[ "$1" =~ "all" ]];then
     ./run.sh "python -m pip install python-dotenv==1.0.1"
     ./run.sh "python -m pip install openai==1.60.1"
     ./run.sh "python -m pip install puremagic==1.28"
+    ./run.sh "python -m pip install sqlalchemy==2.0.46"
 fi
 
 

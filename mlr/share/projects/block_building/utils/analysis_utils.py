@@ -217,8 +217,10 @@ class Experiment:
         self._participants_by_participant_id_dict[participant_id].set_replan_probability(trial_key)
 
     @staticmethod
-    def compute_prob(input_value):
-        return np.exp(-input_value * ConfigUtils.EXP_TEMPERATURE)
+    def compute_prob(input_value, input_temperature=None):
+        if input_temperature is None:
+            input_temperature = ConfigUtils.TEMP_DEFAULT
+        return np.exp(-input_value * input_temperature)
 
     def z_score_participant_responses(self, trial_key):
         for participant_id in self.get_participant_id_list():
@@ -245,7 +247,7 @@ class Experiment:
         participant = self.get_participant_by_participant_id(participant_id)
         return participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
 
-    def get_prob_trial_responses_dict(self, trial_key, participant_id_list=None):
+    def get_prob_trial_responses_dict(self, trial_key, participant_id_list=None, exp_temperature=None):
         trial_names_list = self.get_all_trial_names()
 
         if participant_id_list is None:
@@ -259,7 +261,7 @@ class Experiment:
             participant = self.get_participant_by_participant_id(participant_id)
             for trial_name in trial_names_list:
                 trial_responses = participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
-                trial_responses = [Experiment.compute_prob(response) for response in trial_responses]
+                trial_responses = [Experiment.compute_prob(response, exp_temperature) for response in trial_responses]
                 response_values_dict[trial_name].append(np.sum(trial_responses))
 
         for key in response_values_dict:

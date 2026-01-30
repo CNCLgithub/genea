@@ -10,7 +10,10 @@ class ConfigUtils:
     PLACE_PENALTY = 15.0  # KE
     # PLACE_PENALTY = 1.0  # SSA
 
-    EXP_TEMPERATURE = 3
+    TEMP_DEFAULT = 3.5
+    TEMP_ENERGY = 3.5
+    TEMP_COST = 2.1
+    TEMP_SSA = 9.9
 
     # options
     DEBUG_CPP = False
@@ -19,7 +22,9 @@ class ConfigUtils:
     NOISE_GAUSSIAN_STD = 0.01
     NOISE_THRESHOLD = 0.018  # if changed, remember to change this in run_physx.cpp as well
 
-    OPENAI_MODEL_NAME = "gpt-4o-2024-11-20"
+    ANALYSIS_PEARSON = True
+
+    OPENAI_MODEL_NAME = "gpt-5-2025-08-07"
 
 
 class NameUtils:

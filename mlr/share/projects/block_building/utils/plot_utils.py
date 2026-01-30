@@ -67,8 +67,7 @@ class PlotUtils:
 
     @staticmethod
     def draw_multiple_bar_plots(x_labels_list, y_values_list_dict, behavior_values_list=None, save_path=None):
-        # color_list = ["#12314e", "#505052", "#666668", "#929498", "#ACACAE"]
-        color_list = ["#12314e", "#505052", "#12314e", "#505052", "#12314e", "#505052", "#12314e", "#505052"]
+        color_list = ["#12314e", "#505052", "#12314e", "#505052", "#12314e", "#505052", "#12314e", "#505052", "#12314e"]
 
         plt.rcParams['legend.handlelength'] = 1
         plt.rcParams['legend.handleheight'] = 1.125
@@ -83,15 +82,17 @@ class PlotUtils:
         y_err_list = [lower_list, upper_list]
 
         ax = sns.barplot(x=np.arange(len(means_list)), y=means_list,
-                         yerr=y_err_list, palette=color_list, label=x_labels_list)
+                         yerr=y_err_list, color="lightgray", label=x_labels_list)
+
+        for bar, color in zip(ax.patches, color_list):
+            bar.set_facecolor(color)
 
         ax.axhline(y=split_half_lower, color="#929498", linestyle="--", linewidth=.5)
         ax.axhline(y=split_half_upper, color="#929498", linestyle="--", linewidth=.5)
 
-        ax.yaxis.grid(False)
+        ax.yaxis.grid(True)
         ax.xaxis.grid(False)
         ax.set_axisbelow(True)
-        ax.set_xticklabels(x_labels_list)
         plt.xticks(rotation=90)
         ax.tick_params(labelsize=5)
         plt.ylabel("Correlation", fontsize=20)
@@ -120,9 +121,9 @@ class PlotUtils:
 
         # sns.stripplot(x=x_list, y=y_list, orient="v", zorder=0, color="#bebebe", jitter=0.2, size=10)
         sns.boxplot(x=x_list, y=y_list, orient="v", width=0.5, zorder=0, color="#bebebe", **box_color_props)
-        sns.pointplot(x=x_list, y=y_list, join=False, color="#79b5e0", ci=95, zorder=1, label="human", sizes=[30])
+        sns.pointplot(x=x_list, y=y_list, join=False, color="#79b5e0", errorbar=('ci', 95), zorder=1, markersize=6)
 
-        sns.pointplot(x=x_model_list, y=y_model_list, join=False, color="#12314e", sizes=[30])
+        sns.pointplot(x=x_model_list, y=y_model_list, join=False, color="#12314e", markersize=6)
         plt.ylim(-10.0, 110.0)
         plt.yticks(range(-10, 120, 10), range(-10, 120, 10))
         plt.grid(False)

@@ -4,12 +4,11 @@ import random
 import scipy.stats as stats
 import time
 
-from torch.fx.experimental.migrate_gradual_types.constraint import Constraint
-
 from mlr.share.projects.block_building.analysis.parse_data import ExperimentType, Parser, ModelType, ModelData
 from mlr.share.projects.block_building.utils.compute_utils import ComputeUtils
 from mlr.share.projects.block_building.utils.core_utils import ConfigUtils
 from mlr.share.projects.block_building.utils.file_utils import FileUtils
+from mlr.share.projects.block_building.utils.path_utils import PathUtils
 from mlr.share.projects.block_building.utils.plot_utils import PlotUtils
 from mlr.share.projects.block_building.utils.analysis_utils import TrialKeys
 from mlr.share.projects.block_building.utils.msg_utils import Msg
@@ -37,7 +36,10 @@ def run_split_half_bootstrap(behavior_data):
             behavior_responses_list1.append(behavior_responses_dict1[trial_name])
             behavior_responses_list2.append(behavior_responses_dict2[trial_name])
 
-        bootstrap_cor_list.append(np.corrcoef(behavior_responses_list1, behavior_responses_list2)[0, 1])
+        if ConfigUtils.ANALYSIS_PEARSON:
+            bootstrap_cor_list.append(ComputeUtils.get_pearsonr(behavior_responses_list1, behavior_responses_list2))
+        else:
+            bootstrap_cor_list.append(ComputeUtils.get_spearmanr(behavior_responses_list1, behavior_responses_list2))
 
     correlation_value = np.mean(bootstrap_cor_list)
     Msg.print_warn("HUMAN vs HUMAN 50/50 = " + str(correlation_value))
@@ -67,7 +69,10 @@ def run_leave_one_out_bootstrap(behavior_data):
             behavior_responses_list1.append(behavior_responses_dict1[trial_name])
             behavior_responses_list2.append(behavior_responses_dict2[trial_name])
 
-        bootstrap_cor_list.append(np.corrcoef(behavior_responses_list1, behavior_responses_list2)[0, 1])
+        if ConfigUtils.ANALYSIS_PEARSON:
+            bootstrap_cor_list.append(ComputeUtils.get_pearsonr(behavior_responses_list1, behavior_responses_list2))
+        else:
+            bootstrap_cor_list.append(ComputeUtils.get_spearmanr(behavior_responses_list1, behavior_responses_list2))
 
     correlation_value = np.mean(bootstrap_cor_list)
     Msg.print_warn("HUMAN vs HUMAN ALL-1/1 = " + str(correlation_value))
@@ -105,7 +110,11 @@ def run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_respon
 
         for model_name in model_names_list:
             model_responses_list = model_response_list_dict[model_name]
-            bootstrap_cor_list[model_name].append(np.corrcoef(behavior_responses_list, model_responses_list)[0, 1])
+            if ConfigUtils.ANALYSIS_PEARSON:
+                r = ComputeUtils.get_pearsonr(behavior_responses_list, model_responses_list)
+            else:
+                r = ComputeUtils.get_spearmanr(behavior_responses_list, model_responses_list)
+            bootstrap_cor_list[model_name].append(r)
 
         success = True
         for model_name in model_names_list[1:]:
@@ -125,7 +134,7 @@ def run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_respon
         Msg.print_warn("BOOTSTRAP HUMAN vs MODEL " + model_name + " = " + str(correlation_value))
 
     if save_filepath:
-        write_list = [ConfigUtils.EXP_TEMPERATURE]
+        write_list = [ConfigUtils.TEMP_DEFAULT]
         for model in model_names_list:
             write_list.append(np.mean(bootstrap_cor_list[model]))
         FileUtils.write_row_to_file(save_filepath, write_list)
@@ -145,7 +154,10 @@ def run_behavior_vs_model_correlation(behavior_data, model_response_dict, model_
         behavior_responses_list.append(behavior_response_dict[trial_name])
         model_responses_list.append(model_response_dict[trial_name])
 
-    correlation_value, p_value = stats.pearsonr(behavior_responses_list, model_responses_list)
+    if ConfigUtils.ANALYSIS_PEARSON:
+        correlation_value, p_value = ComputeUtils.get_pearsonr(behavior_responses_list, model_responses_list, True)
+    else:
+        correlation_value, p_value = ComputeUtils.get_spearmanr(behavior_responses_list, model_responses_list, True)
 
     if model_name is None:
         model_name = "model"
@@ -154,10 +166,10 @@ def run_behavior_vs_model_correlation(behavior_data, model_response_dict, model_
         if do_z:
             model_responses_list = ComputeUtils.zscore_list(model_responses_list)
 
-        save_path = "/home/jakiroshah/Desktop/" + model_name + ".pdf"
+        save_filepath = PathUtils.join(PathUtils.get_out_plots_dirpath(), model_name + ".pdf")
         PlotUtils.draw_scatter_plot(model_responses_list, behavior_responses_list,
                                     f"behavior vs {model_name}", model_name, "behavior",
-                                    save_path=save_path, annot=trial_names_list)
+                                    save_path=save_filepath, annot=trial_names_list)
 
     Msg.print_warn("HUMAN vs MODEL " + model_name + " = " + str(correlation_value) + ", " + str(p_value))
 
@@ -169,7 +181,8 @@ def draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_respo
     correlation_list_leave_one_out = run_leave_one_out_bootstrap(behavior_data)
 
     floor_ceiling_list = [np.mean(correlation_list_split_half), np.mean(correlation_list_leave_one_out)]
-    # floor_ceiling_list = [0.0, 1.0]
+    # floor_ceiling_list = [-0.1, 1.1]
+
     PlotUtils.draw_multiple_bar_plots(list(model_response_dict_dict.keys()),
                                       corr_list_by_model_dict,
                                       floor_ceiling_list, save_path=save_path)
@@ -229,20 +242,23 @@ def run_analysis(experiment_type):
         }
 
     # ----------- uncomment when running temperature analysis -----------
-    # save_filepath = "/home/jakiroshah/Desktop/" + "bootstrap_" + str(experiment_type).lower() + ".csv"
-    # run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict, save_filepath)
+    save_filepath = PathUtils.join(PathUtils.get_out_files_dirpath(), "boot_" + str(experiment_type).lower() + ".csv")
+    run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict, save_filepath)
 
     # ----------- produces bar graphs -----------
-    save_path = "/home/jakiroshah/Desktop/" + str(experiment_type).lower() + "_bar.pdf"
-    draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict, save_path)
+    save_filepath = PathUtils.join(PathUtils.get_out_plots_dirpath(), str(experiment_type).lower() + "_bar.pdf")
+    draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict, save_filepath)
 
     # ----------- produces correlation scatter graphs -----------
     run_behavior_vs_model_correlation(behavior_data, phy_energy_response_dict, experiment_type + "_" + "PHY_ON_ENERGY")
+    run_behavior_vs_model_correlation(behavior_data, phy_cost_response_dict, experiment_type + "_" + "PHY_ON_COST")
+    run_behavior_vs_model_correlation(behavior_data, vlm_response_dict, experiment_type + "_" + "PHY_ON_VLM")
 
     time.sleep(1)
     Msg.println_normal("#################################################")
 
 
+@click.command()
 @click.option("-ag", "--action_goal_inference", default=False, is_flag=True, help="analyze action-goal inference data")
 @click.option("-e", "--effector_inference", default=False, is_flag=True, help="analyze hands data")
 @click.option("-d", "--difficulty", default=False, is_flag=True, help="analyze difficulty data")
@@ -265,13 +281,14 @@ def main(action_goal_inference, effector_inference, difficulty, temperature):
         return
 
     if temperature:
-        for temperature in np.linspace(0.1, 10, 100):
-            ConfigUtils.EXP_TEMPERATURE = temperature
+        for temperature in np.linspace(1, 11, 101):
+            ConfigUtils.TEMP_DEFAULT = temperature
+            ConfigUtils.TEMP_ENERGY = temperature
+            ConfigUtils.TEMP_COST = temperature
+            ConfigUtils.TEMP_SSA = temperature
+
             run_analysis(ExperimentType.ACTION_GOAL)
             run_analysis(ExperimentType.HANDS)
-            run_analysis(ExperimentType.DIFFICULTY_DIFF)
-            run_analysis(ExperimentType.DIFFICULTY_TIME)
-            run_analysis(ExperimentType.DIFFICULTY_BUILD)
         return
 
 
