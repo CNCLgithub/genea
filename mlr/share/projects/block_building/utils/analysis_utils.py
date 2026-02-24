@@ -247,7 +247,7 @@ class Experiment:
         participant = self.get_participant_by_participant_id(participant_id)
         return participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
 
-    def get_prob_trial_responses_dict(self, trial_key, participant_id_list=None, exp_temperature=None):
+    def get_prob_responses_dict(self, trial_key, participant_id_list=None, exp_temp=None, do_sum=False):
         trial_names_list = self.get_all_trial_names()
 
         if participant_id_list is None:
@@ -255,21 +255,29 @@ class Experiment:
         if isinstance(participant_id_list, str):
             participant_id_list = [participant_id_list]
 
-        response_values_dict = {key: [] for key in trial_names_list}
+        response_values_dict = {}
 
         for participant_id in participant_id_list:
             participant = self.get_participant_by_participant_id(participant_id)
             for trial_name in trial_names_list:
-                trial_responses = participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
-                trial_responses = [Experiment.compute_prob(response, exp_temperature) for response in trial_responses]
-                response_values_dict[trial_name].append(np.sum(trial_responses))
+                r_list = participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
+
+                if trial_name not in response_values_dict:
+                    response_values_dict[trial_name] = []
+
+                if do_sum:
+                    r_list = [Experiment.compute_prob(r, exp_temp) for r in r_list]
+                    response_values_dict[trial_name].append(np.sum(r_list))
+                else:
+                    r_list = [Experiment.compute_prob(r, exp_temp) for r in r_list]
+                    response_values_dict[trial_name].append(np.max(r_list))
 
         for key in response_values_dict:
             response_values_dict[key] = np.mean(response_values_dict[key])
 
         return response_values_dict
 
-    def get_min_trial_responses_dict(self, trial_key, participant_id_list=None):
+    def get_min_responses_dict(self, trial_key, participant_id_list=None):
         trial_names_list = self.get_all_trial_names()
 
         if participant_id_list is None:
@@ -277,12 +285,15 @@ class Experiment:
         if isinstance(participant_id_list, str):
             participant_id_list = [participant_id_list]
 
-        response_values_dict = {key: [] for key in trial_names_list}
+        response_values_dict = {}
 
         for participant_id in participant_id_list:
             participant = self.get_participant_by_participant_id(participant_id)
             for trial_name in trial_names_list:
                 trial_responses = participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
+
+                if trial_name not in response_values_dict:
+                    response_values_dict[trial_name] = []
                 response_values_dict[trial_name].append(np.min(trial_responses))
 
         for key in response_values_dict:
@@ -300,15 +311,42 @@ class Experiment:
         if isinstance(participant_id_list, int):
             participant_id_list = [participant_id_list]
 
-        response_values_dict = {key: [] for key in trial_names_list}
+        response_values_dict = {}
 
+        rt_list = []
         for participant_id in participant_id_list:
             participant = self.get_participant_by_participant_id(participant_id)
             for trial_name in trial_names_list:
                 trial_responses = participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
                 if len(trial_responses) == 0:
                     continue
-                response_values_dict[trial_name].append(np.mean(trial_responses))
+                if trial_key == TrialKeys.TRIAL_REACTION_TIME:
+                    for rt in trial_responses:
+                        rt_list.append(rt)
+
+        for participant_id in participant_id_list:
+            participant = self.get_participant_by_participant_id(participant_id)
+
+            for trial_name in trial_names_list:
+                trial_responses = participant.get_all_trial_responses_by_trial_name(trial_key, trial_name)
+                if len(trial_responses) == 0:
+                    continue
+
+                if trial_name not in response_values_dict:
+                    response_values_dict[trial_name] = []
+
+                if trial_key == TrialKeys.TRIAL_REACTION_TIME:
+                    selected_rt = []
+                    for rt in trial_responses:
+                        if np.mean(rt_list) - 2.0 * np.std(rt_list) < rt < np.mean(rt_list) + 2.0 * np.std(rt_list):
+                            selected_rt.append(rt)
+
+                    if len(selected_rt) == 0:
+                        continue
+
+                    response_values_dict[trial_name].append(np.mean(selected_rt))
+                else:
+                    response_values_dict[trial_name].append(np.mean(trial_responses))
 
         for key in response_values_dict:
             responses = [resp for resp in response_values_dict[key] if not np.isnan(resp)]

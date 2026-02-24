@@ -64,7 +64,7 @@ class ActionGoalTrial(Trial):
         self._trial_data_by_key[TrialKeys.TRIAL_NAME_DETAILED] = self._trial_name_detailed
         self._trial_data_by_key[TrialKeys.TRIAL_NUM] = int(trial_data[TrialKeys.TRIAL_NUM])
         self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE] = int(trial_data[TrialKeys.TRIAL_SLIDER_VALUE])
-        self._trial_data_by_key[TrialKeys.TRIAL_REACTION_TIME] = int(trial_data[TrialKeys.TRIAL_REACTION_TIME])
+        self._trial_data_by_key[TrialKeys.TRIAL_REACTION_TIME] = int(trial_data[TrialKeys.TRIAL_REACTION_TIME]) / 1000
         self._trial_data_by_key[TrialKeys.TRIAL_INIT_IMAGE_NAME] = trial_data[TrialKeys.TRIAL_INIT_IMAGE_NAME]
         self._trial_data_by_key[TrialKeys.TRIAL_FINAL_IMAGE_NAME] = trial_data[TrialKeys.TRIAL_FINAL_IMAGE_NAME]
         self._trial_data_by_key[TrialKeys.TRIAL_LEFT_IMAGE_NAME] = trial_data[TrialKeys.TRIAL_LEFT_IMAGE_NAME]
@@ -90,7 +90,7 @@ class HandsTrial(Trial):
         self._trial_data_by_key[TrialKeys.TRIAL_NAME] = trial_data[TrialKeys.TRIAL_NAME]
         self._trial_data_by_key[TrialKeys.TRIAL_NUM] = int(trial_data[TrialKeys.TRIAL_NUM])
         self._trial_data_by_key[TrialKeys.TRIAL_SLIDER_VALUE] = int(trial_data[TrialKeys.TRIAL_SLIDER_VALUE])
-        self._trial_data_by_key[TrialKeys.TRIAL_REACTION_TIME] = int(trial_data[TrialKeys.TRIAL_REACTION_TIME])
+        self._trial_data_by_key[TrialKeys.TRIAL_REACTION_TIME] = int(trial_data[TrialKeys.TRIAL_REACTION_TIME]) / 1000
         self._trial_data_by_key[TrialKeys.TRIAL_INIT_IMAGE_NAME] = trial_data[TrialKeys.TRIAL_INIT_IMAGE_NAME]
         self._trial_data_by_key[TrialKeys.TRIAL_FINAL_IMAGE_NAME] = trial_data[TrialKeys.TRIAL_FINAL_IMAGE_NAME]
 

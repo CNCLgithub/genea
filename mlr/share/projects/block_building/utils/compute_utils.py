@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats as stats
+import statsmodels.api as sm
 
 from scipy.spatial.transform import Rotation
 
@@ -68,3 +69,17 @@ class ComputeUtils:
         if with_p_value:
             return stats.pearsonr(list1, list2)
         return stats.pearsonr(list1, list2)[0]
+
+    @staticmethod
+    def get_res_partial_regression(list_y, list_of_list_x):
+        if len(list_of_list_x) == 0:
+            assert False
+
+        if not isinstance(list_of_list_x[0], list):
+            list_of_list_x = [list_of_list_x]
+
+        list_x = sm.add_constant(np.column_stack(list_of_list_x))
+
+        model_fit = sm.OLS(np.asarray(list_y).reshape(-1, 1), list_x).fit()
+
+        return model_fit.resid, model_fit.summary(), model_fit.rsquared

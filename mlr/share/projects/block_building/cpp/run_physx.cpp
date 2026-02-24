@@ -301,16 +301,16 @@ bool simulateWorld(KOMO& komoObject, mlr::KinematicWorld& kinWorld, mlr::Kinemat
 
         string blockName(b->name);
         if(!isStringInList(blockNamesList, blockName)) continue;
-        if(!isStringInList(grabbedBlockNamesList, blockName)) {
-            string block_name(b->name);
-            blockNamesVec.push_back(block_name);
-            xInitVec.push_back(b->X.pos.x);
-            yInitVec.push_back(b->X.pos.y);
-            zInitVec.push_back(b->X.pos.z);
+        if(isStringInList(grabbedBlockNamesList, blockName)) continue;
 
-            b->type = mlr::BT_dynamic;
-            for(mlr::Joint* j:b->inLinks) j->type=mlr::JT_free;
-        }
+        string block_name(b->name);
+        blockNamesVec.push_back(block_name);
+        xInitVec.push_back(b->X.pos.x);
+        yInitVec.push_back(b->X.pos.y);
+        zInitVec.push_back(b->X.pos.z);
+
+        b->type = mlr::BT_dynamic;
+        for(mlr::Joint* j:b->inLinks) j->type=mlr::JT_free;
 
         if(blockName == "waist") {
             kinWorld.getBodyByName(b->name)->X.pos.z = 10;
@@ -338,6 +338,7 @@ bool simulateWorld(KOMO& komoObject, mlr::KinematicWorld& kinWorld, mlr::Kinemat
         string blockName(b->name);
 
         if(!isStringInList(blockNamesList, blockName)) continue;
+        if(isStringInList(grabbedBlockNamesList, blockName)) continue;
 
         b->type = mlr::BT_kinematic;
         for(mlr::Joint* j:b->inLinks) j->type=mlr::JT_rigid;

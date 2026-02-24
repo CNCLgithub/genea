@@ -24,7 +24,7 @@ class ModelType:
 
 class ModelData(Experiment):
     TRIAL_NAME = 0
-    TRIAL_NUM_OF_HANDS = 1
+    TRIAL_NUM_INDEX = 1
     TRIAL_SYMBOLIC_PLAN = 2
     TRIAL_SYMBOLIC_PLAN_DETAILED = 3
     TRIAL_COST = 4
@@ -56,12 +56,12 @@ class ModelData(Experiment):
     def get_model_type(self):
         return self._model_type
 
-    def get_hands_response_list(self, model_measure, exp_temp):
+    def get_hands_response_list(self, model_measure, exp_temp, do_rt=False):
         new_response_dict = {}
 
         trial_names_list = self.get_all_trial_names()
-        old_response_dict = self.get_min_trial_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE, model_measure)
-        prob_response_dict = self.get_prob_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure, exp_temp)
+        old_response_dict = self.get_min_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE, model_measure)
+        prob_response_dict = self.get_prob_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure, exp_temp, do_rt)
 
         for trials in trial_names_list:
             new_trial_name = trials[:-2]
@@ -72,26 +72,38 @@ class ModelData(Experiment):
             trial_1 = old_response_dict[new_trial_name + "_1"]
             trial_2 = old_response_dict[new_trial_name + "_2"]
 
-            if trial_1 == 0:
+            if trial_1 == 0 and not do_rt:
                 new_response_dict[new_trial_name] = 1.0
                 continue
 
-            if trial_2 == 0:
+            if trial_2 == 0 and not do_rt:
                 new_response_dict[new_trial_name] = 0.0
+                continue
+
+            if trial_1 == 0 and do_rt:
+                new_response_dict[new_trial_name] = abs(prob_response_dict[new_trial_name + "_2"])
+                continue
+
+            if trial_2 == 0 and do_rt:
+                new_response_dict[new_trial_name] = abs(prob_response_dict[new_trial_name + "_1"])
                 continue
 
             trial_1 = prob_response_dict[new_trial_name + "_1"]
             trial_2 = prob_response_dict[new_trial_name + "_2"]
 
+            if do_rt:
+                new_response_dict[new_trial_name] = abs(trial_2 - trial_1)
+                continue
+
             new_response_dict[new_trial_name] = trial_2 / (trial_1 + trial_2)
 
         return new_response_dict
 
-    def get_action_goal_response_list(self, model_measure, exp_temp):
+    def get_action_goal_response_list(self, model_measure, exp_temp, do_rt=False):
         new_response_dict = {}
 
         trial_names_list = self.get_all_trial_names()
-        old_response_dict = self.get_prob_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure, exp_temp)
+        old_response_dict = self.get_prob_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure, exp_temp, do_rt)
 
         for trials in trial_names_list:
             new_trial_name = trials[:-1]
@@ -132,32 +144,44 @@ class ModelData(Experiment):
             elif new_trial_name == "goal_e":
                 numerator = np.mean(trial_1)
             elif new_trial_name == "goal_f":
-                numerator = np.mean(trial_1)
-            elif new_trial_name == "goal_g":
                 numerator = np.mean(trial_2)
+            elif new_trial_name == "goal_g":
+                numerator = np.mean(trial_1)
             elif new_trial_name == "goal_h":
                 numerator = np.mean(trial_2)
 
-            new_response_dict[new_trial_name] = numerator / (trial_1 + trial_2)
+            if do_rt:
+                new_response_dict[new_trial_name] = abs(2 * numerator - (trial_1 + trial_2))
+            else:
+                new_response_dict[new_trial_name] = numerator / (trial_1 + trial_2)
 
         return new_response_dict
 
-    def get_model_response_list(self, experiment_type, model_measure):
+    def get_model_response_list(self, experiment_type, model_measure, do_rt=False):
         model_type = self.get_model_type()
 
         exp_temp = ConfigUtils.TEMP_DEFAULT
-        if model_measure == ModelData.ENERGY:
-            exp_temp = ConfigUtils.TEMP_ENERGY
-        elif model_measure == ModelData.COST:
-            exp_temp = ConfigUtils.TEMP_COST
-
-        if model_type == ModelType.PHYSICS_ON_SSA or model_type == ModelType.PHYSICS_OFF_SSA:
-            exp_temp = ConfigUtils.TEMP_SSA
 
         if experiment_type == ExperimentType.HANDS:
-            model_response_dict = self.get_hands_response_list(model_measure, exp_temp)
+            if model_measure == ModelData.ENERGY:
+                exp_temp = ConfigUtils.TEMP_ENERGY_E
+            elif model_measure == ModelData.COST:
+                exp_temp = ConfigUtils.TEMP_COST_E
+            elif model_type == ModelType.PHYSICS_ON_SSA or model_type == ModelType.PHYSICS_OFF_SSA:
+                exp_temp = ConfigUtils.TEMP_SSA_E
+
+            model_response_dict = self.get_hands_response_list(model_measure, exp_temp, do_rt)
+
         elif experiment_type == ExperimentType.ACTION_GOAL:
-            model_response_dict = self.get_action_goal_response_list(model_measure, exp_temp)
+            if model_measure == ModelData.ENERGY:
+                exp_temp = ConfigUtils.TEMP_ENERGY_AG
+            elif model_measure == ModelData.COST:
+                exp_temp = ConfigUtils.TEMP_COST_AG
+            elif model_type == ModelType.PHYSICS_ON_SSA or model_type == ModelType.PHYSICS_OFF_SSA:
+                exp_temp = ConfigUtils.TEMP_SSA_AG
+
+            model_response_dict = self.get_action_goal_response_list(model_measure, exp_temp, do_rt)
+
         else:
             model_response_dict = self.get_mean_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure)
 

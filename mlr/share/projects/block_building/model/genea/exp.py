@@ -350,9 +350,6 @@ class GeneaExperiment:
         two_hand_moves = self._plan_two_hand_moves(first_block_names_to_grab)
         all_plans.extend(two_hand_moves)
 
-        if self.exp_type == ExpType.GOAL or self.exp_type == ExpType.ACTION:
-            all_plans = self._remove_second_move_grab(all_plans)
-
         return self._remove_duplicates(all_plans)
 
     def _run_g_file_generator(self):

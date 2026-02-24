@@ -26,6 +26,11 @@ class PlotUtils:
         y_min = min(y_list) - 2
         y_max = max(y_list) + 2
 
+        # x_min = 0.49
+        # x_max = 1.01
+        # y_min = 48
+        # y_max = 102
+
         # x_min = -0.02
         # x_max = 1.02
         # y_min = -2
@@ -48,8 +53,6 @@ class PlotUtils:
         for i in range(len(x_list)):
             if annot:
                 plt.annotate(annot[i], (x_list[i], y_list[i]))
-
-        # plt.text(min(x_list), np.ceil(max(y_list)), 'r=' + str(np.mean(r)) + "; p=" + str(p), ha='left', va='top')
 
         if save_path:
             plt.savefig(save_path)

@@ -1,7 +1,6 @@
 import click
 import numpy as np
 import random
-import scipy.stats as stats
 import time
 
 from mlr.share.projects.block_building.analysis.parse_data import ExperimentType, Parser, ModelType, ModelData
@@ -80,9 +79,13 @@ def run_leave_one_out_bootstrap(behavior_data):
     return bootstrap_cor_list
 
 
-def run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict, save_filepath=None):
-    Msg.print_info("Running bootstrap analysis for experiment type: " + str(experiment_type))
-    behavior_trial_key = TrialKeys.TRIAL_SLIDER_VALUE
+def run_behavior_vs_model_bootstrap(exp_type, behavior_data, model_response_dict_dict, save_filepath=None, do_rt=False):
+    Msg.print_info("Running bootstrap analysis for experiment type: " + str(exp_type))
+    if do_rt:
+        behavior_trial_key = TrialKeys.TRIAL_REACTION_TIME
+    else:
+        behavior_trial_key = TrialKeys.TRIAL_SLIDER_VALUE
+
     model_names_list = list(model_response_dict_dict.keys())
     trial_names_list = behavior_data.get_all_trial_names()
 
@@ -97,8 +100,6 @@ def run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_respon
     bootstrap_cor_list = {model_name: [] for model_name in model_names_list}
 
     participant_id_list = behavior_data.get_participant_id_list()
-
-    success_rate = 0
 
     for _ in range(1000):
         sampled_ids = random.choices(list(participant_id_list), k=len(participant_id_list))
@@ -116,18 +117,53 @@ def run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_respon
                 r = ComputeUtils.get_spearmanr(behavior_responses_list, model_responses_list)
             bootstrap_cor_list[model_name].append(r)
 
-        success = True
-        for model_name in model_names_list[1:]:
-            if bootstrap_cor_list[model_name][-1] > bootstrap_cor_list[model_names_list[0]][-1]:
-                success = False
+    for model_name in model_names_list:
+        correlation_value = np.mean(bootstrap_cor_list[model_name])
+        Msg.print_warn("BOOTSTRAP HUMAN vs MODEL " + model_name + " = " + str(correlation_value))
 
-        if success:
-            success_rate += 1
+    if save_filepath:
+        write_list = [ConfigUtils.TEMP_DEFAULT]
+        for model in model_names_list:
+            write_list.append(np.mean(bootstrap_cor_list[model]))
+        FileUtils.write_row_to_file(save_filepath, write_list)
 
-    if success_rate > 950:
-        Msg.print_success("SUCCESS RATE = " + str(success_rate))
-    else:
-        Msg.print_error("SUCCESS RATE = " + str(success_rate))
+    return bootstrap_cor_list
+
+
+def run_reaction_time_bootstrap(experiment_type, behavior_data, model_response_dict_dict, save_filepath=None):
+    Msg.print_info("Running bootstrap analysis for experiment type: " + str(experiment_type))
+
+    behavior_trial_key = TrialKeys.TRIAL_REACTION_TIME
+    model_names_list = list(model_response_dict_dict.keys())
+    trial_names_list = behavior_data.get_all_trial_names()
+
+    model_response_list_dict = {}
+    for model_name in model_names_list:
+        model_responses_list = []
+        model_response_dict = model_response_dict_dict[model_name]
+        for trial_name in trial_names_list:
+            model_responses_list.append(model_response_dict[trial_name])
+        model_response_list_dict[model_name] = model_responses_list
+
+    bootstrap_cor_list = {model_name: [] for model_name in model_names_list}
+
+    participant_id_list = behavior_data.get_participant_id_list()
+
+    for _ in range(1000):
+        sampled_ids = random.choices(list(participant_id_list), k=len(participant_id_list))
+        behavior_responses_dict = behavior_data.get_mean_trial_responses_dict(behavior_trial_key, sampled_ids)
+
+        behavior_responses_list = []
+        for trial_name in trial_names_list:
+            behavior_responses_list.append(behavior_responses_dict[trial_name])
+
+        for model_name in model_names_list:
+            model_responses_list = model_response_list_dict[model_name]
+            if ConfigUtils.ANALYSIS_PEARSON:
+                r = ComputeUtils.get_pearsonr(behavior_responses_list, model_responses_list)
+            else:
+                r = ComputeUtils.get_spearmanr(behavior_responses_list, model_responses_list)
+            bootstrap_cor_list[model_name].append(r)
 
     for model_name in model_names_list:
         correlation_value = np.mean(bootstrap_cor_list[model_name])
@@ -174,17 +210,50 @@ def run_behavior_vs_model_correlation(behavior_data, model_response_dict, model_
     Msg.print_warn("HUMAN vs MODEL " + model_name + " = " + str(correlation_value) + ", " + str(p_value))
 
 
-def draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict, save_path):
-    corr_list_by_model_dict = run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict)
+def run_reaction_time_correlation(behavior_data, model_response_dict, model_name=None, do_plot=True, do_z=False):
+    behavior_pref_dict = behavior_data.get_mean_trial_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE)
+    behavior_resp_dict = behavior_data.get_mean_trial_responses_dict(TrialKeys.TRIAL_REACTION_TIME)
 
-    correlation_list_split_half = run_split_half_bootstrap(behavior_data)
-    correlation_list_leave_one_out = run_leave_one_out_bootstrap(behavior_data)
+    trial_names_list = behavior_data.get_all_trial_names()
 
-    floor_ceiling_list = [np.mean(correlation_list_split_half), np.mean(correlation_list_leave_one_out)]
-    # floor_ceiling_list = [-0.1, 1.1]
+    behavior_pref_list = []
+    behavior_rt_list = []
+    model_pref_list = []
 
+    for trial_name in trial_names_list:
+        behavior_pref_list.append(behavior_pref_dict[trial_name])
+        behavior_rt_list.append(behavior_resp_dict[trial_name])
+        model_pref_list.append(model_response_dict[trial_name])
+
+    rt_pref_resid = ComputeUtils.get_res_partial_regression(behavior_rt_list, behavior_pref_list)
+    model_pref_resid = ComputeUtils.get_res_partial_regression(model_pref_list, behavior_pref_list)
+    ComputeUtils.get_res_partial_regression(rt_pref_resid[0], model_pref_resid[0])
+
+    if ConfigUtils.ANALYSIS_PEARSON:
+        correlation_value, p_value = ComputeUtils.get_pearsonr(behavior_rt_list, model_pref_list, True)
+    else:
+        correlation_value, p_value = ComputeUtils.get_spearmanr(behavior_rt_list, model_pref_list, True)
+
+    if model_name is None:
+        model_name = "model"
+
+    if do_plot:
+        if do_z:
+            model_pref_list = ComputeUtils.zscore_list(model_pref_list)
+
+        save_filepath = PathUtils.join(PathUtils.get_out_plots_dirpath(), model_name + "_rt.pdf")
+        PlotUtils.draw_scatter_plot(model_pref_list, behavior_rt_list,
+                                    f"behavior vs {model_name}", model_name, "behavior",
+                                    save_path=save_filepath, annot=trial_names_list)
+
+    Msg.print_warn("HUMAN vs MODEL " + model_name + " = " + str(correlation_value) + ", " + str(p_value))
+
+
+def draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict, save_path, do_rt=False):
+    corr_dict = run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict, do_rt=do_rt)
+    floor_ceiling_list = [-0.1, 1.1]
     PlotUtils.draw_multiple_bar_plots(list(model_response_dict_dict.keys()),
-                                      corr_list_by_model_dict,
+                                      corr_dict,
                                       floor_ceiling_list, save_path=save_path)
 
 
@@ -213,46 +282,70 @@ def run_analysis(experiment_type):
     phys_model_data = Parser.parse_computational_data(experiment_type, ModelType.PHYSICS_ON)
     no_phys_model_data = Parser.parse_computational_data(experiment_type, ModelType.PHYSICS_OFF)
 
-    phy_energy_response_dict = phys_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
-    no_phy_energy_response_dict = no_phys_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
+    phy_energy_pref_dict = phys_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
+    no_phy_energy_pref_dict = no_phys_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
 
-    phy_cost_response_dict = phys_model_data.get_model_response_list(experiment_type, ModelData.COST)
-    no_phy_cost_response_dict = no_phys_model_data.get_model_response_list(experiment_type, ModelData.COST)
+    phy_energy_rt_dict = phys_model_data.get_model_response_list(experiment_type, ModelData.ENERGY, True)
+    no_phy_energy_rt_dict = no_phys_model_data.get_model_response_list(experiment_type, ModelData.ENERGY, True)
+    phy_cost_rt_dict = phys_model_data.get_model_response_list(experiment_type, ModelData.COST, True)
+    no_phy_cost_rt_dict = no_phys_model_data.get_model_response_list(experiment_type, ModelData.COST, True)
 
-    heuristics_response_dict = Parser.parse_computational_data(experiment_type, ModelType.HEURISTICS)
-    stability_response_dict = Parser.parse_computational_data(experiment_type, ModelType.STABILITY)
+    phy_cost_pref_dict = phys_model_data.get_model_response_list(experiment_type, ModelData.COST)
+    no_phy_cost_pref_dict = no_phys_model_data.get_model_response_list(experiment_type, ModelData.COST)
+
+    heuristics_pref_dict = Parser.parse_computational_data(experiment_type, ModelType.HEURISTICS)
+    stability_pref_dict = Parser.parse_computational_data(experiment_type, ModelType.STABILITY)
 
     phys_ssa_model_data = Parser.parse_computational_data(experiment_type, ModelType.PHYSICS_ON_SSA)
     no_phys_ssa_model_data = Parser.parse_computational_data(experiment_type, ModelType.PHYSICS_OFF_SSA)
-    phy_ssa_response_dict = phys_ssa_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
-    no_phy_ssa_response_dict = no_phys_ssa_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
+    phy_ssa_pref_dict = phys_ssa_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
+    no_phy_ssa_pref_dict = no_phys_ssa_model_data.get_model_response_list(experiment_type, ModelData.ENERGY)
+    phy_ssa_rt_dict = phys_ssa_model_data.get_model_response_list(experiment_type, ModelData.ENERGY, True)
+    no_phy_ssa_rt_dict = no_phys_ssa_model_data.get_model_response_list(experiment_type, ModelData.ENERGY, True)
 
-    vlm_response_dict = Parser.parse_computational_data(experiment_type, ModelType.VLM)
+    vlm_pref_dict = Parser.parse_computational_data(experiment_type, ModelType.VLM)
 
-    model_response_dict_dict = {
-        "phy_on_energy": phy_energy_response_dict,
-        "phy_off_energy": no_phy_energy_response_dict,
-        "phy_on_cost": phy_cost_response_dict,
-        "phy_off_cost": no_phy_cost_response_dict,
-        "phy_on_ssa": phy_ssa_response_dict,
-        "phy_off_ssa": no_phy_ssa_response_dict,
-        "stability": stability_response_dict,
-        "heuristic": heuristics_response_dict,
-        "vlm": vlm_response_dict
-        }
+    model_pref_dict_dict = {
+        "phy_on_energy": phy_energy_pref_dict,
+        "phy_off_energy": no_phy_energy_pref_dict,
+        "phy_on_cost": phy_cost_pref_dict,
+        "phy_off_cost": no_phy_cost_pref_dict,
+        "phy_on_ssa": phy_ssa_pref_dict,
+        "phy_off_ssa": no_phy_ssa_pref_dict,
+        "stability": stability_pref_dict,
+        "heuristic": heuristics_pref_dict,
+        "vlm": vlm_pref_dict
+    }
 
     # ----------- uncomment when running temperature analysis -----------
     save_filepath = PathUtils.join(PathUtils.get_out_files_dirpath(), "boot_" + str(experiment_type).lower() + ".csv")
-    run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_response_dict_dict, save_filepath)
+    run_behavior_vs_model_bootstrap(experiment_type, behavior_data, model_pref_dict_dict, save_filepath)
 
     # ----------- produces bar graphs -----------
     save_filepath = PathUtils.join(PathUtils.get_out_plots_dirpath(), str(experiment_type).lower() + "_bar.pdf")
-    draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_response_dict_dict, save_filepath)
+    draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_pref_dict_dict, save_filepath)
 
     # ----------- produces correlation scatter graphs -----------
-    run_behavior_vs_model_correlation(behavior_data, phy_energy_response_dict, experiment_type + "_" + "PHY_ON_ENERGY")
-    run_behavior_vs_model_correlation(behavior_data, phy_cost_response_dict, experiment_type + "_" + "PHY_ON_COST")
-    run_behavior_vs_model_correlation(behavior_data, vlm_response_dict, experiment_type + "_" + "PHY_ON_VLM")
+    run_behavior_vs_model_correlation(behavior_data, phy_energy_pref_dict, experiment_type + "_" + "phy_on_energy")
+
+    # ----------- produces reaction time graphs -----------
+    if ExperimentType.DIFFICULTY not in experiment_type:
+        behavior_dict = behavior_data.get_mean_trial_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE)
+
+        model_pref_dict_dict = {
+            "behavior": behavior_dict,
+            "rt_phy_on": phy_energy_rt_dict,
+            "rt_phy_off": no_phy_energy_rt_dict,
+            "rt_cost_phy_on": phy_cost_rt_dict,
+            "rt_cost_phy_off": no_phy_cost_rt_dict,
+            "rt_ssa_phy_on": phy_ssa_rt_dict,
+            "rt_ssa_phy_off": no_phy_ssa_rt_dict,
+        }
+
+        save_filepath = PathUtils.join(PathUtils.get_out_plots_dirpath(), str(experiment_type).lower() + "_bar_rt.pdf")
+        draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_pref_dict_dict, save_filepath, True)
+
+        run_reaction_time_correlation(behavior_data, phy_energy_rt_dict, experiment_type + "_" + "phy_on_rt")
 
     time.sleep(1)
     Msg.println_normal("#################################################")
@@ -282,10 +375,14 @@ def main(action_goal_inference, effector_inference, difficulty, temperature):
 
     if temperature:
         for temperature in np.linspace(1, 11, 101):
+            Msg.print_warn("----------" + str(temperature) + "----------")
             ConfigUtils.TEMP_DEFAULT = temperature
-            ConfigUtils.TEMP_ENERGY = temperature
-            ConfigUtils.TEMP_COST = temperature
-            ConfigUtils.TEMP_SSA = temperature
+            ConfigUtils.TEMP_ENERGY_AG = temperature
+            ConfigUtils.TEMP_ENERGY_E = temperature
+            ConfigUtils.TEMP_COST_AG = temperature
+            ConfigUtils.TEMP_COST_E = temperature
+            ConfigUtils.TEMP_SSA_AG = temperature
+            ConfigUtils.TEMP_SSA_E = temperature
 
             run_analysis(ExperimentType.ACTION_GOAL)
             run_analysis(ExperimentType.HANDS)

@@ -73,7 +73,7 @@ fi
 ## ==========================================================================
 if [[ "$1" =~ "data" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Pulling data..."
-    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EU5kMTlcjEtJiT7VrRsJ85EBq7wzKnjrUVCwGi2rt6Gn4g?e=Od3cZ8&download=1" -O library.zip
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQBOZDE5XIxLSYk-1a0bCfORAX_kEzotA-G29bg42KGdnJY?e=SOf1wL&download=1" -O library.zip
     rm -rf mlr/share/projects/block_building/library
     chmod +777 library.zip
     unzip library.zip

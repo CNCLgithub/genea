@@ -143,7 +143,7 @@ class Parser:
                 trial_name = row[ModelData.TRIAL_NAME].replace(" ", "_")
 
                 if experiment_type == ExperimentType.HANDS:
-                    trial_num_of_hands = int(row[ModelData.TRIAL_NUM_OF_HANDS])
+                    trial_num_of_hands = int(row[ModelData.TRIAL_NUM_INDEX])
                     if trial_num_of_hands == 1:
                         trial_name += "_1"
                     elif trial_num_of_hands == 2:

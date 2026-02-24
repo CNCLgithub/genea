@@ -10,10 +10,13 @@ class ConfigUtils:
     PLACE_PENALTY = 15.0  # KE
     # PLACE_PENALTY = 1.0  # SSA
 
-    TEMP_DEFAULT = 3.5
-    TEMP_ENERGY = 3.5
-    TEMP_COST = 2.1
-    TEMP_SSA = 9.9
+    TEMP_DEFAULT = 3.1
+    TEMP_ENERGY_AG = 3.1
+    TEMP_ENERGY_E = 2.3
+    TEMP_COST_AG = 4.4
+    TEMP_COST_E = 1.7
+    TEMP_SSA_AG = 2.5
+    TEMP_SSA_E = 1.1
 
     # options
     DEBUG_CPP = False
