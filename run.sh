@@ -9,24 +9,23 @@ echo_purple () { echo -e "\033[1;38;5;141m$* \033[0m"; }
 echo_blue_thin () { echo -e "\033[0;36m$* \033[0m"; }
 
 cd "$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )" || exit
+
 . load_config.sh
+. load_paths.sh
 
-CONT="${ENV['cont_main']}"
 
-if [ "$1" == "n" ]; then  # navigation
-    . load_paths.sh
-    PROJECT="navigation"
-elif [ "$1" == "bb" ]; then  # block building
-    . load_paths.sh
+APP_ENV=""
+APP_CONT="${ENV['cont_init']}"
+if [[ "$1" == "bb" ]]; then  # block building
     PROJECT="block_building"
-elif [ "$1" == "setup" ]; then  # executing setup
-    PROJECT=""
-elif [ "$1" == "x" ]; then
-    . load_paths.sh
-    PROJECT=""
+    APP_ENV="${ENV[env_bb]}"
+    APP_CONT="${ENV[cont_bb]}"
+elif [[ "$1" == "nav" ]]; then  # navigation
+    PROJECT="navigation"
+    APP_ENV="${ENV[env_nav]}"
+    APP_CONT="${ENV[cont_nav]}"
 else
-    echo_orange "Invalid argument"
-    exit 1
+    PROJECT=""
 fi
 
 COMMAND="${*:2}"
@@ -43,7 +42,7 @@ echo_blue_thin "$(printf "=%.0s"  $(seq 1 79))"
 echo
 
 
-${SING} "${BS}" "${CONT}" bash -c "source ${ENV['env']}/bin/activate \
+${SING} "${BS}" "${APP_CONT}" bash -c "source ${APP_ENV}/bin/activate \
         && cd /project/mlr/share/projects/${PROJECT} \
         && exec ${COMMAND} \
         && cd /project \

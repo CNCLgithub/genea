@@ -30,18 +30,31 @@ if [[ $# -eq 0 ]] || [[ "$*" =~ "--help" ]] || [[ "$*" =~ "-h" ]];then
     exit 0
 fi
 
+APP_ENV=""
+APP_DEF=""
+APP_CONT="${ENV['cont_init']}"
+if [[ "$1" =~ "bb" ]];then
+    APP_ENV="${ENV[env_bb]}"
+    APP_DEF="${ENV[def_bb]}"
+    APP_CONT="${ENV[cont_bb]}"
+elif [[ "$1" =~ "nav" ]];then
+    APP_ENV="${ENV[env_nav]}"
+    APP_DEF="${ENV[def_nav]}"
+    APP_CONT="${ENV[cont_nav]}"
+fi
+
 
 ## ==========================================================================
 ## ----------------------- singularity container setup ------------------- ##
 ## ==========================================================================
-if [[ "$1" =~ "cont_pull" ]] || [[ "$1" =~ "all" ]];then
+if [[ "$2" =~ "cont_pull" ]];then
     echo_blue "Pulling singularity container..."
     wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EVysC-tuizdIgs9wmTrXYwoBjwkTOXNlF9kTLsRMfbPj4w?e=M4ZrLd&download=1" -O "${ENV[cont_init]}"
-    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EaFj9lg1b-5FseCdNFSJkcQB5VAYydkXVqjYYQu0LSeeJg?e=njvmDj&download=1" -O "${ENV[cont_main]}"
-elif [[ "$1" =~ "cont_build" ]];then
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EaFj9lg1b-5FseCdNFSJkcQB5VAYydkXVqjYYQu0LSeeJg?e=njvmDj&download=1" -O "${ENV[cont_bb]}"
+elif [[ "$2" =~ "cont_build" ]];then
     echo_blue "Building apptainer container..."
-    remove "${ENV[cont_main]}"
-    sudo -E apptainer build "${ENV[cont_main]}" "${ENV[cont_def]}"
+    remove "${APP_CONT}"
+    sudo -E apptainer build "${APP_CONT}" "${APP_DEF}"
 else
     echo_green "Not touching container"
 fi
@@ -50,24 +63,36 @@ fi
 ## ==========================================================================
 ## ----------------------- python setup ---------------------------------- ##
 ## ==========================================================================
-if [[ "$1" =~ "python" ]] || [[ "$1" =~ "all" ]];then
-    echo_blue "Setting up Python venv..."
-    apptainer exec "${ENV[cont_main]}" bash -c "python -m venv ${ENV[env]}"
-    ./run.sh setup "python -m pip install --upgrade pip --no-cache-dir"
-    ./run.sh setup "python -m pip install pillow==10.4.0"
-    ./run.sh setup "python -m pip install numpy==1.24.4"
-    ./run.sh setup "python -m pip install scipy==1.10.1"
-    ./run.sh setup "python -m pip install scikit-learn==1.3.2"
-    ./run.sh setup "python -m pip install matplotlib==3.7.5"
-    ./run.sh setup "python -m pip install click==8.1.7"
-    ./run.sh setup "python -m pip install click-help-colors==0.9.4"
-    ./run.sh setup "python -m pip install shapely==2.0.6"
-    ./run.sh setup "python -m pip install seaborn==0.13.2"
-    ./run.sh setup "python -m pip install python-dotenv==1.0.1"
-    ./run.sh setup "python -m pip install openai==1.60.1"
-    ./run.sh setup "python -m pip install puremagic==1.28"
-    ./run.sh setup "python -m pip install crocoddyl==3.0.1"
-    ./run.sh setup "python -m pip install mujoco==3.2.3"
+if [[ "$1" =~ "bb" ]] && [[ "$2" =~ "python" ]];then
+    echo_blue "Setting up Python ${APP_ENV}..."
+    apptainer exec "${APP_CONT}" bash -c "python -m venv ${APP_ENV}"
+    ./run.sh "$1" "python -m pip install --upgrade pip --no-cache-dir"
+    ./run.sh "$1" "python -m pip install pillow==10.4.0"
+    ./run.sh "$1" "python -m pip install numpy==1.24.4"
+    ./run.sh "$1" "python -m pip install scipy==1.10.1"
+    ./run.sh "$1" "python -m pip install scikit-learn==1.3.2"
+    ./run.sh "$1" "python -m pip install matplotlib==3.7.5"
+    ./run.sh "$1" "python -m pip install click==8.1.7"
+    ./run.sh "$1" "python -m pip install click-help-colors==0.9.4"
+    ./run.sh "$1" "python -m pip install shapely==2.0.6"
+    ./run.sh "$1" "python -m pip install seaborn==0.13.2"
+elif [[ "$1" =~ "nav" ]] && [[ "$2" =~ "python" ]];then
+    echo_blue "Setting up Python ${APP_ENV}..."
+    apptainer exec "${APP_CONT}" bash -c "python -m venv ${APP_ENV}"
+    ./run.sh "$1" "python -m pip install --upgrade pip --no-cache-dir"
+    ./run.sh "$1" "python -m pip install pillow==12.2.0"
+    ./run.sh "$1" "python -m pip install numpy==2.4.6"
+    ./run.sh "$1" "python -m pip install scipy==1.17.1"
+    ./run.sh "$1" "python -m pip install scikit-learn==1.8.0"
+    ./run.sh "$1" "python -m pip install matplotlib==3.10.9"
+    ./run.sh "$1" "python -m pip install click==8.4.1"
+    ./run.sh "$1" "python -m pip install click-help-colors==0.9.4"
+    ./run.sh "$1" "python -m pip install shapely==2.1.2"
+    ./run.sh "$1" "python -m pip install seaborn==0.13.2"
+    ./run.sh "$1" "python -m pip install python-dotenv==1.2.2"
+    ./run.sh "$1" "python -m pip install openai==2.38.0"
+    ./run.sh "$1" "python -m pip install puremagic==2.2.0"
+    ./run.sh "$1" "python -m pip install crocoddyl==3.2.1"
 else
     echo_green "Not touching python"
 fi

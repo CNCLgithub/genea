@@ -56,6 +56,8 @@ Manifest.toml
 *.egg-info
 
 venv/
+venv_bb/
+venv_nav/
 
 # Files and Folders #
 #####################

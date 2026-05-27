@@ -1,0 +1,65 @@
+bootstrap:docker
+From: tsapu/cudagl:12.6.3-base-ubuntu24.04
+
+
+%environment
+export DEBIAN_FRONTEND=noninteractive
+export PATH=/opt/openrobots/bin:$PATH
+export PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig:$PKG_CONFIG_PATH
+export LD_LIBRARY_PATH=/opt/openrobots/lib:$LD_LIBRARY_PATH
+
+%runscript
+exec bash "$*"
+
+
+%post
+# Set up some required environment defaults
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get -y install build-essential
+apt-get -y --force-yes install vim
+apt-get -y update
+apt-get -y install software-properties-common \
+                   wget \
+                   dpkg \
+                   cmake  \
+                   git  \
+                   curl \
+                   gdb \
+                   libopencv-dev \
+                   unzip \
+                   python3.12 \
+                   python3.12-venv \
+                   freeglut3-dev \
+                   libglu1-mesa-dev \
+                   libglew-dev \
+                   libqhull-dev \
+                   libann-dev
+
+apt-get clean
+apt-get -y upgrade
+
+add-apt-repository -y ppa:apptainer/ppa
+apt-get update
+apt-get install -y apptainer
+
+# sort out the libGLEW issue for Ubuntu 20.04
+ln -f -s /usr/lib/x86_64-linux-gnu/libGLEW.so.2.2 /usr/lib/libGLEW.so.1.13
+ln -f -s /usr/lib/x86_64-linux-gnu/libglut.so.3.12 /usr/lib/libglut.so.3
+ln -f -s /usr/lib/x86_64-linux-gnu/libqhull.so.8.0.2 /usr/lib/libqhull.so.7
+
+
+update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1
+
+
+# For Pinocchio
+apt install -qqy lsb-release
+
+mkdir -p /etc/apt/keyrings
+
+curl http://robotpkg.openrobots.org/packages/debian/robotpkg.asc | tee /etc/apt/keyrings/robotpkg.asc
+echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/robotpkg.asc] http://robotpkg.openrobots.org/packages/debian/pub $(lsb_release -cs) robotpkg" | tee /etc/apt/sources.list.d/robotpkg.list
+
+apt-get update
+
+apt install -qqy robotpkg-py3*-pinocchio

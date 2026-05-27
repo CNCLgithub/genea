@@ -448,6 +448,14 @@ class StimuliBPYUtils:
         bpy.ops.render.render(animation=True)
 
     @staticmethod
+    def render_frame(out_path, frame):
+        scene = bpy.context.scene
+        scene.frame_set(frame)
+        scene.render.filepath = out_path
+        scene.render.image_settings.file_format = 'PNG'
+        bpy.ops.render.render(write_still=True)
+
+    @staticmethod
     def get_stim_x_min():
         return StimuliBPYUtils._get_stim_bounds()["x_min"]
 
@@ -493,18 +501,22 @@ def main():
 
     for stimuli_item_dir_path in stimuli_item_path_list:
         stimuli_num = int(stimuli_item_dir_path.split("/")[-1].split("_")[-1])
-        out_wood_filepath = os.path.join(out_video_dirpath, f"stim_wood_{stimuli_num}.mp4")
-        out_stone_filepath = os.path.join(out_video_dirpath, f"stim_stone_{stimuli_num}.mp4")
+        out_wood_img_filepath = os.path.join(out_video_dirpath, f"stim_wood_{stimuli_num}.png")
+        out_stone_img_filepath = os.path.join(out_video_dirpath, f"stim_stone_{stimuli_num}.png")
+        out_wood_vid_filepath = os.path.join(out_video_dirpath, f"stim_wood_{stimuli_num}.mp4")
+        out_stone_vid_filepath = os.path.join(out_video_dirpath, f"stim_stone_{stimuli_num}.mp4")
 
         stimuli_filepath = os.path.join(stimuli_item_dir_path, "meshes", "stim.obj")
 
         StimuliBPYUtils.bpy_clear()
         StimuliBPYUtils.setup_scene(stimuli_filepath, _PlatformMaterial.WOOD)
-        StimuliBPYUtils.render_video(out_wood_filepath)
+        StimuliBPYUtils.render_frame(out_wood_img_filepath, VIDEO_FRAME_COUNT // 5 + VIDEO_FRAME_COUNT // 5 - 5)
+        StimuliBPYUtils.render_video(out_wood_vid_filepath)
 
         StimuliBPYUtils.bpy_clear()
         StimuliBPYUtils.setup_scene(stimuli_filepath, _PlatformMaterial.STONE)
-        StimuliBPYUtils.render_video(out_stone_filepath)
+        StimuliBPYUtils.render_frame(out_stone_img_filepath, VIDEO_FRAME_COUNT // 5 + VIDEO_FRAME_COUNT // 5 - 5)
+        StimuliBPYUtils.render_video(out_stone_vid_filepath)
 
 
 if __name__ == '__main__':
