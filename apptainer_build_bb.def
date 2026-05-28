@@ -36,7 +36,8 @@ apt-get -y install software-properties-common \
                    libglu1-mesa-dev \
                    libglew-dev \
                    libqhull-dev \
-                   libann-dev
+                   libann-dev \
+                   libstdc++6
 
 apt-get clean
 

@@ -77,6 +77,7 @@ if [[ "$1" =~ "bb" ]] && [[ "$2" =~ "python" ]];then
     ./run.sh "$1" "python -m pip install click-help-colors==0.9.4"
     ./run.sh "$1" "python -m pip install shapely==2.0.6"
     ./run.sh "$1" "python -m pip install seaborn==0.13.2"
+    ./run.sh "$1" "python -m pip install statsmodels==0.14.1"
 elif [[ "$1" =~ "nav" ]] && [[ "$2" =~ "python" ]];then
     echo_blue "Setting up Python ${APP_ENV}..."
     apptainer exec "${APP_CONT}" bash -c "python -m venv ${APP_ENV}"

@@ -5,12 +5,25 @@ This repository contains the code that implements the computational model from t
 In addition, it contains information about the experiment and analysis scripts that were used to generate the data for the paper.
 
 ## Getting Started
+The codebase contains two sub-repositories, each implementing different realizations of the GenEA framework depending on the task, namely block building and navigation. 
+This separation is necessary because each sub-repository has different dependencies. 
+Despite the separation, this codebase has been designed to provide a consistent workflow. 
+We use the placehold `<task>` to specify the task domain: use `bb` for block building and `nav` for navigation.
 
 ### Working with Apptainer (or Singularity)
 We have set up the entire codebase so that it can conveniently be run via 
 [Apptainer](https://apptainer.org/docs/user/main/introduction.html) (or Singularity). 
 
-### Setup
+### Install Apptainer
+```bash
+sudo apt install -y software-properties-common
+sudo add-apt-repository -y ppa:apptainer/ppa
+sudo apt update
+sudo apt install -y apptainer
+```
+
+
+### 🖥️ Setup
 Download the Apptainer containers (~ 5 mins)
 ```bash
 ./setup.sh cont_pull  
@@ -18,7 +31,7 @@ Download the Apptainer containers (~ 5 mins)
 
 Download and install all the necessary python packages (~ 5 mins)
 ```bash
-./setup.sh python
+./setup.sh <task> python
 ```
 
 Download data for running the experiments and to perform analysis (~ 5 mins)
@@ -26,8 +39,16 @@ Download data for running the experiments and to perform analysis (~ 5 mins)
 ./setup.sh data
 ```
 
+### 🖥️ System Requirements
+
+This project has been tested on Linux (Ubuntu 18.04, 20.04 and 24.04). 
+However, you should be able to use any operating system supported by [Apptainer](https://apptainer.org/docs/user/main/introduction.html).
+
+
+## BB: Block Building
+
 ### Compile the codebase
-When running the code for the first time, you will need to compile CPP files in the codebase. 
+When running the code for the first time, you will need to compile the CPP files in the codebase. 
 This is done by running the following command (~ 5 mins):
 ```
 singularity exec cont_init.simg bash -c "cd mlr/share && make"
@@ -44,7 +65,7 @@ Continue with the following commands:
 ./compile.sh makefile_run_ppm_generator
 ```
 
-## Define block configurations
+### Define block configurations
 Each trial of a study is described via a pair of `.g` files. 
 
 The files under the `library/init_files` directory define initial block configurations 
@@ -52,16 +73,16 @@ whereas those under `library/fin_files` directory specify final block configurat
 
 To view any block configuration, run the following command:
 ```bash
-./run.sh python run_viewer.py -p <absolute path of the .g file>
+./run.sh bb python run_viewer.py -p <absolute path of the .g file>
 ```
 
 You can also generate images of any block configuration by running the following command:
 ```bash
-./run.sh python run_image_generator.py -p <absolute path of the .g file> -i
+./run.sh bb python run_image_generator.py -p <absolute path of the .g file> -i
 ```
 
 
-## Run the model
+### Run the model
 All key model variables and parameters are defined in the `utils/core_utils.py` file, 
 including `ConfigUtils.IS_PHYSICS_ON` which when set to `False` runs the standard TAMP ablation model.
 
@@ -72,10 +93,10 @@ Use the `library/exp_data/trials_list.csv` file to specify the trials you want t
 
 To run the model on the studies specified in the `trials_list.csv` file, run the following command (~ 20-30 mins, depending on the experiment):
 ```bash
-./run.sh python run_experiment.py -a   # run action inference trials
-./run.sh python run_experiment.py -g   # run goal inference trials
-./run.sh python run_experiment.py -e   # run embodiment strategies inference (how many hands) trials
-./run.sh python run_experiment.py -d   # run difficulty trials
+./run.sh bb python run_experiment.py -a   # run action inference trials
+./run.sh bb python run_experiment.py -g   # run goal inference trials
+./run.sh bb python run_experiment.py -e   # run embodiment strategies inference (how many hands) trials
+./run.sh bb python run_experiment.py -d   # run difficulty trials
 ```
 
 The output of the model is stored in the `library/out_robot_data` directory. 
@@ -83,15 +104,13 @@ Data from the action, goal and embodiment strategies inference studies will be s
 Data from the difficulty study will be stored in the `diff_overall_out.csv` file.
 All intermediate files generated during the model run will be stored in the `library/intermediate_files` directory.
 
-## Analyze the results
+### Analyze the results
 ```bash
-./run.sh python perform_analysis.py -ag   # analyze action-goal inference data
-./run.sh python perform_analysis.py -e   # analyze embodiment strategies inference data
-./run.sh python perform_analysis.py -d   # analyze difficulty data
+./run.sh bb python perform_analysis.py -ag  # analyze action-goal inference data
+./run.sh bb python perform_analysis.py -e   # analyze embodiment strategies inference data
+./run.sh bb python perform_analysis.py -d   # analyze difficulty data
 ```
 
-## 🖥️ System Requirements
-
-This project has been tested on Linux (Ubuntu 18.04 and 20.04), however, you should be able to use any operating system supported by [Apptainer](https://apptainer.org/docs/user/main/introduction.html).
+## NAV: Navigation
 
 ---
