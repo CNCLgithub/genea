@@ -8,15 +8,7 @@ In addition, it contains information about the experiment and analysis scripts t
 
 ### Working with Apptainer (or Singularity)
 We have set up the entire codebase so that it can conveniently be run via 
-[Apptainer](https://apptainer.org/docs/user/main/introduction.html) (or Singularity). If your machine does not 
-have either of these already installed, run the following commands:
-```
-./apptainer_download.sh s1
- echo source ~/.bashrc
-./apptainer_download.sh s3
-./apptainer_download.sh s4
-```
-
+[Apptainer](https://apptainer.org/docs/user/main/introduction.html) (or Singularity). 
 
 ### Setup
 Download the Apptainer containers (~ 5 mins)
