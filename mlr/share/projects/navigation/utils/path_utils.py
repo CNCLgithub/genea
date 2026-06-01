@@ -1,7 +1,5 @@
 import os
 
-from Cython import returns
-
 
 class PathUtils:
     SLASH = "/"

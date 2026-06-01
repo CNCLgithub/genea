@@ -95,6 +95,11 @@ elif [[ "$1" =~ "nav" ]] && [[ "$2" =~ "python" ]];then
     ./run.sh "$1" "python -m pip install openai==2.38.0"
     ./run.sh "$1" "python -m pip install puremagic==2.2.0"
     ./run.sh "$1" "python -m pip install crocoddyl==3.2.1"
+    ./run.sh "$1" "python -m pip install trimesh==4.12.2"
+    ./run.sh "$1" "python -m pip install xmltodict==1.0.4"
+    ./run.sh "$1" "python -m pip install setuptools==82.0.1"
+    ./run.sh "$1" "python -m pip install wheel==0.47.0"
+    ./run.sh "$1" "python -m pip install mujoco==3.9.0"
 else
     echo_green "Not touching python"
 fi

@@ -56,6 +56,10 @@ class ComputeUtils:
         return list(stats.zscore(input_list))
 
     @staticmethod
+    def convert_quat_to_euler(quat_xyzw):
+        return Rotation.from_quat(quat_xyzw).as_euler('xyz')
+
+    @staticmethod
     def compute_l2_distance(list1, list2):
         return np.linalg.norm(np.array(list1) - np.array(list2))
 

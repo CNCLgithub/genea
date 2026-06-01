@@ -1,9 +1,8 @@
 import crocoddyl
 import pinocchio
-
 import numpy as np
-from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
 
+from mlr.share.projects.navigation.utils.config_utils import CoreConfig
 from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavAgent, NavProblem, NavProblemConstraints
 
 
@@ -59,12 +58,12 @@ class WalkProblem(NavProblem):
         com_ref = (self._agent.get_left_foot_pos() + self._agent.get_right_foot_pos()) / 2
         com_ref[2] = pinocchio.centerOfMass(self._agent.get_agent_model(), self._agent.get_agent_data(), pose0)[2]
 
-        total_steps = ConfigUtils.WALK_TREAD_KNOTS
+        total_steps = CoreConfig.WALK_TREAD_KNOTS
 
         walk_problem_list = []
 
         walk_stand_phase = []
-        for _ in range(ConfigUtils.WALK_STAND_KNOTS):
+        for _ in range(CoreConfig.WALK_STAND_KNOTS):
             nav_constraint = NavProblemConstraints(self._agent)
             nav_constraint.add_l_contact_constraint()
             nav_constraint.add_r_contact_constraint()

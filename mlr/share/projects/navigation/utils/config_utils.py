@@ -1,7 +1,5 @@
-class ConfigUtils:
+class CoreConfig:
     IS_DEBUG = True
-
-    CROCODDYL_FORCE_SCALING_FACTOR = 0.0001
 
     PYBULLET_SIM_TIME_TOTAL = 5  # seconds
     PYBULLET_SIM_TIME_STEP = 1. / 240.
@@ -12,9 +10,6 @@ class ConfigUtils:
     PYBULLET_POS_THRESHOLD = 0.5
     PYBULLET_ROT_THRESHOLD = 10
     PYBULLET_FORCE_MAG_MULTIPLIER = .1
-
-    STIMULI_PLATFORM_MASS = 20.0
-    STIMULI_PLATFORM_GAP = 1.2
 
     NAV_MODEL_VIEW_DYNAMICS = True
     NAV_MODEL_VIEW_KINEMATICS = False
@@ -37,3 +32,11 @@ class ConfigUtils:
 
     WALK_STAND_KNOTS = 4
     WALK_TREAD_KNOTS = 20
+
+
+class CrocoddylConfig:
+    CROCODDYL_FORCE_SCALING_FACTOR = 0.0001
+
+
+class StimuliConfig:
+    PLATFORM_GAP = 1.2

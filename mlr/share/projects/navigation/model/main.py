@@ -2,21 +2,21 @@ from mlr.share.projects.navigation.model.planner import NavModel
 from mlr.share.projects.navigation.model.stimuli import StimuliDiff, StimuliPairs, StimuliSingle
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.navigation_utils import NavAgent
-from mlr.share.projects.navigation.utils.stimuli_utils import StimulusItem
+from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
 
 
 class Experiment:
     @staticmethod
     def run_jump_test():
-        stimuli_pair_dirpath = FileUtils.get_dir_list_in_directory(StimuliPairs().get_stimuli_set_dirpath())[2]
-        nav_model = NavModel(NavAgent.TALOS_LEGS, StimulusItem(stimuli_pair_dirpath, StimuliPairs()))
+        stimuli_pair_dirpath = FileUtils.get_dir_list_in_directory(StimuliDiff().get_stimuli_set_dirpath())[2]
+        nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(stimuli_pair_dirpath, StimuliDiff()))
         nav_model.add_jump_task()
         nav_model.run_dynamics()
 
     @staticmethod
     def run_walk_test():
         stimuli_single_dirpath = FileUtils.get_dir_list_in_directory(StimuliSingle().get_stimuli_set_dirpath())[1]
-        nav_model = NavModel(NavAgent.TALOS_LEGS, StimulusItem(stimuli_single_dirpath, StimuliSingle()))
+        nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(stimuli_single_dirpath, StimuliSingle()))
         nav_model.add_walk_task()
         nav_model.run_dynamics()
 
@@ -24,7 +24,7 @@ class Experiment:
     def run_pair_platforms(total_runs=50):
         for stimuli_pair_dirpath in FileUtils.get_dir_list_in_directory(StimuliPairs().get_stimuli_set_dirpath()):
             for run_num in range(1, total_runs + 1):
-                nav_model = NavModel(NavAgent.TALOS_LEGS, StimulusItem(stimuli_pair_dirpath, StimuliPairs()))
+                nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(stimuli_pair_dirpath, StimuliPairs()))
                 nav_model.add_jump_task()
                 nav_model.run_dynamics()
                 nav_model.save_result_to_outfile(run_num)
@@ -33,9 +33,9 @@ class Experiment:
     def run_nav_model_on_diff():
         stim_item_dirpath_list = FileUtils.get_dir_list_in_directory(StimuliDiff().get_stimuli_set_dirpath())
         for stim_item_dirpath in stim_item_dirpath_list:
-            stim_item = StimulusItem(stim_item_dirpath, StimuliDiff())
+            stim_item = Stimulus(stim_item_dirpath, StimuliDiff())
 
-            stim_item_name = stim_item.get_stimulus_item_name()
+            stim_item_name = stim_item.get_stimulus_name()
             condition1 = int(stim_item_name.split("_")[1]) % 5 == 0 and int(stim_item_name.split("_")[1]) != 5
             condition2 = int(stim_item_name.split("_")[1]) == 1
             condition3 = int(stim_item_name.split("_")[1]) == 0
@@ -46,4 +46,4 @@ class Experiment:
 
 
 if __name__ == '__main__':
-    Experiment.run_pair_platforms()
+    Experiment.run_jump_test()

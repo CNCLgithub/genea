@@ -4,8 +4,7 @@ import pinocchio
 
 from example_robot_data.robots_loader import TalosLegsLoader
 
-from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
-from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
+from mlr.share.projects.navigation.utils.config_utils import CoreConfig
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 
 
@@ -91,88 +90,6 @@ class NavAgent:
 
     def get_nu(self):
         return self.get_agent_actuation_model().nu
-
-
-class NavPosition:
-    def __init__(self, x, y, z):
-        self._pos_x = x
-        self._pos_y = y
-        self._pos_z = z
-
-    def add_x(self, x):
-        self._pos_x += x
-
-    def set_x(self, new_x):
-        self._pos_x = new_x
-
-    def get_x(self):
-        return self._pos_x
-
-    def get_y(self):
-        return self._pos_y
-
-    def get_z(self):
-        return self._pos_z
-
-    def get_position_as_list(self):
-        return [self._pos_x, self._pos_y, self._pos_z]
-
-    def get_position_as_np_array(self):
-        return np.array(self.get_position_as_list())
-
-    def get_position_as_str(self):
-        return f"{self._pos_x} {self._pos_y} {self._pos_z}"
-
-
-class NavRotation:
-    def __init__(self, roll, pitch, yaw):
-        self._rot_roll = roll
-        self._rot_pitch = pitch
-        self._rot_yaw = yaw
-
-    def get_rotation_as_list(self):
-        return [self._rot_roll, self._rot_pitch, self._rot_yaw]
-
-    def get_rotation_as_np_array(self):
-        return np.array(self.get_rotation_as_list())
-
-    def get_rotation_as_str(self):
-        return f"{self._rot_roll} {self._rot_pitch} {self._rot_yaw}"
-
-
-class NavPose:
-    def __init__(self, position: NavPosition, rotation: NavRotation=NavRotation(0.0, 0.0, 0.0)):
-        self._position = position
-        self._rotation = rotation
-
-    def get_position(self):
-        return self._position
-
-    def get_rotation(self):
-        return self._rotation
-
-    def get_pose_diff(self, other_pose):
-        start_pos = self.get_position().get_position_as_np_array()
-        final_pos = other_pose.get_position().get_position_as_np_array()
-        pos_diff = ComputeUtils.compute_l2_distance(start_pos, final_pos)
-
-        start_rot = self.get_rotation().get_rotation_as_np_array()
-        final_rot = other_pose.get_rotation().get_rotation_as_np_array()
-        rot_diff = ComputeUtils.compute_angle_magnitude(start_rot, final_rot)
-
-        return pos_diff, rot_diff
-
-
-class NavForce:
-    def __init__(self, force_pose: NavPose, force_magnitude):
-        self._force_magnitude = force_magnitude
-        self._force_pose = force_pose
-
-    def get_force_magnitude(self):
-        return self._force_magnitude
-
-    def get_force_pose(self):
-        return self._force_pose
 
 
 class NavTask:
@@ -300,7 +217,7 @@ class NavProblem:
             contacts_list.addContact(str(f_id) + "_contact", contact_model)
 
         for f_id in contacts_frame_id_list:
-            wc = crocoddyl.WrenchCone(np.eye(3), ConfigUtils.NAV_PROBLEM_FRICTION_COEFFICIENT, np.array([0.1, 0.05]))
+            wc = crocoddyl.WrenchCone(np.eye(3), CoreConfig.NAV_PROBLEM_FRICTION_COEFFICIENT, np.array([0.1, 0.05]))
             wc_res = crocoddyl.ResidualModelContactWrenchCone(self._agent.get_state(), f_id, wc, self._agent.get_nu())
             wc_act = crocoddyl.ActivationModelQuadraticBarrier(crocoddyl.ActivationBounds(wc.lb, wc.ub))
             wc_cost = crocoddyl.CostModelResidual(self._agent.get_state(), wc_act, wc_res)
@@ -329,7 +246,7 @@ class NavProblem:
 
         control = crocoddyl.ControlParametrizationModelPolyZero(self._agent.get_nu())
 
-        return crocoddyl.IntegratedActionModelEuler(diff_action_model, control, ConfigUtils.NAV_PROBLEM_TIME_STEP)
+        return crocoddyl.IntegratedActionModelEuler(diff_action_model, control, CoreConfig.NAV_PROBLEM_TIME_STEP)
 
     def create_foot_impulse_phase(self, nav_constraints):
         foot_frame_id_list = nav_constraints.get_swing_constraints_frame_id_list()
@@ -380,7 +297,7 @@ class NavProblem:
 
         costs_list = crocoddyl.CostModelSum(self._agent.get_state(), self._agent.get_nu())
         for f_id in foot_contacts_frame_id_list:
-            wc = crocoddyl.WrenchCone(np.eye(3), ConfigUtils.NAV_PROBLEM_FRICTION_COEFFICIENT, np.array([0.1, 0.05]))
+            wc = crocoddyl.WrenchCone(np.eye(3), CoreConfig.NAV_PROBLEM_FRICTION_COEFFICIENT, np.array([0.1, 0.05]))
             wc_res = crocoddyl.ResidualModelContactWrenchCone(self._agent.get_state(), f_id, wc, self._agent.get_nu())
             wc_act = crocoddyl.ActivationModelQuadraticBarrier(crocoddyl.ActivationBounds(wc.lb, wc.ub))
             wc_cost = crocoddyl.CostModelResidual(self._agent.get_state(), wc_act, wc_res)

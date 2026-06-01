@@ -17,7 +17,7 @@ class PathUtils:
         return os.path.join(paths[0], *paths[1:])
 
     @staticmethod
-    def get_root_dirpath():
+    def get_root_dirpath() -> str:
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     @staticmethod

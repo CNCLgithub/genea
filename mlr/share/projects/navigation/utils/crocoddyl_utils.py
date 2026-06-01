@@ -1,19 +1,20 @@
 import numpy as np
 import pinocchio
 
-from crocoddyl import DifferentialActionDataContactFwdDynamics, DifferentialActionDataContactInvDynamics, \
-    ActionDataImpulseFwdDynamics, StdVec_DiffActionData, ActionModelImpulseFwdDynamics
+from crocoddyl import ActionDataImpulseFwdDynamics, StdVec_DiffActionData, ActionModelImpulseFwdDynamics
+from crocoddyl import DifferentialActionDataContactFwdDynamics as FwdDynamics
+from crocoddyl import DifferentialActionModelContactInvDynamics as InvDynamics
 
-from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
-from mlr.share.projects.navigation.utils.navigation_utils import NavForce, NavPose, NavPosition, NavRotation
+from mlr.share.projects.navigation.utils.config_utils import CrocoddylConfig
+from mlr.share.projects.navigation.utils.core_utils import NavForce, NavPose, NavPosition, NavRotation
 
 
 class CrocoddylUtils:
     @staticmethod
     def _has_contacts(data):
         if hasattr(data, "differential"):
-            condition1 = isinstance(data.differential, DifferentialActionDataContactFwdDynamics)
-            condition2 = isinstance(data.differential, DifferentialActionDataContactInvDynamics)
+            condition1 = isinstance(data.differential, FwdDynamics)
+            condition2 = isinstance(data.differential, InvDynamics.DifferentialActionDataContactInvDynamics)
             if condition1 or condition2:
                 return True
         elif isinstance(data, ActionDataImpulseFwdDynamics):
@@ -23,8 +24,8 @@ class CrocoddylUtils:
     @staticmethod
     def _get_contact_model_data(model, data):
         if hasattr(data, "differential"):
-            condition1 = isinstance(data.differential, DifferentialActionDataContactFwdDynamics)
-            condition2 = isinstance(data.differential, DifferentialActionDataContactInvDynamics)
+            condition1 = isinstance(data.differential, FwdDynamics)
+            condition2 = isinstance(data.differential, InvDynamics.DifferentialActionDataContactInvDynamics)
             condition3 = isinstance(data.differential, StdVec_DiffActionData)
             if condition1 or condition2:
                 return model.differential.contacts.contacts, data.differential.multibody.contacts.contacts
@@ -58,7 +59,7 @@ class CrocoddylUtils:
                 nav_rot = NavRotation(force_rot[0], force_rot[1], force_rot[2])
 
                 force_pose = NavPose(nav_pos, nav_rot)
-                force_magnitude = np.linalg.norm(force_wrench.linear) / ConfigUtils.CROCODDYL_FORCE_SCALING_FACTOR
+                force_magnitude = np.linalg.norm(force_wrench.linear) / CrocoddylConfig.CROCODDYL_FORCE_SCALING_FACTOR
                 forces_list.append(NavForce(force_pose, force_magnitude))
 
         return forces_list

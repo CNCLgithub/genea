@@ -9,15 +9,15 @@ from mlr.share.projects.navigation.model.stimuli import StimuliPairs
 from mlr.share.projects.navigation.model.tasks.jump import JumpTask
 from mlr.share.projects.navigation.model.tasks.walk import WalkTask
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
-from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
+from mlr.share.projects.navigation.utils.config_utils import CoreConfig
 from mlr.share.projects.navigation.utils.crocoddyl_utils import CrocoddylUtils
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
+from mlr.share.projects.navigation.utils.mujoco_utils import MujocoUtils
 from mlr.share.projects.navigation.utils.navigation_utils import NavAgent, NavTask
 from mlr.share.projects.navigation.utils.path_utils import PathUtils
 from mlr.share.projects.navigation.utils.platform_utils import Platform, PlatformType
-from mlr.share.projects.navigation.utils.pybullet_utils import PyBulletUtils
-from mlr.share.projects.navigation.utils.stimuli_utils import StimulusItem
+from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
 
 
 class NavOutLabel(Enum):
@@ -98,7 +98,7 @@ class NavOutData:
 
 
 class NavModel:
-    def __init__(self, nav_agent_name, nav_scene: StimulusItem):
+    def __init__(self, nav_agent_name, nav_scene: Stimulus):
         self._agent = NavAgent(nav_agent_name)
 
         self._agent_init_pose = self._agent.get_x0()
@@ -112,9 +112,9 @@ class NavModel:
 
     def _setup_task_solver(self, nav_task: NavTask):
         solver = crocoddyl.SolverFDDP(nav_task.get_task_problem(self._agent, self._agent_current_pose))
-        solver.th_stop = ConfigUtils.NAV_MODEL_THRESHOLD_STOP
+        solver.th_stop = CoreConfig.NAV_MODEL_THRESHOLD_STOP
 
-        if ConfigUtils.NAV_MODEL_VIEW_DYNAMICS:
+        if CoreConfig.NAV_MODEL_VIEW_DYNAMICS:
             solver.setCallbacks([crocoddyl.CallbackVerbose(), crocoddyl.CallbackLogger()])  # noqa
         else:
             solver.setCallbacks([crocoddyl.CallbackVerbose()])  # noqa
@@ -153,32 +153,32 @@ class NavModel:
         return True
 
     def _get_platform_length(self, platform_key):
-        return self._scene.get_platform_surface_measures(platform_key)[0]
+        return self._scene.get_platform_top_surface_xy(platform_key)[0]
 
     def _get_platform_width(self, platform_key):
-        return self._scene.get_platform_surface_measures(platform_key)[0]
+        return self._scene.get_platform_top_surface_xy(platform_key)[0]
 
     def _get_delta_x(self, platform_key, is_single_platform=False, do_skew=True):
         p_length = self._get_platform_length(platform_key)
 
         if is_single_platform:
-            p_length -= 2 * p_length / ConfigUtils.NAV_MODEL_SINGLE_PLATFORM_MULTIPLIER
+            p_length -= 2 * p_length / CoreConfig.NAV_MODEL_SINGLE_PLATFORM_MULTIPLIER
         else:
             p_length /= 2
 
         if do_skew:
-            return ComputeUtils.sample_skew_normal(p_length, ConfigUtils.NAV_MODEL_SIGMA, ConfigUtils.NAV_MODEL_ALPHA)
-        return ComputeUtils.sample_normal(p_length, ConfigUtils.NAV_MODEL_SIGMA / 2)
+            return ComputeUtils.sample_skew_normal(p_length, CoreConfig.NAV_MODEL_SIGMA, CoreConfig.NAV_MODEL_ALPHA)
+        return ComputeUtils.sample_normal(p_length, CoreConfig.NAV_MODEL_SIGMA / 2)
 
     def _get_delta_y(self, platform_key):
         self._get_platform_width(platform_key) / 2
-        return ComputeUtils.sample_normal(0.0, ConfigUtils.NAV_MODEL_SIGMA / 2)
+        return ComputeUtils.sample_normal(0.0, CoreConfig.NAV_MODEL_SIGMA / 2)
 
     @staticmethod
     def has_stimuli_moved(start_pose, final_pose):
         pos_diff, rot_diff = start_pose.get_pose_diff(final_pose)
 
-        if pos_diff < ConfigUtils.PYBULLET_POS_THRESHOLD or rot_diff < ConfigUtils.PYBULLET_ROT_THRESHOLD:
+        if pos_diff < CoreConfig.PYBULLET_POS_THRESHOLD or rot_diff < CoreConfig.PYBULLET_ROT_THRESHOLD:
             Msg.print_info(f"INFO [NavModel]: platform stable -- pos={pos_diff}, rot={rot_diff}")
             return False, pos_diff, rot_diff
 
@@ -208,7 +208,7 @@ class NavModel:
         jump_vector = np.array([jump_cleft + jump_delta_x, jump_delta_y, 0.0])
 
         jump_task = JumpTask()
-        jump_task.set_jump_height(ConfigUtils.NAV_MODEL_JUMP_HEIGHT)
+        jump_task.set_jump_height(CoreConfig.NAV_MODEL_JUMP_HEIGHT)
         jump_task.set_jump_vector(jump_vector)
 
         self._setup_task_solver(jump_task)
@@ -226,12 +226,12 @@ class NavModel:
 
             instability_count += 1
 
-        total_steps = max(1, int(walk_distance // ConfigUtils.NAV_MODEL_STEP_LENGTH))
+        total_steps = max(1, int(walk_distance // CoreConfig.NAV_MODEL_STEP_LENGTH))
         step_length = walk_distance / total_steps
 
         for step_num in range(total_steps):
             walk_task = WalkTask(step_num == 0)
-            walk_task.set_step_height(ConfigUtils.NAV_MODEL_STEP_HEIGHT)
+            walk_task.set_step_height(CoreConfig.NAV_MODEL_STEP_HEIGHT)
             walk_task.set_step_length(step_length)
 
             self._setup_task_solver(walk_task)
@@ -239,60 +239,62 @@ class NavModel:
             self._nav_task_stability_list.append(instability_count)
 
     def run_dynamics(self):
-        if ConfigUtils.NAV_MODEL_VIEW_KINEMATICS:
+        if CoreConfig.NAV_MODEL_VIEW_KINEMATICS:
             self._view_kinematics()
 
         jump_onset_time = 0.0
-        jump_stint_time = ConfigUtils.PYBULLET_SIM_JUMP * ConfigUtils.PYBULLET_SIM_TIME_STEP
+        jump_stint_time = CoreConfig.PYBULLET_SIM_JUMP * CoreConfig.PYBULLET_SIM_TIME_STEP
 
         walk_onset_time = 0.0
-        walk_stint_time = ConfigUtils.PYBULLET_SIM_WALK * ConfigUtils.PYBULLET_SIM_TIME_STEP
+        walk_stint_time = CoreConfig.PYBULLET_SIM_WALK * CoreConfig.PYBULLET_SIM_TIME_STEP
+
+        mujoco_utils = MujocoUtils(PathUtils.join(self._scene.get_urdf_dirpath(), "stim.urdf"), CoreConfig.NAV_MODEL_VIEW_DYNAMICS)
 
         ground_rel_filepath = self._scene.get_urdf_rel_filepath(self._scene.get_platform_ground_key())
 
-        pybullet_utils = PyBulletUtils(ConfigUtils.NAV_MODEL_VIEW_DYNAMICS)
-        pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), ground_rel_filepath, is_fixed=True)
-        for platform_key in self._scene.get_platform_keys_list():
-            platform_rel_filepath = self._scene.get_urdf_rel_filepath(platform_key)
-            pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), platform_rel_filepath)
-
-        p_id_list = pybullet_utils.get_platform_ids_list()
-
-        for nav_task in self._nav_task_list:
-            nav_forces = CrocoddylUtils.get_forces_list(nav_task.get_task_solver())
-
-            # store poses before dynamics
-            for p_key, p_id in zip(self._scene.get_platform_keys_list(), p_id_list):
-                self._scene.get_platform_by_key(p_key).add_platform_pose(pybullet_utils.get_platform_pose(p_id))
-
-            for p_id, nf_list in zip(p_id_list, ComputeUtils.chunkify_list(nav_forces, len(p_id_list))):
-                for nfs in nf_list:
-                    if len(nfs) == 0:
-                        continue
-                    if nav_task.get_task_type() == NavTask.JUMP:
-                        pybullet_utils.add_force_on_platform(p_id, nfs[0], jump_onset_time, jump_stint_time)
-                        pybullet_utils.add_force_on_platform(p_id, nfs[1], jump_onset_time, jump_stint_time)
-                    elif nav_task.get_task_type() == NavTask.WALK:
-                        if len(nfs) == 2:
-                            pybullet_utils.add_force_on_platform(p_id, nfs[0], walk_onset_time, walk_stint_time)
-                            pybullet_utils.add_force_on_platform(p_id, nfs[1], walk_onset_time, walk_stint_time)
-                            continue
-                        pybullet_utils.add_force_on_platform(p_id, nfs[0], walk_onset_time, walk_stint_time)
-
-            walk_onset_time += walk_stint_time
-
-            pybullet_utils.run_simulation()
-
-            # store poses after dynamics
-            for p_key, p_id in zip(self._scene.get_platform_keys_list(), p_id_list):
-                self._scene.get_platform_by_key(p_key).add_platform_pose(pybullet_utils.get_platform_pose(p_id))
-
-        pybullet_utils.close()
+        # pybullet_utils = PyBulletUtils(ConfigUtils.NAV_MODEL_VIEW_DYNAMICS)
+        # pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), ground_rel_filepath, is_fixed=True)
+        # for platform_key in self._scene.get_platform_keys_list():
+        #     platform_rel_filepath = self._scene.get_urdf_rel_filepath(platform_key)
+        #     pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), platform_rel_filepath)
+        #
+        # p_id_list = pybullet_utils.get_platform_ids_list()
+        #
+        # for nav_task in self._nav_task_list:
+        #     nav_forces = CrocoddylUtils.get_forces_list(nav_task.get_task_solver())
+        #
+        #     # store poses before dynamics
+        #     for p_key, p_id in zip(self._scene.get_platform_keys_list(), p_id_list):
+        #         self._scene.get_platform_by_key(p_key).add_platform_pose(pybullet_utils.get_platform_pose(p_id))
+        #
+        #     for p_id, nf_list in zip(p_id_list, ComputeUtils.chunkify_list(nav_forces, len(p_id_list))):
+        #         for nfs in nf_list:
+        #             if len(nfs) == 0:
+        #                 continue
+        #             if nav_task.get_task_type() == NavTask.JUMP:
+        #                 pybullet_utils.add_force_on_platform(p_id, nfs[0], jump_onset_time, jump_stint_time)
+        #                 pybullet_utils.add_force_on_platform(p_id, nfs[1], jump_onset_time, jump_stint_time)
+        #             elif nav_task.get_task_type() == NavTask.WALK:
+        #                 if len(nfs) == 2:
+        #                     pybullet_utils.add_force_on_platform(p_id, nfs[0], walk_onset_time, walk_stint_time)
+        #                     pybullet_utils.add_force_on_platform(p_id, nfs[1], walk_onset_time, walk_stint_time)
+        #                     continue
+        #                 pybullet_utils.add_force_on_platform(p_id, nfs[0], walk_onset_time, walk_stint_time)
+        #
+        #     walk_onset_time += walk_stint_time
+        #
+        #     pybullet_utils.run_simulation()
+        #
+        #     # store poses after dynamics
+        #     for p_key, p_id in zip(self._scene.get_platform_keys_list(), p_id_list):
+        #         self._scene.get_platform_by_key(p_key).add_platform_pose(pybullet_utils.get_platform_pose(p_id))
+        #
+        # pybullet_utils.close()
 
     def save_result_to_outfile(self, run_num):
         for nav_task in self._nav_task_list:
             nav_out_data = NavOutData(StimuliPairs().get_stimuli_set_name())
-            nav_out_data.add_nav_data(NavOutLabel.NAV_STIM_ITEM_NAME, self._scene.get_stimulus_item_name(True))
+            nav_out_data.add_nav_data(NavOutLabel.NAV_STIM_ITEM_NAME, self._scene.get_stimulus_name(True))
             nav_out_data.add_nav_data(NavOutLabel.NAV_AGENT_NAME, self._agent.get_name())
             nav_out_data.add_nav_data(NavOutLabel.NAV_TASK, nav_task.get_task_type())
             nav_out_data.add_nav_data(NavOutLabel.RUN_NUM, run_num)
@@ -306,9 +308,9 @@ class NavModel:
                 start_pose = platform.get_platform_pose(0)
                 final_pose = platform.get_platform_pose(-1)
                 has_moved, pos_diff, rot_diff = self.has_stimuli_moved(start_pose, final_pose)
-                mass = ConfigUtils.STIMULI_PLATFORM_MASS
+                mass = CoreConfig.STIMULI_PLATFORM_MASS
 
-                nav_out_data.add_platform_data(platform.get_platform_name(), pos_diff, rot_diff, has_moved, mass)
+                nav_out_data.add_platform_data(platform.get_platform_type(), pos_diff, rot_diff, has_moved, mass)
                 nav_task_cost += nav_task.get_task_cost()
                 if has_moved:
                     nav_task_instability += 1
@@ -322,7 +324,7 @@ class NavModel:
 
 
 class NavPlanner:
-    def __init__(self, stim_item: StimulusItem):
+    def __init__(self, stim_item: Stimulus):
         self._stim_item = stim_item
 
         self._stim_platforms_list: List[Platform] = self._load_stim_platforms_list()
@@ -331,7 +333,7 @@ class NavPlanner:
         ordered_platforms_list = []
 
         stim_platform_keys_list = self._stim_item.get_platform_keys_list()
-        stim_platform_keys_list = [key for key in stim_platform_keys_list if StimulusItem.is_platform_movable(key)]
+        stim_platform_keys_list = [key for key in stim_platform_keys_list if Stimulus.is_platform_movable(key)]
 
         for platform_key in stim_platform_keys_list:
             platform = self._stim_item.get_platform_by_key(platform_key)
@@ -342,14 +344,14 @@ class NavPlanner:
     @staticmethod
     def _get_next_nav_tasks_list(platform_name):
         return_nav_task_list = [NavTask.JUMP]
-        if PlatformType.CUBOIDAL_LONG in platform_name:
+        if PlatformType.LONG in platform_name:
             return_nav_task_list.append(NavTask.WALK)
         return return_nav_task_list
 
     def run_planner(self):
         for platform_index, curr_platform in enumerate(self._stim_platforms_list[:-1]):
             for nav_task in self._get_next_nav_tasks_list(curr_platform.get_platform_name()):
-                nav_model = NavModel(NavAgent.TALOS_LEGS, StimulusItem(stimuli_pair_dirpath, StimuliPairs()))
+                nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(stimuli_pair_dirpath, StimuliPairs()))
 
                 if nav_task == NavTask.JUMP:
                     next_platform_name = self._stim_platforms_list[platform_index + 1].get_platform_name()

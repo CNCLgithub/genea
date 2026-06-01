@@ -2,7 +2,7 @@ import crocoddyl
 import numpy as np
 import pinocchio
 
-from mlr.share.projects.navigation.utils.config_utils import ConfigUtils
+from mlr.share.projects.navigation.utils.config_utils import CoreConfig
 from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavAgent, NavProblem, NavProblemConstraints
 
 
@@ -56,21 +56,21 @@ class JumpProblem(NavProblem):
         jump_problem_list = []
 
         take_off_phase = []
-        for _ in range(ConfigUtils.JUMP_GROUND_KNOTS):
+        for _ in range(CoreConfig.JUMP_GROUND_KNOTS):
             nav_constraint = NavProblemConstraints(self._agent)
             nav_constraint.add_l_contact_constraint()
             nav_constraint.add_r_contact_constraint()
             take_off_phase.append(self.create_foot_action_phase(nav_constraint))
 
         fly_up_phase = []
-        for k in range(ConfigUtils.JUMP_FLYING_KNOTS):
-            com_jump_segment = com_jump * (k + 1) / ConfigUtils.JUMP_FLYING_KNOTS + com_ref
+        for k in range(CoreConfig.JUMP_FLYING_KNOTS):
+            com_jump_segment = com_jump * (k + 1) / CoreConfig.JUMP_FLYING_KNOTS + com_ref
             nav_constraint = NavProblemConstraints(self._agent)
             nav_constraint.add_com_constraint(com_jump_segment)
             fly_up_phase.append(self.create_foot_action_phase(nav_constraint))
 
         fly_down_phase = []
-        for k in range(ConfigUtils.JUMP_FLYING_KNOTS):
+        for k in range(CoreConfig.JUMP_FLYING_KNOTS):
             nav_constraint = NavProblemConstraints(self._agent)
             fly_down_phase.append(self.create_foot_action_phase(nav_constraint))
 
@@ -82,7 +82,7 @@ class JumpProblem(NavProblem):
         land_phase = []
         land_vec = jump_vector.copy()
         land_vec[2] = height_diff
-        for _ in range(ConfigUtils.JUMP_GROUND_KNOTS // 2):
+        for _ in range(CoreConfig.JUMP_GROUND_KNOTS // 2):
             nav_constraint = NavProblemConstraints(self._agent)
             nav_constraint.add_l_contact_constraint()
             nav_constraint.add_r_contact_constraint()
