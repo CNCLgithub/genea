@@ -146,8 +146,11 @@ class Platform:
 
         return PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_SIZE_BULK, PlatformConfig.PLATFORM_HEIGHT
 
-    def get_platform_id(self):
-        return self._platform_id
+    def get_platform_name(self):
+        platform_shape = self.get_platform_type().get_shape()
+        platform_scale = self.get_platform_type().get_scale()
+        platform_material = self.get_platform_type().get_material()
+        return "_".join([platform_shape, platform_scale, platform_material, self._platform_id])
 
     def get_platform_type(self):
         return self._platform_type
@@ -155,9 +158,10 @@ class Platform:
     def get_platform_pose(self):
         return self._platform_pose
 
-    @staticmethod
-    def get_mass():
-        return PlatformConfig.PLATFORM_MASS
+    def get_mass(self):
+        if self.get_platform_type().get_material() == PlatformMaterial.WOODY:
+            return PlatformConfig.PLATFORM_MASS_WOODY
+        return PlatformConfig.PLATFORM_MASS_STONE
 
     def get_platform_mesh_name(self):
         return self.get_platform_type().get_shape() + "_" + self.get_platform_type().get_scale()

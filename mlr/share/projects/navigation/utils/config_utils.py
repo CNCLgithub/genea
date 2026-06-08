@@ -43,7 +43,8 @@ class StimuliConfig:
 
 
 class PlatformConfig:
-    PLATFORM_MASS = 20.01
+    PLATFORM_MASS_WOODY = 10.00
+    PLATFORM_MASS_STONE = 20.00
 
     PLATFORM_HEIGHT = 3.5
     PLATFORM_SIZE_BASE = 3.0

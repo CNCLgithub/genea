@@ -75,7 +75,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -84,7 +84,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -95,7 +95,7 @@ class StimuliDiff(StimuliSet):
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -105,7 +105,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.WIDE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -114,7 +114,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.WIDE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -123,7 +123,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.WIDE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -132,7 +132,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.WIDE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -142,7 +142,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.LONG, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -151,7 +151,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.LONG, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -160,7 +160,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.LONG, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -169,7 +169,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.LONG, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in range(len(platform_types_list))]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
         self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
@@ -177,14 +177,14 @@ class StimuliDiff(StimuliSet):
     # ======================= WALK =======================
     def make_stimuli_11(self):
         platform_types_list = [PlatformType(PlatformShape.WALK, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY)]
-        parent_ids_list = [str(parent_id) for parent_id in [0]]
+        parent_ids_list = [parent_id for parent_id in [0]]
         delta_x_list = [-1.0]
         delta_y_list = [0.0]
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, -1.0, 0.0)
 
     def make_stimuli_12(self):
         platform_types_list = [PlatformType(PlatformShape.WALK, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in [0]]
+        parent_ids_list = [parent_id for parent_id in [0]]
         delta_x_list = [1.0]
         delta_y_list = [0.0]
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, 1.0, 0.0)
@@ -193,7 +193,7 @@ class StimuliDiff(StimuliSet):
         platform_types_list = [PlatformType(PlatformShape.WALK, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
-        parent_ids_list = [str(parent_id) for parent_id in [0, 0, 2]]
+        parent_ids_list = [parent_id for parent_id in [0, 0, 2]]
         delta_x_list = [-1.0, -1.0, 0.5]
         delta_y_list = [2.0, -2.0, 0.0]
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, -1.0, 0.0)

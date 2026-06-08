@@ -73,19 +73,21 @@ class Stimulus:
         platform = Platform(str(self._stim_platforms_counter), platform_type, platform_pose)
 
         self._stim_platforms_counter += 1
-        self._stim_platforms_dict[platform.get_platform_id()] = platform
+        self._stim_platforms_dict[platform.get_platform_name()] = platform
 
         # add mesh
         mesh_filepath = PathUtils.join(PathUtils.get_platforms_dirpath(), platform.get_platform_mesh_filename())
         FileUtils.copy_file(mesh_filepath, self.get_stimulus_meshes_dirpath())
 
         # add mjcf
-        self._stim_mjcf_generator.add_body(platform.get_platform_id(),
+        self._stim_mjcf_generator.add_body(platform.get_platform_name(),
                                            platform.get_platform_mesh_name(),
                                            platform.get_platform_mesh_filename(),
                                            platform_pose.get_position().get_position_as_str(),
                                            platform_pose.get_rotation().get_rotation_as_str(),
                                            platform.get_mass())
+
+        return platform.get_platform_name()
 
     def add_ground(self, ground_pose=NavPose(NavPosition(0.0, 0.0, -PlatformConfig.PLATFORM_HEIGHT))):
         ground_size = 10
@@ -103,12 +105,12 @@ class Stimulus:
             mjcf_filepath = self._stim_mjcf_generator.get_mjcf_filepath()
 
         mj = MujocoUtils(mjcf_filepath)
-        platform_ids_list = mj.get_body_names_list()
+        platform_names_list = mj.get_body_names_list()
         platform_types_list = mj.get_body_types_list()
-        for platform_id, platform_type in zip(platform_ids_list, platform_types_list):
-            platform_pos, platform_rot = mj.get_body_pose_by_name(platform_id)
+        for platform_name, platform_type in zip(platform_names_list, platform_types_list):
+            platform_pos, platform_rot = mj.get_body_pose_by_name(platform_name)
             platform_pose = NavPose(NavPosition(*platform_pos), NavRotation(*platform_rot))
-            self._stim_platforms_dict[platform_id] = Platform(platform_id, platform_type, platform_pose)
+            self._stim_platforms_dict[platform_name] = Platform(platform_name, platform_type, platform_pose)
 
     def save_to_mjcf(self):
         self._stim_mjcf_generator.save_mjcf()
@@ -121,15 +123,17 @@ class Stimulus:
     def get_root_platform_pose() -> NavPose:
         return NavPose(NavPosition(0.0, 0.0, -PlatformConfig.PLATFORM_HEIGHT))
 
-    def get_next_platform_pose(self, query_platform_type, ref_platform_id, delta_x, delta_y) -> NavPose:
-        if ref_platform_id not in self._stim_platforms_dict:
-            Msg.print_error(f"ERROR [Stimuli]: Platform {ref_platform_id} not found.")
+    def get_next_platform_pose(self, query_platform_type, ref_platform_index, delta_x, delta_y) -> NavPose:
+        if ref_platform_index >= len(list(self._stim_platforms_dict.keys())):
+            Msg.print_error(f"ERROR [Stimuli]: Platform {ref_platform_index} not found.")
             assert False
 
-        next_x = self.get_platform(ref_platform_id).get_platform_pose().get_position().get_x()
-        next_y = self.get_platform(ref_platform_id).get_platform_pose().get_position().get_y()
+        ref_platform_name = self.get_platform_name_by_index(ref_platform_index)
 
-        ref_surface_xy = self.get_platform_top_surface_xy(ref_platform_id)
+        next_x = self.get_platform(ref_platform_name).get_platform_pose().get_position().get_x()
+        next_y = self.get_platform(ref_platform_name).get_platform_pose().get_position().get_y()
+
+        ref_surface_xy = self.get_platform_top_surface_xy(ref_platform_name)
         next_x += ref_surface_xy[0] / 2
 
         next_x += StimuliConfig.MIN_GAP_X + delta_x
@@ -162,32 +166,40 @@ class Stimulus:
     def get_stimulus_meshes_dirpath(self):
         return PathUtils.join(self.get_stimulus_dirpath(), "meshes")
 
-    def get_platform_ids_list(self):
+    def get_platform_names_list(self):
         return list(self._stim_platforms_dict.keys())
 
-    def get_platform_id_by_index(self, query_index):
+    def get_platform_name_by_index(self, query_index):
+        query_platform_name = None
         if query_index == -1:
-            return self.get_platform_ids_list()[-1]
+            query_platform_name = self.get_platform_names_list()[-1]
 
-        if query_index < len(self.get_platform_ids_list()):
-            return self.get_platform_ids_list()[query_index]
+        if query_index < len(self.get_platform_names_list()):
+            query_platform_name = self.get_platform_names_list()[query_index]
+
+        return query_platform_name
+
+    def get_platform_by_index(self, query_index):
+        query_platform_name = self.get_platform_name_by_index(query_index)
+        if self.get_platform_name_by_index(query_index):
+            return self.get_platform(query_platform_name)
 
         Msg.print_error(f"ERROR [Stimuli]: platform index {query_index} not found.")
         assert False
 
-    def get_platform(self, platform_id) -> Platform:
-        if platform_id not in self._stim_platforms_dict:
-            Msg.print_error(f"ERROR [Stimuli]: platform {platform_id} not found.")
+    def get_platform(self, platform_name) -> Platform:
+        if platform_name not in self._stim_platforms_dict:
+            Msg.print_error(f"ERROR [Stimuli]: platform {platform_name} not found.")
             assert False
 
-        return self._stim_platforms_dict[platform_id]
+        return self._stim_platforms_dict[platform_name]
 
-    def get_platform_top_surface_xy(self, platform_id):
-        if platform_id not in self._stim_platforms_dict:
-            Msg.print_error(f"ERROR [Stimuli]: Platform {platform_id} not found.")
+    def get_platform_top_surface_xy(self, platform_name):
+        if platform_name not in self._stim_platforms_dict:
+            Msg.print_error(f"ERROR [Stimuli]: Platform {platform_name} not found.")
             assert False
 
-        return Platform.get_platform_top_surface_xy(self.get_platform(platform_id).get_platform_type())
+        return Platform.get_platform_top_surface_xy(self.get_platform(platform_name).get_platform_type())
 
     def get_gap_between_platform_centers(self, platform_id1, platform_id2):
         if platform_id1 not in self._stim_platforms_dict or platform_id2 not in self._stim_platforms_dict:
@@ -222,9 +234,9 @@ class Stimulus:
     def get_center_x(self):
         min_platform_list = []
         max_platform_list = []
-        for platform_id in self.get_platform_ids_list():
-            platform_x = self.get_platform(platform_id).get_platform_pose().get_position().get_x()
-            surface_xy = self.get_platform_top_surface_xy(platform_id)
+        for platform_name in self.get_platform_names_list():
+            platform_x = self.get_platform(platform_name).get_platform_pose().get_position().get_x()
+            surface_xy = self.get_platform_top_surface_xy(platform_name)
             min_platform_list.append(platform_x - surface_xy[0] / 2)
             max_platform_list.append(platform_x + surface_xy[0] / 2)
 
@@ -235,8 +247,8 @@ class Stimulus:
 
     def get_max_x(self):
         max_platform_list = []
-        for platform_id in self.get_platform_ids_list():
-            platform_x = self.get_platform(platform_id).get_platform_pose().get_position().get_x()
-            surface_xy = self.get_platform_top_surface_xy(platform_id)
+        for platform_name in self.get_platform_names_list():
+            platform_x = self.get_platform(platform_name).get_platform_pose().get_position().get_x()
+            surface_xy = self.get_platform_top_surface_xy(platform_name)
             max_platform_list.append(platform_x + surface_xy[0] / 2)
         return max(max_platform_list)
