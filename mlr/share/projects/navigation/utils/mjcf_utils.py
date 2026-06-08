@@ -60,7 +60,6 @@ class MJCFGenerator:
         self._mjcf_root = _MJCFElement(_MJCFTag.MJCF, None)
 
         self._mjcf_compiler = _MJCFElement(_MJCFTag.COMPILER, self._mjcf_root)
-        # self._mjcf_compiler.add_attribute(_MJCFAttr.ANGLE, "radians")
         self._mjcf_compiler.add_attribute(_MJCFAttr.MESHDIR, "meshes/")
 
         self._mjcf_option = _MJCFElement(_MJCFTag.OPTION, self._mjcf_root)
@@ -70,6 +69,8 @@ class MJCFGenerator:
         self._mjcf_body = _MJCFElement(_MJCFTag.WORLD_BODY, self._mjcf_root)
 
         self._mjcf_filepath = PathUtils.join(stimulus_dirpath, "stimulus.mjcf")
+
+        self._mesh_registry = []
 
     @staticmethod
     def _mjcf_to_dict(mjcf_filepath):
@@ -102,17 +103,19 @@ class MJCFGenerator:
             body_rot = body_element.get(_MJCFAttr.ROT)
             yield body_name, [float(pos) for pos in body_pos.split(" ")], [float(rot) for rot in body_rot.split(" ")]
 
-    def add_ground(self, ground_pos_as_str, ground_size_str, ground_color_str=".2 .2 .2 1"):
+    def add_ground(self, ground_pos_as_str, ground_size_str):
         geom = _MJCFElement(_MJCFTag.GEOM, self._mjcf_body)
         geom.add_attribute(_MJCFAttr.TYPE, _MJCFAttr.BOX)
         geom.add_attribute(_MJCFAttr.POS, ground_pos_as_str)
         geom.add_attribute(_MJCFAttr.SIZE, ground_size_str)
-        geom.add_attribute(_MJCFAttr.RGBA, ground_color_str)
+        geom.add_attribute(_MJCFAttr.RGBA, ".2 .2 .2 1")
 
-    def add_body(self, body_name, body_type, body_mesh_filename, body_pos_str, body_rot_str, body_color_str, body_mass):
-        mesh = _MJCFElement(_MJCFTag.MESH, self._mjcf_asset)
-        mesh.add_attribute(_MJCFAttr.NAME, body_type)
-        mesh.add_attribute(_MJCFAttr.FILE, body_mesh_filename)
+    def add_body(self, body_name, mesh_name, mesh_filename, body_pos_str, body_rot_str, body_mass):
+        if mesh_name not in self._mesh_registry:
+            mesh = _MJCFElement(_MJCFTag.MESH, self._mjcf_asset)
+            mesh.add_attribute(_MJCFAttr.NAME, mesh_name)
+            mesh.add_attribute(_MJCFAttr.FILE, mesh_filename)
+            self._mesh_registry.append(mesh_name)
 
         body = _MJCFElement(_MJCFTag.BODY, self._mjcf_body)
         body.add_attribute(_MJCFAttr.NAME, body_name)
@@ -121,9 +124,9 @@ class MJCFGenerator:
 
         geom = _MJCFElement(_MJCFTag.GEOM, body)
         geom.add_attribute(_MJCFAttr.TYPE, _MJCFAttr.MESH)
-        geom.add_attribute(_MJCFAttr.MESH, body_type)
+        geom.add_attribute(_MJCFAttr.MESH, mesh_name)
         geom.add_attribute(_MJCFAttr.MASS, str(body_mass))
-        geom.add_attribute(_MJCFAttr.RGBA, body_color_str)
+        geom.add_attribute(_MJCFAttr.RGBA, ".625 .625 .625 1")
 
         _MJCFElement(_MJCFTag.FREE_JOINT, body)
 

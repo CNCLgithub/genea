@@ -1,25 +1,6 @@
 import numpy as np
 
 
-class NavColor:
-    def __init__(self, color_name, color_rgba=(0.625, 0.625, 0.625, 1.0)):
-        self._color_name = color_name
-        self._color_rgba = color_rgba
-
-    @staticmethod
-    def load_from_str(color_name, color_str):
-        return NavColor(color_name, [float(x) for x in color_str.split(" ")])
-
-    def get_color_name(self):
-        return self._color_name
-
-    def get_color_rgba(self):
-        return self._color_rgba
-
-    def get_color_as_str(self):
-        return f"{self._color_rgba[0]} {self._color_rgba[1]} {self._color_rgba[2]} {self._color_rgba[3]}"
-
-
 class NavPosition:
     def __init__(self, x, y, z):
         self._pos_x = x

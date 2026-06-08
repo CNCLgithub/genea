@@ -83,6 +83,7 @@ class FileUtils:
         except Exception as e:
             Msg.print_error("ERROR: issue in retrieving directory list within given directory " + dirpath)
             Msg.print_error(str(e))
+            assert False
 
     @staticmethod
     def get_files_in_directory(dirpath, is_sorted=True, is_recursive=False):
@@ -101,6 +102,7 @@ class FileUtils:
         except Exception as e:
             Msg.print_error("ERROR: issue in retrieving files within directory " + dirpath)
             Msg.print_error(str(e))
+            assert False
 
     @staticmethod
     def read_file(filepath):
