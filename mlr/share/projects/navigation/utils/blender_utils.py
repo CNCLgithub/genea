@@ -5,6 +5,7 @@ import os
 import random
 import shutil
 import sys
+import xml.etree.ElementTree as ETree
 
 from mathutils import Vector
 
@@ -23,6 +24,9 @@ from core_utils import NavPosition, NavPose
 from platform_utils import PlatformShape, PlatformScale, PlatformMaterial, PlatformType, Platform
 
 
+PLATFORM_NAME = "platform_name"
+
+
 class _FileUtils:
     @staticmethod
     def is_dir(dirpath: str):
@@ -37,12 +41,6 @@ class _FileUtils:
             return
 
         os.makedirs(dirpath)
-        
-    @staticmethod
-    def import_stl_file(filepath: str):
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(f"ERROR [video_utils]: file not found: {filepath}")
-        bpy.ops.wm.stl_import(filepath=filepath)
 
     @staticmethod
     def get_dir_list_in_directory(dirpath: str):
@@ -55,6 +53,56 @@ class _FileUtils:
 
 
 class BPYUtils:
+    @staticmethod
+    def _import_stl_file(filepath: str):
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"ERROR [video_utils]: file not found: {filepath}")
+        bpy.ops.import_mesh.stl(filepath=filepath)
+
+    @staticmethod
+    def _import_mjcf_file(scene_dirpath: str, mjcf_filepath: str):
+        tree = ETree.parse(mjcf_filepath)
+        root = tree.getroot()
+
+        mjcf_mesh_dict = {}
+        for mesh in root.findall(".//asset/mesh"):
+            mjcf_mesh_dict[mesh.attrib["name"]] = os.path.join(scene_dirpath, "meshes", mesh.attrib["file"])
+
+        for body in root.findall(".//worldbody/body"):
+            body_name = body.attrib.get("name", "no_name")
+            body_pos = list(map(float, body.attrib.get("pos", "0 0 0").split()))
+            body_rot = list(map(float, body.attrib.get("euler", "0 0 0").split()))
+
+            geom = body.find("geom")
+            if geom is None:
+                continue
+
+            geom_type = geom.attrib.get("type")
+
+            if geom_type == "mesh":
+                mesh_filepath = mjcf_mesh_dict[geom.attrib["mesh"]]
+                if mesh_filepath.endswith(".stl"):
+                    BPYUtils._import_stl_file(mesh_filepath)
+
+                obj = bpy.context.selected_objects[0]
+                obj.name = body_name
+                obj.location = body_pos
+                obj.rotation_euler = body_rot
+                obj[PLATFORM_NAME] = body_name
+
+            elif geom_type == "box":
+                body_scale = list(map(float, geom.attrib["size"].split()))
+                bpy.ops.mesh.primitive_cube_add(location=body_pos)
+                obj = bpy.context.object
+                obj.name = body_name
+                obj.scale = body_scale
+                obj.rotation_euler = body_rot
+                obj[PLATFORM_NAME] = body_name
+
+            else:
+                print(f"ERROR [BPYUtils]: encountered an unsupported geom type -- {geom_type} for {body_name})")
+                assert False
+
     @staticmethod
     def _get_chaikin_curve(input_points, total_points_to_generate, iterations=3):
         for _ in range(iterations):
@@ -173,18 +221,24 @@ class BPYUtils:
         camera.constraints["Track To"].up_axis = 'UP_Y'
 
     @staticmethod
-    def _add_lighting(light_location=(0., 0., 0.), light_energy=20000.0, light_size=10):
+    def _add_lighting(light_location=(0., 0., 0.), light_energy=4000.0, light_size=40):
         bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_location)
         area = bpy.context.object
-        area.data.energy = light_energy
+        area.data.energy = light_energy * 2
         area.data.size = light_size
 
+        bpy.ops.object.light_add(type='AREA', align='WORLD', location=(0, -30, 0))
+        area = bpy.context.object
+        area.data.energy = light_energy / 1.25
+        area.data.size = light_size
+        area.rotation_euler[0] = math.radians(90)
+
     @staticmethod
-    def _add_texture_woody(bpy_obj):
+    def _add_texture_woody(bpy_obj, is_darker=False):
         if bpy_obj is None:
             return
 
-        mat = bpy._platform_name.materials.new(name=PlatformMaterial.WOODY)
+        mat = bpy.data.materials.new(name=PlatformMaterial.WOODY)
         mat.use_nodes = True
 
         for node in mat.node_tree.nodes:
@@ -205,8 +259,8 @@ class BPYUtils:
         wave = mat.node_tree.nodes.new(type="ShaderNodeTexWave")
         wave.wave_type = random.choice(['RINGS', 'BANDS'])
         wave.rings_direction = 'Z'
-        wave.inputs["Scale"].default_value = random.uniform(0.6, 6.0)
-        wave.inputs["Distortion"].default_value = random.uniform(1.5, 3.5)
+        wave.inputs["Scale"].default_value = random.uniform(0.5, 1.5)
+        wave.inputs["Distortion"].default_value = random.uniform(1.0, 4.5)
 
         noise = mat.node_tree.nodes.new(type="ShaderNodeTexNoise")
         noise.inputs["Scale"].default_value = random.uniform(2.0, 12.0)
@@ -221,14 +275,17 @@ class BPYUtils:
         mix.inputs['Fac'].default_value = random.uniform(0.5, 0.8)
 
         color_ramp = mat.node_tree.nodes.new(type='ShaderNodeValToRGB')
-        color_ramp.color_ramp.elements[0].color = (0.2, 0.1, 0.0, 1)
-        color_ramp.color_ramp.elements[1].color = (0.8, 0.5, 0.2, 1)
+        color_ramp.color_ramp.elements[0].color = (0.75, 0.4, 0.25, 1)
+        color_ramp.color_ramp.elements[1].color = (0.95, 0.85, 0.7, 1)
+        if is_darker:
+            color_ramp.color_ramp.elements[0].color = (0.005, 0.001, 0.00, 1)
+            color_ramp.color_ramp.elements[1].color = (0.018, 0.008, 0.002, 1)
 
         mat.node_tree.links.new(tex_coord.outputs['Object'], mapping.inputs['Vector'])
         mat.node_tree.links.new(mapping.outputs['Vector'], noise.inputs['Vector'])
         mat.node_tree.links.new(mapping.outputs['Vector'], vector_math.inputs[0])
         mat.node_tree.links.new(noise.outputs['Fac'], vector_math.inputs[1])
-        if random.choice([True, False]):
+        if is_darker:
             mat.node_tree.links.new(vector_math.outputs['Vector'], wave.inputs['Vector'])
         else:
             mat.node_tree.links.new(mapping.outputs['Vector'], wave.inputs['Vector'])
@@ -334,9 +391,9 @@ class BPYUtils:
         elif material == PlatformMaterial.STONE:
             BPYUtils._add_texture_stone(obj)
         elif material == PlatformMaterial.BLAND:
-            BPYUtils._add_color(obj, "light_gray", (0.625, 0.625, 0.625, 1.0))
+            BPYUtils._add_color(obj, "bland", (0.625, 0.625, 0.625, 1.0))
         elif material == PlatformMaterial.BRAWN:
-            BPYUtils._add_color(obj, "dark_gray", (0.9, 0.9, 0.9, 1.0))
+            BPYUtils._add_texture_woody(obj, True)
         else:
             raise ValueError(f"ERROR [BPYUtils]: invalid material -- {material}")
 
@@ -344,7 +401,7 @@ class BPYUtils:
     def bpy_clear():
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete(use_global=False)
-        
+
     @staticmethod
     def bpy_select_all():
         bpy.ops.object.select_all(action='SELECT')
@@ -364,28 +421,12 @@ class BPYUtils:
             bpy.ops.object.mode_set(mode='EDIT')
 
     @staticmethod
-    def load_platform_mesh(platform: Platform):
-        platform_filepath = os.path.join(PLATFORMS_DIRPATH, platform.get_platform_mesh_filename())
-        platform_pose = platform.get_platform_pose()
-        platform_material = platform.get_platform_type().get_material()
-
-        if bpy.context.object and bpy.context.object.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
-
-        bpy.ops.import_mesh.stl(filepath=platform_filepath)
-
-        obj = bpy.context.object
-        obj.location = platform_pose.get_position().get_position_as_np_array()
-        obj.rotation_euler = platform_pose.get_rotation().get_rotation_as_np_array()
-        BPYUtils.add_material(obj, platform_material)
-
-    @staticmethod
     def save_scene_as_stl(stl_filepath: str):
         BPYUtils.bpy_object_mode()
         bpy.ops.export_mesh.stl(filepath=stl_filepath, use_selection=True)
 
     @staticmethod
-    def render_video(out_video_filepath):
+    def render_video(out_video_filepath: str):
         scene = bpy.context.scene
         scene.render.filepath = out_video_filepath
         scene.render.image_settings.file_format = 'FFMPEG'
@@ -403,7 +444,7 @@ class BPYUtils:
         bpy.ops.render.render(animation=True)
 
     @staticmethod
-    def render_frame(out_path, frame):
+    def render_frame(out_path: str, frame: int):
         scene = bpy.context.scene
         scene.frame_set(frame)
         scene.render.filepath = out_path
@@ -411,13 +452,19 @@ class BPYUtils:
         bpy.ops.render.render(write_still=True)
 
     @staticmethod
-    def import_scene(scene_filepath: str):
+    def load_scene(scene_dirpath, scene_filepath: str):
         BPYUtils.bpy_clear()
 
-        bpy.context.scene.world.color = (0, 0, 0)
+        world = bpy.context.scene.world
+        world.use_nodes = True
+        bg = world.node_tree.nodes["Background"]
+        bg.inputs[0].default_value = (0.04, 0.04, 0.04, 1)
+        bg.inputs[1].default_value = 1.0
 
         if scene_filepath.endswith(".stl"):
-            _FileUtils.import_stl_file(scene_filepath)
+            BPYUtils._import_stl_file(scene_filepath)
+        elif scene_filepath.endswith(".mjcf"):
+            BPYUtils._import_mjcf_file(scene_dirpath, scene_filepath)
         else:
             print(f"ERROR [BPYUtils]: invalid scene type -- {scene_filepath}")
             assert False
@@ -426,11 +473,14 @@ class BPYUtils:
         light_location = (BPYUtils.get_stim_center_x(), BPYUtils.get_stim_center_y(), light_height)
         BPYUtils._add_lighting(light_location=light_location)
 
-        tracer_height = BPYUtils.get_stim_z_min() + abs(BPYUtils.get_stim_height()) * 0.75
-        camera_height = BPYUtils.get_stim_z_min() + abs(BPYUtils.get_stim_height()) * 1.5
+        tracer_height = BPYUtils.get_stim_z_min() + abs(BPYUtils.get_stim_height()) * 1.0
+        camera_height = BPYUtils.get_stim_z_min() + abs(BPYUtils.get_stim_height()) * 2.2
         BPYUtils._add_camera(tracer_height, 2, camera_height, 8)
 
-        BPYUtils._add_texture(platform_texture)
+        for bpy_obj in bpy.context.scene.objects:
+            if PLATFORM_NAME in bpy_obj.keys():
+                obj_type = bpy_obj.get(PLATFORM_NAME).split("_")[2]
+                BPYUtils.add_material(bpy_obj, obj_type)
 
     @staticmethod
     def _get_stim_bounds():
@@ -441,7 +491,7 @@ class BPYUtils:
             if not obj.type == 'MESH':
                 continue
 
-            if obj.name.startswith("ground"):
+            if obj.name.startswith(PlatformShape.GROUND):
                 obj.select_set(False)
                 continue
 
@@ -457,7 +507,7 @@ class BPYUtils:
                 "y_max": max(y),
                 "z_min": min(z),
                 "z_max": max(z)}
-    
+
     @staticmethod
     def get_stim_x_min():
         return BPYUtils._get_stim_bounds()["x_min"]
@@ -484,7 +534,7 @@ class BPYUtils:
 
     @staticmethod
     def get_stim_center_x():
-        return (BPYUtils.get_stim_x_max() + BPYUtils.get_stim_x_min()) / 2
+        return BPYUtils.get_stim_x_min() + (BPYUtils.get_stim_x_max() + BPYUtils.get_stim_x_min()) / 2
 
     @staticmethod
     def get_stim_center_y():
@@ -551,8 +601,7 @@ class RoundedCuboidPlatform(Platform):
                 v.co.x *= bot_scale
                 v.co.y *= bot_scale
 
-        bmesh.update_edit_mesh(obj._platform_name)
-
+        bmesh.update_edit_mesh(obj.data)
         BPYUtils.bpy_object_mode()
 
 
@@ -646,36 +695,30 @@ def make_platforms():
     platform.create_platform()
     platform.save_as_stl()
 
-    
-def make_stimuli():
-    stimuli_set_dirpath = os.path.join(STIMULI_DIRPATH, STIMULI_SET_NAME)
-    stimuli_item_path_list = _FileUtils.get_dir_list_in_directory(stimuli_set_dirpath)
 
-    out_video_dirpath = os.path.join(OUT_DIRPATH, "stim_videos")
-    _FileUtils.create_dir(out_video_dirpath)
+def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False):
+    stimuli_path_list = _FileUtils.get_dir_list_in_directory(os.path.join(STIMULI_DIRPATH, stimuli_set_name))
+    for stimulus_dir_path in stimuli_path_list:
+        stimuli_num = int(stimulus_dir_path.split("/")[-1].split("_")[-1])
 
-    for stimuli_item_dir_path in stimuli_item_path_list:
-        stimuli_num = int(stimuli_item_dir_path.split("/")[-1].split("_")[-1])
-        out_wood_img_filepath = os.path.join(out_video_dirpath, f"stim_wood_{stimuli_num}.png")
-        out_stone_img_filepath = os.path.join(out_video_dirpath, f"stim_stone_{stimuli_num}.png")
-        out_wood_vid_filepath = os.path.join(out_video_dirpath, f"stim_wood_{stimuli_num}.mp4")
-        out_stone_vid_filepath = os.path.join(out_video_dirpath, f"stim_stone_{stimuli_num}.mp4")
+        BPYUtils.load_scene(stimulus_dir_path, os.path.join(stimulus_dir_path, "stimulus.mjcf"))
 
-        stimuli_filepath = os.path.join(stimuli_item_dir_path, "meshes", "stim.obj")
+        if save_as_img:
+            out_img_dirpath = os.path.join(OUT_DIRPATH, "stim_images")
+            out_img_filepath = os.path.join(out_img_dirpath, f"stim_{stimuli_num}.png")
+            _FileUtils.create_dir(out_img_dirpath)
+            BPYUtils.render_frame(out_img_filepath, 2 * (BlenderConfig.VIDEO_FRAME_COUNT // 5) - 5)
 
-        BPYUtils.bpy_clear()
-        BPYUtils.import_scene(stimuli_filepath)
-        BPYUtils.render_frame(out_wood_img_filepath, VIDEO_FRAME_COUNT // 5 + VIDEO_FRAME_COUNT // 5 - 5)
-        BPYUtils.render_video(out_wood_vid_filepath)
-
-        BPYUtils.bpy_clear()
-        BPYUtils.import_scene(stimuli_filepath)
-        BPYUtils.render_frame(out_stone_img_filepath, VIDEO_FRAME_COUNT // 5 + VIDEO_FRAME_COUNT // 5 - 5)
-        BPYUtils.render_video(out_stone_vid_filepath)
+        if save_as_video:
+            out_vid_dirpath = os.path.join(OUT_DIRPATH, "stim_videos")
+            out_vid_filepath = os.path.join(out_vid_dirpath, f"stim_{stimuli_num}.mp4")
+            _FileUtils.create_dir(out_vid_dirpath)
+            BPYUtils.render_video(out_vid_filepath)
 
 
 def main():
-    make_platforms()
+    # make_platforms()
+    make_stimuli("diff", save_as_img=True, save_as_video=False)
 
 
 if __name__ == '__main__':

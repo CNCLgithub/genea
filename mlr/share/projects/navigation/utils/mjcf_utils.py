@@ -37,6 +37,17 @@ class _MJCFAttr:
     ANGLE = "angle"
     MESHDIR = "meshdir"
     GRAVITY = "gravity"
+    SOLIMP = "solimp"
+    SOLREF = "solref"
+
+
+class _MJCFDefault:
+    PLATFORM_COLOR = ".625 .625 .625 1"
+    GROUND_COLOR = ".9 .9 .9 1"
+
+    ROT = "0 0 0"
+    SOLIMP = "0.999 0.999 0.001"
+    SOLREF = "0.001 1"
 
 
 class _MJCFElement:
@@ -103,12 +114,18 @@ class MJCFGenerator:
             body_rot = body_element.get(_MJCFAttr.ROT)
             yield body_name, [float(pos) for pos in body_pos.split(" ")], [float(rot) for rot in body_rot.split(" ")]
 
-    def add_ground(self, ground_pos_as_str, ground_size_str):
-        geom = _MJCFElement(_MJCFTag.GEOM, self._mjcf_body)
+    def add_ground(self, ground_name, ground_pos_as_str, ground_size_str):
+        body = _MJCFElement(_MJCFTag.BODY, self._mjcf_body)
+        body.add_attribute(_MJCFAttr.NAME, ground_name)
+        body.add_attribute(_MJCFAttr.POS, ground_pos_as_str)
+        body.add_attribute(_MJCFAttr.ROT, _MJCFDefault.ROT)
+
+        geom = _MJCFElement(_MJCFTag.GEOM, body)
         geom.add_attribute(_MJCFAttr.TYPE, _MJCFAttr.BOX)
-        geom.add_attribute(_MJCFAttr.POS, ground_pos_as_str)
         geom.add_attribute(_MJCFAttr.SIZE, ground_size_str)
-        geom.add_attribute(_MJCFAttr.RGBA, ".2 .2 .2 1")
+        geom.add_attribute(_MJCFAttr.RGBA, _MJCFDefault.GROUND_COLOR)
+        geom.add_attribute(_MJCFAttr.SOLIMP, _MJCFDefault.SOLIMP)
+        geom.add_attribute(_MJCFAttr.SOLREF, _MJCFDefault.SOLREF)
 
     def add_body(self, body_name, mesh_name, mesh_filename, body_pos_str, body_rot_str, body_mass):
         if mesh_name not in self._mesh_registry:
@@ -126,7 +143,9 @@ class MJCFGenerator:
         geom.add_attribute(_MJCFAttr.TYPE, _MJCFAttr.MESH)
         geom.add_attribute(_MJCFAttr.MESH, mesh_name)
         geom.add_attribute(_MJCFAttr.MASS, str(body_mass))
-        geom.add_attribute(_MJCFAttr.RGBA, ".625 .625 .625 1")
+        geom.add_attribute(_MJCFAttr.RGBA, _MJCFDefault.PLATFORM_COLOR)
+        geom.add_attribute(_MJCFAttr.SOLIMP, _MJCFDefault.SOLIMP)
+        geom.add_attribute(_MJCFAttr.SOLREF, _MJCFDefault.SOLREF)
 
         _MJCFElement(_MJCFTag.FREE_JOINT, body)
 
@@ -151,78 +170,3 @@ class MJCFGenerator:
 
     def visualize(self):
         MujocoUtils(self._mjcf_filepath)
-
-    # def save_as_stl(self, out_filename="stim"):
-    #     base_dirpath = PathUtils.get_parent_dirpath(self._mjcf_filepath, 2)
-    #     out_obj_filepath = PathUtils.join(base_dirpath, "meshes", out_filename + ".obj")
-    #
-    #     urdf_elements_list = self._mjcf_root.get_urdf_dict()["robot"]["link"]
-    #     if not isinstance(urdf_elements_list, list):
-    #         urdf_elements_list = [urdf_elements_list]
-    #
-    #     blue_material = SimpleMaterial(name='stim_blue', diffuse=[0.2, 0.2, 0.8])
-    #     blue_material.name = "stim_blue"
-    #
-    #     brown_material = SimpleMaterial(name='stim_brown', diffuse=[0.2, 0.1, 0.07])
-    #     brown_material.name = "stim_brown"
-    #
-    #     black_material = SimpleMaterial(name='stim_black', diffuse=[0.05, 0.05, 0.05])
-    #     black_material.name = "stim_black"
-    #
-    #     green_material = SimpleMaterial(name='stim_green', diffuse=[0.2, 0.8, 0.2])
-    #     green_material.name = "stim_green"
-    #
-    #     white_material = SimpleMaterial(name='stim_white', diffuse=[0.8, 0.8, 0.8])
-    #     white_material.name = "stim_white"
-    #
-    #     scene = trimesh.Scene()
-    #
-    #     # add agent
-    #     mesh = trimesh.load(PathUtils.join(PathUtils.get_misc_dirpath(), "agent.obj"))
-    #     mesh.apply_scale(0.4)
-    #     mesh.visual = TextureVisuals(material=white_material)
-    #     scene.add_geometry(mesh)
-    #     scene.export(out_obj_filepath)
-    #
-    #     # add platforms
-    #     for urdf_element in urdf_elements_list:
-    #         urdf_element_name = urdf_element["@name"].split("_")[0]
-    #
-    #         urdf_visual = urdf_element.get("visual", None)
-    #         if urdf_visual is None:
-    #             continue
-    #
-    #         urdf_geom = urdf_visual["geometry"]["mesh"]
-    #
-    #         mesh_filepath = PathUtils.join(base_dirpath, urdf_geom["@filename"])
-    #         mesh = trimesh.load(mesh_filepath)
-    #
-    #         scale = [float(v) for v in urdf_geom.get("@scale", "1 1 1").split()]
-    #         mesh.apply_scale(scale)
-    #
-    #         origin = urdf_visual.get("origin", {})
-    #         xyz = [float(v) for v in origin.get("@xyz", "0 0 0").split()]
-    #         roll, pitch, yaw = [float(v) for v in origin.get("@rpy", "0 0 0").split()]
-    #
-    #         rot_x = trimesh.transformations.rotation_matrix(roll, [1, 0, 0])
-    #         rot_y = trimesh.transformations.rotation_matrix(pitch, [0, 1, 0])
-    #         rot_z = trimesh.transformations.rotation_matrix(yaw, [0, 0, 1])
-    #
-    #         pos_mat = trimesh.transformations.translation_matrix(xyz)
-    #         rot_mat = trimesh.transformations.concatenate_matrices(rot_z, rot_y, rot_x)
-    #         aln_mat = trimesh.transformations.rotation_matrix(np.deg2rad(-90), [1, 0, 0])
-    #         pose_transform = trimesh.transformations.concatenate_matrices(rot_mat, aln_mat, pos_mat)
-    #         mesh.apply_transform(pose_transform)
-    #
-    #         if "a" in urdf_element_name:
-    #             mesh.visual = TextureVisuals(material=blue_material)
-    #         elif "g" in urdf_element_name:
-    #             mesh.visual = TextureVisuals(material=brown_material)
-    #         elif "z" in urdf_element_name:
-    #             mesh.visual = TextureVisuals(material=green_material)
-    #         else:
-    #             mesh.visual = TextureVisuals(material=white_material)
-    #
-    #         scene.add_geometry(mesh)
-    #
-    #     scene.export(out_obj_filepath)

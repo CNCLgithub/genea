@@ -1,4 +1,4 @@
-from mlr.share.projects.navigation.utils.config_utils import PlatformConfig
+from mlr.share.projects.navigation.utils.config_utils import PlatformConfig, StimuliConfig
 from mlr.share.projects.navigation.utils.core_utils import NavPosition, NavPose
 from mlr.share.projects.navigation.utils.platform_utils import PlatformType, PlatformShape, PlatformScale, \
     PlatformMaterial
@@ -56,7 +56,7 @@ class StimuliDiff(StimuliSet):
             stimulus.add_platform(platform_type, platform_pose)
         stimulus.add_platform(PlatformType.get_goal(), stimulus.get_goal_platform_pose(dx_goal, dy_goal))
 
-        stimulus.add_ground(NavPose(NavPosition(stimulus.get_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT - 0.1)))
+        stimulus.add_ground(NavPose(NavPosition(stimulus.get_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
         stimulus.add_camera()
         stimulus.save_to_mjcf()
         stimulus.visualize()
@@ -90,11 +90,10 @@ class StimuliDiff(StimuliSet):
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     def make_stimuli_02(self):
-        platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
+        platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY)]
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
@@ -178,15 +177,21 @@ class StimuliDiff(StimuliSet):
     def make_stimuli_11(self):
         platform_types_list = [PlatformType(PlatformShape.WALK, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY)]
         parent_ids_list = [parent_id for parent_id in [0]]
-        delta_x_list = [-1.0]
+
+        offset_x = -StimuliConfig.MIN_GAP_X + .5
+        delta_x_list = [offset_x]
         delta_y_list = [0.0]
+
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, -1.0, 0.0)
 
     def make_stimuli_12(self):
         platform_types_list = [PlatformType(PlatformShape.WALK, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
         parent_ids_list = [parent_id for parent_id in [0]]
-        delta_x_list = [1.0]
+
+        offset_x = -StimuliConfig.MIN_GAP_X + .5
+        delta_x_list = [offset_x]
         delta_y_list = [0.0]
+
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, 1.0, 0.0)
 
     def make_stimuli_13(self):
@@ -194,26 +199,32 @@ class StimuliDiff(StimuliSet):
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE),
                                PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
         parent_ids_list = [parent_id for parent_id in [0, 0, 2]]
-        delta_x_list = [-1.0, -1.0, 0.5]
+
+        offset_x = -StimuliConfig.MIN_GAP_X + .5
+        delta_x_list = [offset_x, offset_x, .8]
         delta_y_list = [2.0, -2.0, 0.0]
-        self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, -1.0, 0.0)
+
+        self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, offset_x, 0.0)
 
 
 def main():
     # StimuliTest().make_stimuli()
 
-    # StimuliDiff().make_stimuli_00()
-    # StimuliDiff().make_stimuli_01()
-    # StimuliDiff().make_stimuli_02()
-    # StimuliDiff().make_stimuli_03()
-    # StimuliDiff().make_stimuli_04()
-    # StimuliDiff().make_stimuli_05()
-    # StimuliDiff().make_stimuli_06()
-    # StimuliDiff().make_stimuli_07()
-    # StimuliDiff().make_stimuli_08()
-    # StimuliDiff().make_stimuli_09()
-    # StimuliDiff().make_stimuli_10()
-    StimuliDiff().make_stimuli_11()
+    stimuli_diff = StimuliDiff()
+    # stimuli_diff.make_stimuli_00()
+    # stimuli_diff.make_stimuli_01()
+    stimuli_diff.make_stimuli_02()
+    # stimuli_diff.make_stimuli_03()
+    # stimuli_diff.make_stimuli_04()
+    # stimuli_diff.make_stimuli_05()
+    # stimuli_diff.make_stimuli_06()
+    # stimuli_diff.make_stimuli_07()
+    # stimuli_diff.make_stimuli_08()
+    # stimuli_diff.make_stimuli_09()
+    # stimuli_diff.make_stimuli_10()
+    # stimuli_diff.make_stimuli_11()
+    # stimuli_diff.make_stimuli_11()
+    stimuli_diff.make_stimuli_13()
 
 
 if __name__ == '__main__':

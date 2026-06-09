@@ -90,11 +90,12 @@ class Stimulus:
         return platform.get_platform_name()
 
     def add_ground(self, ground_pose=NavPose(NavPosition(0.0, 0.0, -PlatformConfig.PLATFORM_HEIGHT))):
-        ground_size = 10
-        ground_height = 0.25
-        ground_pose.get_position().add_z(-ground_height)
-        ground_pose_as_str = ground_pose.get_position().get_position_as_str()
-        self._stim_mjcf_generator.add_ground(ground_pose_as_str, f"{ground_size} {ground_size} {ground_height}")
+        ground_pose.get_position().add_z(-StimuliConfig.GROUND_HEIGHT)
+        ground_pose_str = ground_pose.get_position().get_position_as_str()
+
+        platform = Platform("", PlatformType.get_ground(), ground_pose)
+        ground_size = f"{StimuliConfig.GROUND_LENGTH} {StimuliConfig.GROUND_WIDTH} {StimuliConfig.GROUND_HEIGHT}"
+        self._stim_mjcf_generator.add_ground(platform.get_platform_name(), ground_pose_str, ground_size)
 
     def add_camera(self):
         camera_pos_str = f"{self.get_center_x()} -30 10"

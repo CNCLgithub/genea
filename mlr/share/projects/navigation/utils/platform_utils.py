@@ -9,6 +9,7 @@ class PlatformShape:
     WALK = "walk"
     ROOT = "root"
     GOAL = "goal"
+    GROUND = "ground"
 
 
 class PlatformScale:
@@ -61,6 +62,10 @@ class PlatformType:
 
     def get_material(self):
         return self._platform_material
+
+    @staticmethod
+    def get_ground():
+        return PlatformType(PlatformShape.GROUND, PlatformScale.NOT_SCALED, PlatformMaterial.BRAWN)
 
     @staticmethod
     def get_root():

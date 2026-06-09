@@ -39,7 +39,11 @@ class CrocoddylConfig:
 
 
 class StimuliConfig:
-    MIN_GAP_X = 1.5
+    MIN_GAP_X = 1.2
+
+    GROUND_LENGTH = 30
+    GROUND_WIDTH = 15
+    GROUND_HEIGHT = 0.25
 
 
 class PlatformConfig:
