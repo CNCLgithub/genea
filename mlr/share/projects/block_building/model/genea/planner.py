@@ -8,9 +8,8 @@ from shutil import copyfile
 
 import numpy as np
 
-from mlr.share.projects.block_building.model.genea.blocks import Block
-from mlr.share.projects.block_building.model.genea.planner.agent import RobotActions, RobotHand
-from mlr.share.projects.block_building.model.genea.planner.env import Table
+from mlr.share.projects.block_building.model.genea.agent import RobotActions, RobotHand
+from mlr.share.projects.block_building.model.genea.env import Block, Table
 from mlr.share.projects.block_building.utils.compute_utils import ComputeUtils
 from mlr.share.projects.block_building.utils.core_utils import NameUtils, ConfigUtils
 from mlr.share.projects.block_building.utils.cpp_utils import CPPUtils
@@ -222,7 +221,7 @@ class WorldStateNode:
 
         if len(return_string) > 0:
             return delimiter.join(return_string)
-        return None
+        return ""
 
     def get_contents_as_string(self, delimiter=", "):
         left_hand_content = self._left_hand_move_record.get_block_name()
@@ -386,30 +385,6 @@ class WorldStateNode:
                 return False
         return True
 
-    def are_blocks_stacked(self, block_name1, block_name2):
-        if block_name1 is None or block_name2 is None:
-            Msg.print_info("INFO [are_held_blocks_stacked_at_final]: one of the hands is empty...")
-            return False
-
-        block1 = self._get_block_by_name(block_name1)
-        block2 = self._get_block_by_name(block_name2)
-
-        block1_above = block1.get_name_of_block_above_at_final()
-        block2_above = block2.get_name_of_block_above_at_final()
-
-        if block1_above == block_name2 or block2_above == block_name1:
-            return True
-
-        return False
-
-    def are_held_blocks_stacked_at_final(self):
-        block1 = self._left_hand.get_contents()
-        block2 = self._right_hand.get_contents()
-
-        if block1 is None and block2 is None:
-            return False
-        return self.are_blocks_stacked(block1.get_block_name(), block2.get_block_name())
-
     def can_block_be_grabbed(self, block_name, robot_hand=None):
         if self.get_num_of_blocks_above(block_name) > 0:
             Msg.print_info("INFO [grab_block_name]: cannot pick a block that is under another " + block_name)
@@ -450,10 +425,9 @@ class WorldStateNode:
             return False
 
         # release block from hand
-        block = None
         if robot_hand == NameUtils.ROBOT_HAND_LEFT:
             block = self._left_hand.get_contents()
-        elif robot_hand == NameUtils.ROBOT_HAND_RIGHT:
+        else:
             block = self._right_hand.get_contents()
 
         if block is None:
@@ -474,10 +448,9 @@ class WorldStateNode:
             Msg.print_error("ERROR [can_block_in_hand_be_fixed]: operation invalid, right hand has nothing to fix")
             assert False
 
-        block = None
         if robot_hand == NameUtils.ROBOT_HAND_LEFT:
             block = self._left_hand.get_contents()
-        elif robot_hand == NameUtils.ROBOT_HAND_RIGHT:
+        else:
             block = self._right_hand.get_contents()
 
         if block is None:
@@ -568,12 +541,11 @@ class WorldStateNode:
                                        robot_hand=NameUtils.ROBOT_HAND_LEFT,
                                        place_on_table=NameUtils.TABLE_PLACE_LEFT):
         # release block from hand
-        block = None
         if robot_hand == NameUtils.ROBOT_HAND_LEFT:
             block = self._left_hand.get_contents()
             self._left_hand.release_block()
             self._left_hand_move_record = RobotActionRecord(RobotActions.PLACE_LEFT_HAND, block.get_block_name())
-        elif robot_hand == NameUtils.ROBOT_HAND_RIGHT:
+        else:
             block = self._right_hand.get_contents()
             self._right_hand.release_block()
             self._right_hand_move_record = RobotActionRecord(RobotActions.PLACE_RIGHT_HAND, block.get_block_name())
@@ -595,13 +567,12 @@ class WorldStateNode:
 
     def _move_block_name_to_fin_pos(self, robot_hand=NameUtils.ROBOT_HAND_LEFT):
         # release block from hand
-        block = None
         if robot_hand == NameUtils.ROBOT_HAND_LEFT:
             block = self._left_hand.get_contents()
             self._left_hand.release_block()
             self._left_hand_move_record = RobotActionRecord(RobotActions.FIX_LEFT_HAND, block.get_block_name())
             self._left_hand_move_record.set_fix_above_block_name(block.get_name_of_block_underneath_at_final())
-        elif robot_hand == NameUtils.ROBOT_HAND_RIGHT:
+        else:
             block = self._right_hand.get_contents()
             self._right_hand.release_block()
             self._right_hand_move_record = RobotActionRecord(RobotActions.FIX_RIGHT_HAND, block.get_block_name())
@@ -1579,3 +1550,61 @@ class WorldStateTree:
 
                 if next_world_states_exist:
                     current_world_state.set_as_valid_to_explore()
+
+
+class Planner:
+    def __init__(self, exp_type, exp_trial_num, is_diff,
+                 init_blocks_list, max_steps_per_plan, folder_counter, is_one_hand_only_plan):
+        self._exp_type = exp_type
+        self._exp_trial_num = exp_trial_num
+        self._is_diff = is_diff
+
+        self._init_blocks_list = init_blocks_list
+        self._max_steps_per_plan = max_steps_per_plan
+
+        self._folder_counter = folder_counter
+        self._is_one_hand_only_plan = is_one_hand_only_plan
+
+        self._world_states_tree = None
+
+    def _init_planner_and_world_states(self, first_block_name_to_grab=None):
+        self._world_states_tree = WorldStateTree(self._exp_type,
+                                                 self._exp_trial_num,
+                                                 self._is_diff,
+                                                 self._init_blocks_list,
+                                                 self._max_steps_per_plan,
+                                                 self._folder_counter,
+                                                 first_block_names_to_grab=first_block_name_to_grab,
+                                                 is_one_hand_only_plan=self._is_one_hand_only_plan)
+
+    def get_all_valid_moves(self):
+        if self._world_states_tree is None:
+            Msg.print_error("ERROR [get_all_valid_moves]: must run the planner first")
+            assert False
+
+        return self._world_states_tree.get_all_valid_moves()
+
+    def get_all_valid_tree_paths(self):
+        if self._world_states_tree is None:
+            Msg.print_error("ERROR [get_tree_paths_per_valid_move]: must run the planner first")
+            assert False
+
+        return self._world_states_tree.get_all_valid_tree_paths()
+
+    def get_ke_per_valid_move(self):
+        if self._world_states_tree is None:
+            Msg.print_error("ERROR [get_ke_per_valid_move]: must run the planner first")
+            assert False
+
+        return self._world_states_tree.get_ke_per_valid_move()
+
+    def get_stability_per_valid_move(self):
+        if self._world_states_tree is None:
+            Msg.print_error("ERROR [get_stability_per_valid_move]: must run the planner first")
+            assert False
+
+        return self._world_states_tree.get_stability_per_valid_move()
+
+    def run_planner(self, first_block_name_to_grab=None):
+        self._init_planner_and_world_states(first_block_name_to_grab=first_block_name_to_grab)
+        self._world_states_tree.start_planner()

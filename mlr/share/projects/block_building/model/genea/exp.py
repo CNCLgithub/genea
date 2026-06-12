@@ -1,6 +1,6 @@
 from mlr.share.projects.block_building.model.exp import ExpType
-from mlr.share.projects.block_building.model.genea.blocks import Block
-from mlr.share.projects.block_building.model.genea.planner.search_tree import WorldStateTree
+from mlr.share.projects.block_building.model.genea.env import Block
+from mlr.share.projects.block_building.model.genea.planner import Planner
 from mlr.share.projects.block_building.utils.core_utils import NameUtils, ConfigUtils
 from mlr.share.projects.block_building.utils.cpp_utils import CPPUtils
 from mlr.share.projects.block_building.utils.file_utils import GFileUtils, FileUtils, GFileGenerator
@@ -312,13 +312,13 @@ class GeneaExperiment:
 
         self._initialize_experiment()
 
-        planner = GeneaPlanner(exp_type=self.exp_type,
-                               exp_trial_num=self.exp_trial_num,
-                               is_diff=self.exp_type == ExpType.DIFFICULTY,
-                               init_blocks_list=self._init_blocks_list,
-                               max_steps_per_plan=self.max_steps_per_plan,
-                               folder_counter=self.folder_counter,
-                               is_one_hand_only_plan=is_one_hand_only_plan)
+        planner = Planner(exp_type=self.exp_type,
+                          exp_trial_num=self.exp_trial_num,
+                          is_diff=self.exp_type == ExpType.DIFFICULTY,
+                          init_blocks_list=self._init_blocks_list,
+                          max_steps_per_plan=self.max_steps_per_plan,
+                          folder_counter=self.folder_counter,
+                          is_one_hand_only_plan=is_one_hand_only_plan)
         planner.run_planner(first_block_name_to_grab=first_block_names_to_grab)
 
         returned_moves = planner.get_all_valid_moves()
@@ -603,61 +603,3 @@ class GeneaExperiment:
 
         if planner_output is None:
             Msg.print_warn("WARN []: nothing to run for " + str(self.exp_type) + "_" + str(self.exp_trial_num))
-
-
-class GeneaPlanner:
-    def __init__(self, exp_type, exp_trial_num, is_diff,
-                 init_blocks_list, max_steps_per_plan, folder_counter, is_one_hand_only_plan):
-        self._exp_type = exp_type
-        self._exp_trial_num = exp_trial_num
-        self._is_diff = is_diff
-
-        self._init_blocks_list = init_blocks_list
-        self._max_steps_per_plan = max_steps_per_plan
-
-        self._folder_counter = folder_counter
-        self._is_one_hand_only_plan = is_one_hand_only_plan
-
-        self._world_states_tree = None
-
-    def _init_planner_and_world_states(self, first_block_name_to_grab=None):
-        self._world_states_tree = WorldStateTree(self._exp_type,
-                                                 self._exp_trial_num,
-                                                 self._is_diff,
-                                                 self._init_blocks_list,
-                                                 self._max_steps_per_plan,
-                                                 self._folder_counter,
-                                                 first_block_names_to_grab=first_block_name_to_grab,
-                                                 is_one_hand_only_plan=self._is_one_hand_only_plan)
-
-    def get_all_valid_moves(self):
-        if self._world_states_tree is None:
-            Msg.print_error("ERROR [get_all_valid_moves]: must run the planner first")
-            assert False
-
-        return self._world_states_tree.get_all_valid_moves()
-
-    def get_all_valid_tree_paths(self):
-        if self._world_states_tree is None:
-            Msg.print_error("ERROR [get_tree_paths_per_valid_move]: must run the planner first")
-            assert False
-
-        return self._world_states_tree.get_all_valid_tree_paths()
-
-    def get_ke_per_valid_move(self):
-        if self._world_states_tree is None:
-            Msg.print_error("ERROR [get_ke_per_valid_move]: must run the planner first")
-            assert False
-
-        return self._world_states_tree.get_ke_per_valid_move()
-
-    def get_stability_per_valid_move(self):
-        if self._world_states_tree is None:
-            Msg.print_error("ERROR [get_stability_per_valid_move]: must run the planner first")
-            assert False
-
-        return self._world_states_tree.get_stability_per_valid_move()
-
-    def run_planner(self, first_block_name_to_grab=None):
-        self._init_planner_and_world_states(first_block_name_to_grab=first_block_name_to_grab)
-        self._world_states_tree.start_planner()
