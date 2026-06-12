@@ -57,7 +57,7 @@ class BPYUtils:
     def _import_stl_file(filepath: str):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"ERROR [video_utils]: file not found: {filepath}")
-        bpy.ops.import_mesh.stl(filepath=filepath)
+        bpy.ops.wm.stl_import(filepath=filepath)
 
     @staticmethod
     def _import_mjcf_file(scene_dirpath: str, mjcf_filepath: str):
@@ -146,74 +146,128 @@ class BPYUtils:
         return return_points
 
     @staticmethod
-    def _set_camera_trajectory(blender_obj, shape_multiplier, stadium_height, total_waypoints):
-        minor_axis = (BPYUtils.get_stim_y_max() - BPYUtils.get_stim_y_min()) * shape_multiplier
+    def _compute_orbit_radius(obj_height: float, fov_rad: float = math.radians(50), margin: float = 1.1) -> float:
+        min_distance = ((BPYUtils.get_stim_diagonal() / 2) * margin) / math.tan(fov_rad / 2)
 
-        diff_factor = (BPYUtils.get_stim_x_max() - BPYUtils.get_stim_x_min()) / 3
+        delta_z_sq = (obj_height - BPYUtils.get_stim_center_z()) ** 2
+        if delta_z_sq >= min_distance ** 2:
+            orbit_radius = BPYUtils.get_stim_length() / 2
+        else:
+            orbit_radius = math.sqrt(min_distance ** 2 - delta_z_sq)
 
-        l_center_x = BPYUtils.get_stim_x_min() + diff_factor
-        l_center_y = BPYUtils.get_stim_center_y()
+        return orbit_radius
 
-        r_center_x = BPYUtils.get_stim_x_max() - diff_factor
-        r_center_y = BPYUtils.get_stim_center_y()
+    @staticmethod
+    def _set_camera_trajectory(bpy_obj, orbit_radius, orbit_height, total_waypoints):
+        l_center_x = BPYUtils.get_stim_x_min()
+        r_center_x = BPYUtils.get_stim_x_max()
+        center_y = BPYUtils.get_stim_center_y()
 
-        waypoint_ends = total_waypoints // 5
-        waypoint_line = total_waypoints // 5
+        waypoints_per_section = BlenderConfig.VIDEO_FRAME_COUNT // 11
 
         points_on_curve = []
 
-        l_start_angle = math.radians(-150)
+        l_start_angle = math.radians(-180)
+        l_final_angle = math.radians(-270)
+        for i in range(waypoints_per_section + 1):  # left arc
+            theta = l_start_angle + i * (l_final_angle - l_start_angle) / waypoints_per_section
+            point_x = l_center_x + orbit_radius * math.cos(theta)
+            point_y = center_y + orbit_radius * math.sin(theta)
+            points_on_curve.append((point_x, point_y))
+
+        for i in range(waypoints_per_section + 1):  # middle line
+            point_x = l_center_x + i * ((r_center_x - l_center_x) / waypoints_per_section)
+            point_y = center_y + orbit_radius
+            points_on_curve.append((point_x, point_y))
+
+        start_angle_right = math.radians(-270)
+        end_angle_right = math.radians(-360)
+        for i in range(waypoints_per_section + 1):  # right arc
+            theta = start_angle_right + i * (end_angle_right - start_angle_right) / waypoints_per_section
+            point_x = r_center_x + orbit_radius * math.cos(theta)
+            point_y = center_y + orbit_radius * math.sin(theta)
+            points_on_curve.append((point_x, point_y))
+
+        start_angle_right = math.radians(-270)
+        end_angle_right = math.radians(-360)
+        for i in range(waypoints_per_section + 1)[::-1]:  # reverse right arc
+            theta = start_angle_right + i * (end_angle_right - start_angle_right) / waypoints_per_section
+            point_x = r_center_x + orbit_radius * math.cos(theta)
+            point_y = center_y + orbit_radius * math.sin(theta)
+            points_on_curve.append((point_x, point_y))
+
+        for i in range(waypoints_per_section + 1)[::-1]:  # reverse middle line
+            point_x = l_center_x + i * ((r_center_x - l_center_x) / waypoints_per_section)
+            point_y = center_y + orbit_radius
+            points_on_curve.append((point_x, point_y))
+
+        l_start_angle = math.radians(-180)
+        l_final_angle = math.radians(-270)
+        for i in range(waypoints_per_section + 1)[::-1]:  # reverse left arc
+            theta = l_start_angle + i * (l_final_angle - l_start_angle) / waypoints_per_section
+            point_x = l_center_x + orbit_radius * math.cos(theta)
+            point_y = center_y + orbit_radius * math.sin(theta)
+            points_on_curve.append((point_x, point_y))
+
+        l_start_angle = math.radians(-180)
         l_final_angle = math.radians(-90)
-        for i in range(waypoint_ends + 1):  # left arc
-            theta = l_start_angle + i * (l_final_angle - l_start_angle) / waypoint_ends
-            point_x = l_center_x + minor_axis * math.cos(theta)
-            point_y = l_center_y + minor_axis * math.sin(theta)
+        for i in range(waypoints_per_section + 1):  # left arc
+            theta = l_start_angle + i * (l_final_angle - l_start_angle) / waypoints_per_section
+            point_x = l_center_x + orbit_radius * math.cos(theta)
+            point_y = center_y + orbit_radius * math.sin(theta)
             points_on_curve.append((point_x, point_y))
 
-        for i in range(waypoint_line + 1):  # middle line
-            point_x = l_center_x + i * ((r_center_x - l_center_x) / waypoint_line)
-            point_y = r_center_y - minor_axis
-            points_on_curve.append((point_x, point_y))
-
-        start_angle_right = math.radians(-90)
-        end_angle_right = math.radians(-30)
-        for i in range(waypoint_ends + 1):  # right arc
-            theta = start_angle_right + i * (end_angle_right - start_angle_right) / waypoint_ends
-            point_x = r_center_x + minor_axis * math.cos(theta)
-            point_y = r_center_y + minor_axis * math.sin(theta)
+        for i in range(waypoints_per_section + 1):  # middle line
+            point_x = l_center_x + i * ((r_center_x - l_center_x) / waypoints_per_section)
+            point_y = center_y - orbit_radius
             points_on_curve.append((point_x, point_y))
 
         start_angle_right = math.radians(-90)
-        end_angle_right = math.radians(-30)
-        for i in range(waypoint_ends + 1)[::-1]:  # reverse right arc
-            theta = start_angle_right + i * (end_angle_right - start_angle_right) / waypoint_ends
-            point_x = r_center_x + minor_axis * math.cos(theta)
-            point_y = r_center_y + minor_axis * math.sin(theta)
+        end_angle_right = math.radians(-0)
+        for i in range(waypoints_per_section + 1):  # right arc
+            theta = start_angle_right + i * (end_angle_right - start_angle_right) / waypoints_per_section
+            point_x = r_center_x + orbit_radius * math.cos(theta)
+            point_y = center_y + orbit_radius * math.sin(theta)
             points_on_curve.append((point_x, point_y))
 
-        for i in range(waypoint_line + 1)[::-1]:  # middle line
-            if i == waypoint_line // 2 - 1:
+        start_angle_right = math.radians(-90)
+        end_angle_right = math.radians(-0)
+        for i in range(waypoints_per_section + 1)[::-1]:  # reverse right arc
+            theta = start_angle_right + i * (end_angle_right - start_angle_right) / waypoints_per_section
+            point_x = r_center_x + orbit_radius * math.cos(theta)
+            point_y = center_y + orbit_radius * math.sin(theta)
+            points_on_curve.append((point_x, point_y))
+
+        for i in range(waypoints_per_section + 1)[::-1]:  # reverse middle line
+            if i == waypoints_per_section // 2 - 1:
                 break
-            point_x = l_center_x + i * ((r_center_x - l_center_x) / waypoint_line)
-            point_y = r_center_y - minor_axis
+            point_x = l_center_x + i * ((r_center_x - l_center_x) / waypoints_per_section)
+            point_y = center_y - orbit_radius
             points_on_curve.append((point_x, point_y))
 
         new_points = BPYUtils._get_chaikin_curve(points_on_curve, total_waypoints + 1, 3)
         for frame, (point_x, point_y) in enumerate(new_points, start=1):
-            blender_obj.location = (point_x, point_y, stadium_height)
-            blender_obj.keyframe_insert(data_path="location", frame=frame)
+            bpy_obj.location = (point_x, point_y, orbit_height)
+            bpy_obj.keyframe_insert(data_path="location", frame=frame)
 
     @staticmethod
-    def _add_camera(tracer_height: float, tracer_radius: int, cam_height: float, cam_radius: int):
+    def _add_camera(fov_rad: float = math.radians(50)):
         bpy.ops.object.empty_add()
         tracer = bpy.context.active_object
 
         bpy.ops.object.camera_add()
         camera = bpy.context.object
         bpy.context.scene.camera = camera
+        camera.data.angle = fov_rad
+
+        tracer_height = BPYUtils.get_stim_z_min() + BPYUtils.get_stim_height() * 0.9
+        camera_height = BPYUtils.get_stim_z_min() + BPYUtils.get_stim_height() * 2.5
+
+        tracer_radius = BPYUtils._compute_orbit_radius(tracer_height, fov_rad) * 0.25
+        camera_radius = BPYUtils._compute_orbit_radius(camera_height, fov_rad)
 
         BPYUtils._set_camera_trajectory(tracer, tracer_radius, tracer_height, BlenderConfig.VIDEO_FRAME_COUNT)
-        BPYUtils._set_camera_trajectory(camera, cam_radius, cam_height, BlenderConfig.VIDEO_FRAME_COUNT)
+        BPYUtils._set_camera_trajectory(camera, camera_radius, camera_height, BlenderConfig.VIDEO_FRAME_COUNT)
 
         camera.constraints.new(type='TRACK_TO')
         camera.constraints["Track To"].target = tracer
@@ -221,17 +275,27 @@ class BPYUtils:
         camera.constraints["Track To"].up_axis = 'UP_Y'
 
     @staticmethod
-    def _add_lighting(light_location=(0., 0., 0.), light_energy=4000.0, light_size=40):
-        bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_location)
+    def _add_lighting(light_energy=5000.0, light_size=40):
+        light_location1 = (BPYUtils.get_stim_center_x(), BPYUtils.get_stim_center_y(), BPYUtils.get_stim_height() * 10)
+        light_location2 = (BPYUtils.get_stim_x_min(), -BPYUtils.get_stim_width() * 5, 0)
+        light_location3 = (BPYUtils.get_stim_x_min(), BPYUtils.get_stim_width() * 5, 0)
+
+        bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_location1)
         area = bpy.context.object
         area.data.energy = light_energy * 2
         area.data.size = light_size
 
-        bpy.ops.object.light_add(type='AREA', align='WORLD', location=(0, -30, 0))
+        bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_location2)
         area = bpy.context.object
         area.data.energy = light_energy / 1.25
         area.data.size = light_size
         area.rotation_euler[0] = math.radians(90)
+
+        bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_location3)
+        area = bpy.context.object
+        area.data.energy = light_energy / 1.25
+        area.data.size = light_size
+        area.rotation_euler[0] = math.radians(-90)
 
     @staticmethod
     def _add_texture_woody(bpy_obj, is_darker=False):
@@ -239,8 +303,6 @@ class BPYUtils:
             return
 
         mat = bpy.data.materials.new(name=PlatformMaterial.WOODY)
-        mat.use_nodes = True
-
         for node in mat.node_tree.nodes:
             mat.node_tree.nodes.remove(node)
 
@@ -306,8 +368,6 @@ class BPYUtils:
             return
 
         mat = bpy.data.materials.new(name=PlatformMaterial.STONE)
-        mat.use_nodes = True
-
         for node in mat.node_tree.nodes:
             mat.node_tree.nodes.remove(node)
 
@@ -323,11 +383,6 @@ class BPYUtils:
                                                     random.uniform(0, 2 * math.pi),
                                                     random.uniform(0, 2 * math.pi))
 
-        musgrave = mat.node_tree.nodes.new(type="ShaderNodeTexMusgrave")
-        musgrave.inputs["Scale"].default_value = random.uniform(2.0, 8.0)
-        musgrave.inputs["Detail"].default_value = random.uniform(1.0, 5.0)
-        musgrave.inputs["Dimension"].default_value = random.uniform(0.5, 1.5)
-
         voronoi = mat.node_tree.nodes.new(type="ShaderNodeTexVoronoi")
         voronoi.feature = 'DISTANCE_TO_EDGE'
         voronoi.distance = 'EUCLIDEAN'
@@ -337,6 +392,7 @@ class BPYUtils:
         noise.inputs["Scale"].default_value = random.uniform(2.0, 12.0)
         noise.inputs["Detail"].default_value = random.uniform(2.0, 6.0)
         noise.inputs["Roughness"].default_value = random.uniform(0.5, 1.0)
+        noise.noise_type = 'FBM'
 
         mix1 = mat.node_tree.nodes.new(type="ShaderNodeMixRGB")
         mix1.blend_type = 'MULTIPLY'
@@ -354,11 +410,9 @@ class BPYUtils:
 
         mat.node_tree.links.new(tex_coord.outputs['Object'], mapping.inputs['Vector'])
         mat.node_tree.links.new(mapping.outputs['Vector'], noise.inputs['Vector'])
-        mat.node_tree.links.new(mapping.outputs['Vector'], musgrave.inputs['Vector'])
         mat.node_tree.links.new(mapping.outputs['Vector'], voronoi.inputs['Vector'])
 
         mat.node_tree.links.new(noise.outputs['Fac'], mix1.inputs[1])
-        mat.node_tree.links.new(musgrave.outputs['Fac'], mix1.inputs[2])
         mat.node_tree.links.new(mix1.outputs['Color'], mix2.inputs[1])
         mat.node_tree.links.new(voronoi.outputs['Distance'], mix2.inputs[2])
         mat.node_tree.links.new(mix2.outputs['Color'], color_ramp.inputs['Fac'])
@@ -428,19 +482,23 @@ class BPYUtils:
     @staticmethod
     def render_video(out_video_filepath: str):
         scene = bpy.context.scene
+        scene.render.image_settings.media_type = 'VIDEO'
         scene.render.filepath = out_video_filepath
         scene.render.image_settings.file_format = 'FFMPEG'
         scene.render.ffmpeg.format = 'MPEG4'
-        scene.frame_end = BlenderConfig.VIDEO_FRAME_COUNT
+        scene.render.ffmpeg.codec = "H264"
+        scene.render.image_settings.color_mode = "RGB"
+        scene.frame_end = BlenderConfig.VIDEO_FRAME_COUNT + 1
 
         scene.render.fps = 24
         scene.render.resolution_x = 1920
         scene.render.resolution_y = 1080
         scene.render.resolution_percentage = 100
 
-        bpy.context.scene.cycles.device = 'GPU'
+        scene.render.engine = 'CYCLES'
+        scene.cycles.device = 'GPU'
         bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
-        bpy.context.preferences.addons['cycles'].preferences.get_devices()
+        bpy.context.preferences.addons['cycles'].preferences.refresh_devices()
         bpy.ops.render.render(animation=True)
 
     @staticmethod
@@ -456,7 +514,6 @@ class BPYUtils:
         BPYUtils.bpy_clear()
 
         world = bpy.context.scene.world
-        world.use_nodes = True
         bg = world.node_tree.nodes["Background"]
         bg.inputs[0].default_value = (0.04, 0.04, 0.04, 1)
         bg.inputs[1].default_value = 1.0
@@ -469,13 +526,8 @@ class BPYUtils:
             print(f"ERROR [BPYUtils]: invalid scene type -- {scene_filepath}")
             assert False
 
-        light_height = BPYUtils.get_stim_z_min() + abs(BPYUtils.get_stim_height()) * 10
-        light_location = (BPYUtils.get_stim_center_x(), BPYUtils.get_stim_center_y(), light_height)
-        BPYUtils._add_lighting(light_location=light_location)
-
-        tracer_height = BPYUtils.get_stim_z_min() + abs(BPYUtils.get_stim_height()) * 1.0
-        camera_height = BPYUtils.get_stim_z_min() + abs(BPYUtils.get_stim_height()) * 2.2
-        BPYUtils._add_camera(tracer_height, 2, camera_height, 8)
+        BPYUtils._add_lighting()
+        BPYUtils._add_camera()
 
         for bpy_obj in bpy.context.scene.objects:
             if PLATFORM_NAME in bpy_obj.keys():
@@ -534,15 +586,34 @@ class BPYUtils:
 
     @staticmethod
     def get_stim_center_x():
-        return BPYUtils.get_stim_x_min() + (BPYUtils.get_stim_x_max() + BPYUtils.get_stim_x_min()) / 2
+        return (BPYUtils.get_stim_x_max() + BPYUtils.get_stim_x_min()) / 2
 
     @staticmethod
     def get_stim_center_y():
         return (BPYUtils.get_stim_y_max() + BPYUtils.get_stim_y_min()) / 2
 
     @staticmethod
+    def get_stim_center_z():
+        return (BPYUtils.get_stim_z_max() + BPYUtils.get_stim_z_min()) / 2
+
+    @staticmethod
+    def get_stim_length():
+        return abs(BPYUtils.get_stim_x_max() - BPYUtils.get_stim_x_min())
+
+    @staticmethod
+    def get_stim_width():
+        return abs(BPYUtils.get_stim_y_max() - BPYUtils.get_stim_y_min())
+
+    @staticmethod
     def get_stim_height():
-        return BPYUtils.get_stim_z_max() - BPYUtils.get_stim_z_min()
+        return abs(BPYUtils.get_stim_z_max() - BPYUtils.get_stim_z_min())
+
+    @staticmethod
+    def get_stim_diagonal():
+        stim_l = BPYUtils.get_stim_length()
+        stim_w = BPYUtils.get_stim_width()
+        stim_h = BPYUtils.get_stim_height()
+        return math.sqrt(stim_l**2 + stim_w**2 + stim_h**2)
 
 
 class RoundedCuboidPlatform(Platform):
@@ -707,13 +778,15 @@ def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False):
             out_img_dirpath = os.path.join(OUT_DIRPATH, "stim_images")
             out_img_filepath = os.path.join(out_img_dirpath, f"stim_{stimuli_num}.png")
             _FileUtils.create_dir(out_img_dirpath)
-            BPYUtils.render_frame(out_img_filepath, 2 * (BlenderConfig.VIDEO_FRAME_COUNT // 5) - 5)
+            BPYUtils.render_frame(out_img_filepath, BlenderConfig.VIDEO_FRAME_COUNT + 1)
 
         if save_as_video:
             out_vid_dirpath = os.path.join(OUT_DIRPATH, "stim_videos")
             out_vid_filepath = os.path.join(out_vid_dirpath, f"stim_{stimuli_num}.mp4")
             _FileUtils.create_dir(out_vid_dirpath)
             BPYUtils.render_video(out_vid_filepath)
+
+        break
 
 
 def main():
