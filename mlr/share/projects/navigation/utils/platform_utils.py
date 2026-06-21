@@ -120,6 +120,10 @@ class Platform:
         return self._has_been_visited
 
     @staticmethod
+    def get_platform_bevel_width():
+        return PlatformConfig.PLATFORM_BEVEL_WIDTH
+
+    @staticmethod
     def get_platform_height():
         return PlatformConfig.PLATFORM_HEIGHT
 

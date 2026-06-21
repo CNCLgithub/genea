@@ -1,5 +1,6 @@
 class NavConfig:
     VIEW_KINEMATICS = False
+    VIEW_DYNAMICS = True
 
     DEBUG_KINEMATICS = False
     DEBUG_DYNAMICS = True
@@ -26,7 +27,7 @@ class NavConfig:
     WALK_STAND_KNOTS = 4
     WALK_TREAD_KNOTS = 20
 
-    MIN_PLATFORM_PADDING = 0.125
+    MIN_PLATFORM_PADDING = 0.2
 
     DYNAMICS_THRESHOLD = 1e-7
 

@@ -223,8 +223,10 @@ class Stimulus:
         if ref_platform_name not in self._stim_platforms_dict or goal_platform_name not in self._stim_platforms_dict:
             Msg.print_error(f"ERROR [Stimuli]: Platforms {ref_platform_name} or {goal_platform_name} not found.")
 
-        pos_p1 = self.get_platform(ref_platform_name).get_platform_pose().get_position().get_position_as_np_array()
-        pos_p2 = self.get_platform(goal_platform_name).get_platform_pose().get_position().get_position_as_np_array()
+        bevel_p1 = self.get_platform(ref_platform_name).get_platform_bevel_width()
+
+        pos_p1 = self.get_platform(ref_platform_name).get_platform_pose().get_position().get_position_as_np_array()[:2]
+        pos_p2 = self.get_platform(goal_platform_name).get_platform_pose().get_position().get_position_as_np_array()[:2]
 
         surface_xy_p1 = self.get_platform_top_surface_xy(ref_platform_name)
         surface_xy_p1 = surface_xy_p1[0] / 2, surface_xy_p1[1] / 2
@@ -232,7 +234,11 @@ class Stimulus:
         closest_x = np.clip(pos_p2[0], pos_p1[0] - surface_xy_p1[0], pos_p1[0] + surface_xy_p1[0])
         closest_y = np.clip(pos_p2[1], pos_p1[1] - surface_xy_p1[1], pos_p1[1] + surface_xy_p1[1])
 
-        return np.array([closest_x, closest_y])
+        local_xy = np.array([closest_x, closest_y]) - pos_p1
+        if np.deg2rad(45) < np.arctan2(abs(local_xy[1]), abs(local_xy[0])) < np.deg2rad(55):
+            local_xy -= (local_xy / (np.linalg.norm(local_xy) + 1e-12)) * (bevel_p1 / 2)
+
+        return pos_p1 + local_xy
 
     def get_gap_between_platform_centers(self, platform_name1, platform_name2):
         if platform_name1 not in self._stim_platforms_dict or platform_name2 not in self._stim_platforms_dict:

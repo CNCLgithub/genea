@@ -4,7 +4,7 @@ import numpy as np
 
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import MujocoConfig, NavConfig
-from mlr.share.projects.navigation.utils.core_utils import NavForce, NavPose, NavPosition, NavRotation
+from mlr.share.projects.navigation.utils.core_utils import NavForce
 
 
 class MujocoLandmark:
@@ -143,8 +143,6 @@ class MujocoUtils:
                     continue
 
                 mj.mj_applyFT(self._model, self._data, force_vec, np.zeros(3), force_pos)
-
-        self.visualize()
 
     def close(self):
         mj.mj_resetData(self._model, self._data)
