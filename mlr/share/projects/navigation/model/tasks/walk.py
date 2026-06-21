@@ -2,36 +2,37 @@ import crocoddyl
 import pinocchio
 import numpy as np
 
-from mlr.share.projects.navigation.utils.config_utils import CoreConfig
+from mlr.share.projects.navigation.utils.config_utils import NavConfig
 from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavAgent, NavProblem, NavProblemConstraints
 
 
 class WalkTask(NavTask):
-    def __init__(self, is_first_step=False):
+    def __init__(self, step_length=None, is_first=False, is_close=False, is_lunge=False):
         super().__init__(NavTask.WALK)
 
-        self._is_first_step = is_first_step
-        self._step_length = 0.0
-        self._step_height = 0.0
-
-    def set_step_length(self, step_length: float):
         self._step_length = step_length
 
-    def set_step_height(self, step_height: float):
-        self._step_height = step_height
+        self._is_first_step = is_first
+        self._is_close_step = is_close
+        self._is_lunge_step = is_lunge
 
     def is_first_step(self):
         return self._is_first_step
 
+    def is_close_step(self):
+        return self._is_close_step
+
+    def is_lunge_step(self):
+        return self._is_lunge_step
+
+    def step(self):
+        return self._step_length is not None
+
     def get_step_length(self):
         return self._step_length
 
-    def get_step_height(self):
-        return self._step_height
-
-    def get_task_problem(self, agent: NavAgent, current_pose):
-        p = WalkProblem(agent)
-        return p.create_walk_problem(current_pose, self.get_step_length(), self.get_step_height(), self.is_first_step())
+    def get_task_problem(self, nav_agent: NavAgent):
+        return WalkProblem(nav_agent).create_problem(self)
 
 
 class WalkProblem(NavProblem):
@@ -39,73 +40,97 @@ class WalkProblem(NavProblem):
         super().__init__(nav_agent)
 
     @staticmethod
-    def _get_disp_vec(step_index, step_length, step_height, total_steps):
-        x_value = step_index * step_length / total_steps
+    def _step_delta(step_index, step_length):
+        return step_index * step_length / NavConfig.WALK_TREAD_KNOTS
 
-        z_increment = step_height / (total_steps // 2)
-        if step_index <= total_steps // 2:
-            z_value = step_index * z_increment
+    @staticmethod
+    def _get_disp_vec(step_index, step_length, walk_vec):
+        disp_vec = walk_vec * WalkProblem._step_delta(step_index, step_length)
+
+        delta_z = NavConfig.MAX_STEP_HEIGHT / (NavConfig.WALK_TREAD_KNOTS // 2)
+        if step_index <= NavConfig.WALK_TREAD_KNOTS // 2:
+            disp_vec_z = step_index * delta_z
         else:
-            z_value = (total_steps - step_index) * z_increment
+            disp_vec_z = (NavConfig.WALK_TREAD_KNOTS - step_index) * delta_z
 
-        return np.array([x_value, 0.0, z_value])
+        return np.array([disp_vec[0], disp_vec[1], disp_vec_z])
 
-    def create_walk_problem(self, current_pose, step_length, step_height, is_first_step):
-        pose0 = current_pose[: self._agent.get_nq()]
-        pinocchio.forwardKinematics(self._agent.get_agent_model(), self._agent.get_agent_data(), pose0)
+    def _get_r_constraint(self, disp_vec, com_vec=None):
+        nav_constraint = NavProblemConstraints(self._agent)
+        if com_vec is not None:
+            nav_constraint.add_l_contact_constraint()
+        nav_constraint.add_r_swing_constraint(disp_vec)
+        if com_vec is not None:
+            nav_constraint.add_com_constraint(com_vec)
+        return nav_constraint
+
+    def _get_l_constraint(self, disp_vec, com_vec=None):
+        nav_constraint = NavProblemConstraints(self._agent)
+        if com_vec is not None:
+            nav_constraint.add_r_contact_constraint()
+        nav_constraint.add_l_swing_constraint(disp_vec)
+        if com_vec is not None:
+            nav_constraint.add_com_constraint(com_vec)
+        return nav_constraint
+
+    def get_tread_actions_list(self, step_length, walk_vec, com_ref, is_left_step=False):
+        tread_actions_list = []
+
+        for step_index in range(1, NavConfig.WALK_TREAD_KNOTS + 1):
+            com_vec = walk_vec * WalkProblem._step_delta(step_index, step_length) * 0.5 + com_ref
+            disp_vec = self._get_disp_vec(step_index, step_length, walk_vec)
+            if is_left_step:
+                nav_constraint = self._get_l_constraint(disp_vec, com_vec)
+            else:
+                nav_constraint = self._get_r_constraint(disp_vec, com_vec)
+            tread_actions_list.append(self.create_foot_action_phase(nav_constraint))
+
+        disp_vec = self._get_disp_vec(NavConfig.WALK_TREAD_KNOTS, step_length, walk_vec)
+        if is_left_step:
+            nav_constraint = self._get_l_constraint(disp_vec)
+        else:
+            nav_constraint = self._get_r_constraint(disp_vec)
+        tread_actions_list.append(self.create_foot_impulse_phase(nav_constraint))
+
+        return tread_actions_list
+
+    def get_stand_actions_list(self):
+        stand_actions_list = []
+        for _ in range(NavConfig.WALK_STAND_KNOTS):
+            nav_constraint = NavProblemConstraints(self._agent)
+            nav_constraint.add_l_contact_constraint()
+            nav_constraint.add_r_contact_constraint()
+            stand_actions_list.append(self.create_foot_action_phase(nav_constraint))
+        return stand_actions_list
+
+    def create_problem(self, walk_task: WalkTask):
+        step_length = walk_task.get_step_length()
+
+        pose = self.get_agent_pose()[: self._agent.get_nq()]
+        pinocchio.forwardKinematics(self._agent.get_agent_model(), self._agent.get_agent_data(), pose)
         pinocchio.updateFramePlacements(self._agent.get_agent_model(), self._agent.get_agent_data())
 
         com_ref = (self._agent.get_left_foot_pos() + self._agent.get_right_foot_pos()) / 2
-        com_ref[2] = pinocchio.centerOfMass(self._agent.get_agent_model(), self._agent.get_agent_data(), pose0)[2]
+        com_ref[2] = pinocchio.centerOfMass(self._agent.get_agent_model(), self._agent.get_agent_data(), pose)[2]
 
-        total_steps = CoreConfig.WALK_TREAD_KNOTS
+        walk_vec = pinocchio.Quaternion(pose[6], pose[3], pose[4], pose[5]).toRotationMatrix()[:, 0].copy()  # noqa
+        walk_vec[2] = 0.0
+        walk_vec /= (np.linalg.norm(walk_vec) + 1e-12)
 
-        walk_problem_list = []
+        r_step_length = step_length
+        l_step_length = step_length
+        if walk_task.is_first_step():
+            r_step_length = step_length * 0.5
+        if walk_task.is_close_step():
+            l_step_length = step_length * 0.5
 
-        walk_stand_phase = []
-        for _ in range(CoreConfig.WALK_STAND_KNOTS):
-            nav_constraint = NavProblemConstraints(self._agent)
-            nav_constraint.add_l_contact_constraint()
-            nav_constraint.add_r_contact_constraint()
-            walk_stand_phase.append(self.create_foot_action_phase(nav_constraint))
+        problem_list = []
+        problem_list += self.get_stand_actions_list()
+        problem_list += self.get_tread_actions_list(r_step_length, walk_vec, com_ref, is_left_step=False)
 
-        right_step_len = step_length
-        if is_first_step:
-            right_step_len = step_length * 0.5
+        com_ref += walk_vec * step_length * 0.5
 
-        walk_tread_right_phase = []
-        for step_index in range(1, total_steps + 1):
-            com_vec = np.array([step_index * right_step_len / total_steps, 0.0, 0.0]) * 0.5 + com_ref
-            disp_vec = self._get_disp_vec(step_index, right_step_len, step_height, total_steps)
-            nav_constraint = NavProblemConstraints(self._agent)
-            nav_constraint.add_l_contact_constraint()
-            nav_constraint.add_r_swing_constraint(disp_vec)
-            nav_constraint.add_com_constraint(com_vec)
-            walk_tread_right_phase.append(self.create_foot_action_phase(nav_constraint))
+        problem_list += self.get_stand_actions_list()
+        problem_list += self.get_tread_actions_list(l_step_length, walk_vec, com_ref, is_left_step=True)
 
-        disp_vec = self._get_disp_vec(total_steps, right_step_len, step_height, total_steps)
-        nav_constraint = NavProblemConstraints(self._agent)
-        nav_constraint.add_r_swing_constraint(disp_vec)
-        walk_tread_right_phase.append(self.create_foot_impulse_phase(nav_constraint))
-
-        com_ref[0] += step_length * 0.5
-
-        walk_tread_left_phase = []
-        for step_index in range(1, total_steps + 1):
-            com_vec = np.array([step_index * step_length / total_steps, 0.0, 0.0]) * 0.5 + com_ref
-            disp_vec = self._get_disp_vec(step_index, step_length, step_height, total_steps)
-            nav_constraint = NavProblemConstraints(self._agent)
-            nav_constraint.add_r_contact_constraint()
-            nav_constraint.add_l_swing_constraint(disp_vec)
-            nav_constraint.add_com_constraint(com_vec)
-            walk_tread_left_phase.append(self.create_foot_action_phase(nav_constraint))
-
-        disp_vec = self._get_disp_vec(total_steps, step_length, step_height, total_steps)
-        nav_constraint = NavProblemConstraints(self._agent)
-        nav_constraint.add_l_swing_constraint(disp_vec)
-        walk_tread_left_phase.append(self.create_foot_impulse_phase(nav_constraint))
-
-        walk_problem_list += walk_stand_phase + walk_tread_right_phase
-        walk_problem_list += walk_stand_phase + walk_tread_left_phase
-
-        return crocoddyl.ShootingProblem(current_pose, walk_problem_list[:-1], walk_problem_list[-1])
+        return crocoddyl.ShootingProblem(self.get_agent_pose(), problem_list[:-1], problem_list[-1])

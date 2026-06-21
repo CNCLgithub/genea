@@ -32,7 +32,7 @@ class PlatformType:
         self._platform_material = platform_material
 
     @staticmethod
-    def from_mesh_str(platform_type_str):
+    def from_str(platform_type_str):
         platform_shape, platform_scale, platform_material = platform_type_str.split("_")
         return PlatformType(platform_shape, platform_scale, platform_material)
 
@@ -82,11 +82,21 @@ class Platform:
         self._platform_type = platform_type
         self._platform_pose = platform_pose
 
+        self._has_been_visited = False
+
+    @staticmethod
+    def from_str(platform_name, platform_pose: NavPose):
+        platform_shape, platform_scale, platform_material, platform_id = platform_name.split("_")
+        return Platform(platform_id, PlatformType(platform_shape, platform_scale, platform_material), platform_pose)
+
     def create_platform(self, *platform_args):
         pass
 
     def save_as_stl(self):
         pass
+
+    def set_visited(self, is_visited: bool):
+        self._has_been_visited = is_visited
 
     def is_top_scaled(self):
         return self._platform_type.is_top_scaled()
@@ -105,6 +115,9 @@ class Platform:
 
     def is_brawn(self):
         return self._platform_type.is_brawn()
+
+    def has_been_visited(self):
+        return self._has_been_visited
 
     @staticmethod
     def get_platform_height():

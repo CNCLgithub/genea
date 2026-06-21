@@ -15,7 +15,7 @@ class ComputeUtils:
 
     @staticmethod
     def sample_uniform(min_value, max_value, size=1):
-        return np.random.uniform(min_value, max_value, size).tolist()
+        return np.asarray(np.random.uniform(min_value, max_value, size)).tolist()
 
     @staticmethod
     def sample_normal(mu, sigma):
@@ -23,20 +23,29 @@ class ComputeUtils:
 
     @staticmethod
     def sample_trunc_normal(mu, bound_min, bound_max, sigma=1.0):
+        if bound_min > bound_max:
+            bound_min, bound_max = bound_max, bound_min
+
         lower = (bound_min - mu) / sigma
         upper = (bound_max - mu) / sigma
         return stats.truncnorm.rvs(lower, upper, loc=mu, scale=sigma, size=1).item()
 
     @staticmethod
-    def sample_skew_normal(mu, sigma, alpha):
+    def sample_skew_normal(mu, sigma, alpha, bound_min, bound_max):
         """
         NOTE:
 
-        alpha > 0  → right-skewed
-        alpha < 0  → left-skewed
-        alpha = 0  → normal distribution
+        alpha > 0 → right-skewed
+        alpha < 0 → left-skewed
+        alpha = 0 → normal distribution
         """
-        return stats.skewnorm.rvs(alpha, loc=mu, scale=sigma, size=1).item()
+        if bound_min > bound_max:
+            bound_min, bound_max = bound_max, bound_min
+
+        distribution = stats.skewnorm(alpha, loc=mu, scale=sigma)
+        cdf_min = distribution.cdf(bound_min)
+        cdf_max = distribution.cdf(bound_max)
+        return distribution.ppf(stats.uniform.rvs(cdf_min, cdf_max - cdf_min, size=1).item())
 
     @staticmethod
     def sample_trunc_normal_circular(center, bound_radius, sigma=1.0):
@@ -53,7 +62,7 @@ class ComputeUtils:
 
     @staticmethod
     def zscore_list(input_list):
-        return list(stats.zscore(input_list))
+        return np.asarray(stats.zscore(input_list)).tolist()
 
     @staticmethod
     def convert_quat_to_euler(quat_xyzw):

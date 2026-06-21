@@ -100,6 +100,7 @@ elif [[ "$1" =~ "nav" ]] && [[ "$2" =~ "python" ]];then
     ./run.sh "$1" "python -m pip install setuptools==82.0.1"
     ./run.sh "$1" "python -m pip install wheel==0.47.0"
     ./run.sh "$1" "python -m pip install mujoco==3.9.0"
+    ./run.sh "$1" "python -m pip install meshcat==0.3.2"
 else
     echo_green "Not touching python"
 fi

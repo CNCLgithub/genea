@@ -4,7 +4,7 @@ import pinocchio
 
 from example_robot_data.robots_loader import TalosLegsLoader
 
-from mlr.share.projects.navigation.utils.config_utils import CoreConfig
+from mlr.share.projects.navigation.utils.config_utils import NavConfig
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 
 
@@ -19,6 +19,8 @@ class NavAgent:
         self._right_foot_joint_name = None
 
         self._init_agent()
+        self._reference_pose = self.get_neutral_pose()
+        self._current_pose = self.get_neutral_pose()
 
     def _init_agent(self):
         if self._name == NavAgent.TALOS_LEGS:
@@ -38,17 +40,34 @@ class NavAgent:
     def _get_joint_pos(self, joint_frame_id):
         return self.get_agent_data().oMf[joint_frame_id].translation
 
+    def _get_joint_rot(self, joint_frame_id):
+        return self.get_agent_data().oMf[joint_frame_id].rotation
+
+    @staticmethod
+    def rotate_to(agent_x0, target_angle_rad):
+        new_pose = pinocchio.XYZQUATToSE3(agent_x0[:7])
+        new_pose.rotation = pinocchio.utils.rotate("z", target_angle_rad)
+        agent_x0[:7] = pinocchio.SE3ToXYZQUAT(new_pose)
+        return agent_x0
+
+    @staticmethod
+    def get_robot():
+        return TalosLegsLoader().robot
+
+    def set_ref_pose(self, reference_pose):
+        self._reference_pose = reference_pose
+
+    def update_current_pose(self, current_pose):
+        self._current_pose = current_pose
+
     def get_name(self):
         return self._name
 
-    def get_agent(self):
-        return self._robot
-
     def get_agent_model(self):
-        return self.get_agent().model
+        return self._robot.model
 
     def get_agent_data(self):
-        return self.get_agent().data
+        return self._robot.data
 
     def get_left_foot_frame_id(self):
         return self._get_joint_frame_id(self._get_left_foot_joint_name())
@@ -59,8 +78,14 @@ class NavAgent:
     def get_left_foot_pos(self):
         return self._get_joint_pos(self.get_left_foot_frame_id())
 
+    def get_left_foot_rot(self):
+        return self._get_joint_rot(self.get_left_foot_frame_id())
+
     def get_right_foot_pos(self):
         return self._get_joint_pos(self.get_right_foot_frame_id())
+
+    def get_right_foot_rot(self):
+        return self._get_joint_rot(self.get_right_foot_frame_id())
 
     def get_total_mass(self):
         return sum([inertial.mass for inertial in self.get_agent_model().inertias])
@@ -71,7 +96,7 @@ class NavAgent:
     def get_nq(self):
         return self.get_agent_model().nq
 
-    def get_x0(self):
+    def get_neutral_pose(self):
         q0 = self.get_q0()
         v0 = pinocchio.utils.zero(self.get_nv())
         return np.concatenate([q0, v0])
@@ -79,8 +104,11 @@ class NavAgent:
     def get_q0(self):
         return self.get_agent_model().referenceConfigurations["half_sitting"].copy()
 
-    def get_state0(self):
-        return np.concatenate([self.get_q0(), np.zeros(self.get_nv())])
+    def get_ref_pose(self):
+        return self._reference_pose
+
+    def get_current_pose(self):
+        return self._current_pose
 
     def get_state(self):
         return crocoddyl.StateMultibody(self.get_agent_model())
@@ -95,18 +123,29 @@ class NavAgent:
 class NavTask:
     JUMP = "jump"
     WALK = "walk"
+    TURN = "turn"
 
     def __init__(self, task_type):
         self._task_type = task_type
         self._task_solver = None
 
-    def set_task_solver(self, task_solver):
-        self._task_solver = task_solver
+    def run_task(self, nav_agent: NavAgent):
+        self._task_solver = crocoddyl.SolverFDDP(self.get_task_problem(nav_agent))
+        self._task_solver.th_stop = NavConfig.DYNAMICS_THRESHOLD
+
+        if NavConfig.DEBUG_KINEMATICS:
+            self._task_solver.setCallbacks([crocoddyl.CallbackVerbose(), crocoddyl.CallbackLogger()])  # noqa
+
+        _xs = [nav_agent.get_current_pose()] * (self._task_solver.problem.T + 1)
+        _us = self._task_solver.problem.quasiStatic([nav_agent.get_current_pose()] * self._task_solver.problem.T)
+        self._task_solver.solve(_xs, _us, 100, False)
+
+        nav_agent.update_current_pose(self._task_solver.xs[-1])
 
     def get_task_type(self):
         return self._task_type
 
-    def get_task_problem(self, agent: NavAgent, current_pose):
+    def get_task_problem(self, agent: NavAgent):
         pass
 
     def get_task_solver(self):
@@ -117,10 +156,11 @@ class NavTask:
 
 
 class _NavConstraint:
-    def __init__(self, joint_id, joint_pos=None, joint_misc_data=None):
+    def __init__(self, joint_id, joint_pos=None, joint_rot=None, joint_disp_vec=None):
         self._joint_id = joint_id
         self._joint_pos = joint_pos
-        self._joint_misc_data = joint_misc_data
+        self._joint_rot = joint_rot
+        self._joint_disp_vec = joint_disp_vec
 
     def get_joint_id(self):
         return self._joint_id
@@ -128,8 +168,11 @@ class _NavConstraint:
     def get_joint_pos(self):
         return self._joint_pos
 
-    def get_joint_misc_data(self):
-        return self._joint_misc_data
+    def get_joint_rot(self):
+        return self._joint_rot
+
+    def get_joint_disp_vec(self):
+        return self._joint_disp_vec
 
 
 class NavProblemConstraints:
@@ -144,11 +187,11 @@ class NavProblemConstraints:
     def _add_joint_contact_constraint(self, joint_id):
         self._contact_constraints_list.append(_NavConstraint(joint_id=joint_id))
 
-    def _add_swing_constraint(self, joint_id, joint_pos, disp_vector):
-        if not isinstance(disp_vector, np.ndarray):
+    def _add_swing_constraint(self, joint_id, joint_pos, joint_rot, disp_vec):
+        if not isinstance(disp_vec, np.ndarray):
             Msg.print_error("ERROR [NavProblem]: displacement vector must be specified as an np array")
             assert False
-        self._swing_constraints_list.append(_NavConstraint(joint_id, joint_pos, disp_vector))
+        self._swing_constraints_list.append(_NavConstraint(joint_id, joint_pos, joint_rot, disp_vec))
 
     def add_l_contact_constraint(self):
         self._add_joint_contact_constraint(self._agent.get_left_foot_frame_id())
@@ -157,10 +200,16 @@ class NavProblemConstraints:
         self._add_joint_contact_constraint(self._agent.get_right_foot_frame_id())
 
     def add_l_swing_constraint(self, disp_vec):
-        self._add_swing_constraint(self._agent.get_left_foot_frame_id(), self._agent.get_left_foot_pos(), disp_vec)
+        self._add_swing_constraint(self._agent.get_left_foot_frame_id(),
+                                   self._agent.get_left_foot_pos(),
+                                   self._agent.get_left_foot_rot(),
+                                   disp_vec)
 
     def add_r_swing_constraint(self, disp_vec):
-        self._add_swing_constraint(self._agent.get_right_foot_frame_id(), self._agent.get_right_foot_pos(), disp_vec)
+        self._add_swing_constraint(self._agent.get_right_foot_frame_id(),
+                                   self._agent.get_right_foot_pos(),
+                                   self._agent.get_right_foot_rot(),
+                                   disp_vec)
 
     def add_com_constraint(self, com_vec):
         self._com_constraint = com_vec
@@ -183,13 +232,19 @@ class NavProblemConstraints:
     def get_swing_constraints_pos_list(self):
         return [constraint.get_joint_pos() for constraint in self.get_swing_constraints()]
 
+    def get_swing_constraints_rot_list(self):
+        return [constraint.get_joint_rot() for constraint in self.get_swing_constraints()]
+
     def get_swing_constraints_disp_vec_list(self):
-        return [constraint.get_joint_misc_data() for constraint in self.get_swing_constraints()]
+        return [constraint.get_joint_disp_vec() for constraint in self.get_swing_constraints()]
 
 
 class NavProblem:
     def __init__(self, nav_agent: NavAgent):
         self._agent = nav_agent
+
+    def create_problem(self, nav_task: NavTask):
+        pass
 
     def create_foot_action_phase(self, nav_constraints):
         costs_list = crocoddyl.CostModelSum(self._agent.get_state(), self._agent.get_nu())
@@ -199,6 +254,7 @@ class NavProblem:
 
         swing_frame_id_list = nav_constraints.get_swing_constraints_frame_id_list()
         swing_pos_list = nav_constraints.get_swing_constraints_pos_list()
+        swing_rot_list = nav_constraints.get_swing_constraints_rot_list()
         swing_disp_vec_list = nav_constraints.get_swing_constraints_disp_vec_list()
 
         com_vec = nav_constraints.get_com_constraint()
@@ -217,21 +273,21 @@ class NavProblem:
             contacts_list.addContact(str(f_id) + "_contact", contact_model)
 
         for f_id in contacts_frame_id_list:
-            wc = crocoddyl.WrenchCone(np.eye(3), CoreConfig.NAV_PROBLEM_FRICTION_COEFFICIENT, np.array([0.1, 0.05]))
+            wc = crocoddyl.WrenchCone(np.eye(3), NavConfig.FRICTION_COEFFICIENT, np.array([0.1, 0.05]))
             wc_res = crocoddyl.ResidualModelContactWrenchCone(self._agent.get_state(), f_id, wc, self._agent.get_nu())
             wc_act = crocoddyl.ActivationModelQuadraticBarrier(crocoddyl.ActivationBounds(wc.lb, wc.ub))
             wc_cost = crocoddyl.CostModelResidual(self._agent.get_state(), wc_act, wc_res)
             costs_list.addCost(str(f_id) + "_wrench_cone", wc_cost, 1e1)
 
-        for f_id, f_pos, f_disp_vec in zip(swing_frame_id_list, swing_pos_list, swing_disp_vec_list):
-            pos = pinocchio.SE3(np.eye(3), f_pos + f_disp_vec)
+        for f_id, f_pos, f_rot, f_vec in zip(swing_frame_id_list, swing_pos_list, swing_rot_list, swing_disp_vec_list):
+            pos = pinocchio.SE3(f_rot, f_pos + f_vec)
             f_res = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, self._agent.get_nu())
             f_cost = crocoddyl.CostModelResidual(self._agent.get_state(), f_res)
             costs_list.addCost(str(f_id) + "_foot_track", f_cost, 1e6)
 
         state_nv = self._agent.get_state().nv
         state_weights = np.array([0] * 3 + [500.0] * 3 + [0.01] * (state_nv - 6) + [10] * state_nv)
-        s_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_state0(), self._agent.get_nu())
+        s_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_ref_pose(), self._agent.get_nu())
         s_act = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
         s_cost = crocoddyl.CostModelResidual(self._agent.get_state(), s_act, s_res)
         costs_list.addCost("state_cost", s_cost, 1e1)
@@ -246,24 +302,25 @@ class NavProblem:
 
         control = crocoddyl.ControlParametrizationModelPolyZero(self._agent.get_nu())
 
-        return crocoddyl.IntegratedActionModelEuler(diff_action_model, control, CoreConfig.NAV_PROBLEM_TIME_STEP)
+        return crocoddyl.IntegratedActionModelEuler(diff_action_model, control, NavConfig.TIME_STEP)
 
     def create_foot_impulse_phase(self, nav_constraints):
         foot_frame_id_list = nav_constraints.get_swing_constraints_frame_id_list()
         foot_pos_list = nav_constraints.get_swing_constraints_pos_list()
+        foot_rot_list = nav_constraints.get_swing_constraints_rot_list()
         foot_disp_vec_list = nav_constraints.get_swing_constraints_disp_vec_list()
 
         costs_list = crocoddyl.CostModelSum(self._agent.get_state(), 0)
 
-        for f_id, f_pos, f_disp_vec in zip(foot_frame_id_list, foot_pos_list, foot_disp_vec_list):
-            pos = pinocchio.SE3(np.eye(3), f_pos + f_disp_vec)
+        for f_id, f_pos, f_rot, f_vec in zip(foot_frame_id_list, foot_pos_list, foot_rot_list, foot_disp_vec_list):
+            pos = pinocchio.SE3(f_rot, f_pos + f_vec)
             fp_res = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, 0)
             fp_cost = crocoddyl.CostModelResidual(self._agent.get_state(), fp_res)
             costs_list.addCost(str(f_id) + "_foot_track", fp_cost, 1e8)
 
         state_weights = np.array([1.0] * 6 + [0.1] * (self._agent.get_nv() - 6) + [10] * self._agent.get_nv())
         state_act = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
-        state_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_state0(), 0)
+        state_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_ref_pose(), 0)
         state_cost = crocoddyl.CostModelResidual(self._agent.get_state(), state_act, state_res)
         costs_list.addCost("state_cost", state_cost, 1e1)
 
@@ -283,6 +340,7 @@ class NavProblem:
 
         foot_frame_id_list = nav_constraints.get_swing_constraints_frame_id_list()
         foot_pos_list = nav_constraints.get_swing_constraints_pos_list()
+        foot_rot_list = nav_constraints.get_swing_constraints_rot_list()
         foot_disp_vec_list = nav_constraints.get_swing_constraints_disp_vec_list()
 
         contacts_list = crocoddyl.ContactModelMultiple(self._agent.get_state(), self._agent.get_nu())
@@ -297,14 +355,14 @@ class NavProblem:
 
         costs_list = crocoddyl.CostModelSum(self._agent.get_state(), self._agent.get_nu())
         for f_id in foot_contacts_frame_id_list:
-            wc = crocoddyl.WrenchCone(np.eye(3), CoreConfig.NAV_PROBLEM_FRICTION_COEFFICIENT, np.array([0.1, 0.05]))
+            wc = crocoddyl.WrenchCone(np.eye(3), NavConfig.TIME_STEP, np.array([0.1, 0.05]))
             wc_res = crocoddyl.ResidualModelContactWrenchCone(self._agent.get_state(), f_id, wc, self._agent.get_nu())
             wc_act = crocoddyl.ActivationModelQuadraticBarrier(crocoddyl.ActivationBounds(wc.lb, wc.ub))
             wc_cost = crocoddyl.CostModelResidual(self._agent.get_state(), wc_act, wc_res)
             costs_list.addCost(str(f_id) + "_wrench_cone", wc_cost, 1e1)
 
-        for f_id, f_pos, f_disp_vec in zip(foot_frame_id_list, foot_pos_list, foot_disp_vec_list):
-            pos = pinocchio.SE3(np.eye(3), f_pos + f_disp_vec)
+        for f_id, f_pos, f_rot, f_vec in zip(foot_frame_id_list, foot_pos_list, foot_rot_list, foot_disp_vec_list):
+            pos = pinocchio.SE3(f_rot, f_pos + f_vec)
             f_res = crocoddyl.ResidualModelFramePlacement(self._agent.get_state(), f_id, pos, self._agent.get_nu())
             fv_res = crocoddyl.ResidualModelFrameVelocity(self._agent.get_state(), f_id,
                                                           pinocchio.Motion.Zero(),
@@ -318,7 +376,7 @@ class NavProblem:
         state_nv = self._agent.get_state().nv
         state_weights = np.array([0] * 3 + [500.0] * 3 + [0.01] * (state_nv - 6) + [10] * state_nv)
         s_act = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
-        s_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_state0(), self._agent.get_nu())
+        s_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_ref_pose(), self._agent.get_nu())
         state_cost = crocoddyl.CostModelResidual(self._agent.get_state(), s_act, s_res)
         costs_list.addCost("state_cost", state_cost, 1e1)
 
@@ -331,3 +389,6 @@ class NavProblem:
                                                                                 contacts_list, costs_list, 0.0, True)
 
         return crocoddyl.IntegratedActionModelEuler(diff_action_model, 0.0)
+
+    def get_agent_pose(self):
+        return self._agent.get_current_pose()

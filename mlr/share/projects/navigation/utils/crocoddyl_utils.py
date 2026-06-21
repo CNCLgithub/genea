@@ -4,6 +4,7 @@ import pinocchio
 from crocoddyl import ActionDataImpulseFwdDynamics, StdVec_DiffActionData, ActionModelImpulseFwdDynamics
 from crocoddyl import DifferentialActionDataContactFwdDynamics as FwdDynamics
 from crocoddyl import DifferentialActionModelContactInvDynamics as InvDynamics
+from typing import List
 
 from mlr.share.projects.navigation.utils.config_utils import CrocoddylConfig
 from mlr.share.projects.navigation.utils.core_utils import NavForce, NavPose, NavPosition, NavRotation
@@ -65,15 +66,15 @@ class CrocoddylUtils:
         return forces_list
 
     @staticmethod
-    def get_forces_list(crocoddyl_solver):
-        forces_list = []
+    def get_forces_by_time_list(crocoddyl_solver) -> List[List[NavForce]]:
+        forces_by_time_list = []
         model_list = [*crocoddyl_solver.problem.runningModels.tolist(), crocoddyl_solver.problem.terminalModel]
         data_list = [*crocoddyl_solver.problem.runningDatas.tolist(), crocoddyl_solver.problem.terminalData]
         for model, data in zip(model_list, data_list):
             if CrocoddylUtils._has_contacts(data):
                 contact_model, contact_data = CrocoddylUtils._get_contact_model_data(model, data)
-                forces_list.append(CrocoddylUtils._get_forces_list(model.state, contact_model, contact_data))
-        return forces_list
+                forces_by_time_list.append(CrocoddylUtils._get_forces_list(model.state, contact_model, contact_data))
+        return forces_by_time_list
 
     @staticmethod
     def get_costs_list(crocoddyl_solver):

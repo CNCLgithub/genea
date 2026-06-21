@@ -4,7 +4,6 @@ import xml.etree.ElementTree as ETree
 
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.mujoco_utils import MujocoUtils
-from mlr.share.projects.navigation.utils.path_utils import PathUtils
 
 
 class _MJCFTag:
@@ -67,7 +66,7 @@ class MJCFGenerator:
     BODY_GROUND = "g"
     BODY_PLATFORM = "p"
 
-    def __init__(self, stimulus_dirpath):
+    def __init__(self, mjcf_filepath):
         self._mjcf_root = _MJCFElement(_MJCFTag.MJCF, None)
 
         self._mjcf_compiler = _MJCFElement(_MJCFTag.COMPILER, self._mjcf_root)
@@ -79,7 +78,7 @@ class MJCFGenerator:
         self._mjcf_asset = _MJCFElement(_MJCFTag.ASSET, self._mjcf_root)
         self._mjcf_body = _MJCFElement(_MJCFTag.WORLD_BODY, self._mjcf_root)
 
-        self._mjcf_filepath = PathUtils.join(stimulus_dirpath, "stimulus.mjcf")
+        self._mjcf_filepath = mjcf_filepath
 
         self._mesh_registry = []
 

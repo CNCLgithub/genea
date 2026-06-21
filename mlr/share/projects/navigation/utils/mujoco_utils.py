@@ -1,10 +1,46 @@
 import mujoco as mj
 import mujoco.viewer as mjv
-import time
+import numpy as np
 
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
-from mlr.share.projects.navigation.utils.config_utils import CoreConfig
+from mlr.share.projects.navigation.utils.config_utils import MujocoConfig, NavConfig
 from mlr.share.projects.navigation.utils.core_utils import NavForce, NavPose, NavPosition, NavRotation
+
+
+class MujocoLandmark:
+    def __init__(self, landmark_pos, landmark_vec):
+        self._landmark_pos = landmark_pos
+        self._landmark_vec = landmark_vec
+
+    def add_force_arrow(self, scene):
+        geom = scene.geoms[scene.ngeom]
+        mj.mjv_initGeom(geom,
+                        type=mj.mjtGeom.mjGEOM_ARROW1,
+                        size=[0.1, 0.1, 0.5],
+                        pos=self.get_landmark_pos(),
+                        mat=self.get_landmark_mat(),
+                        rgba=np.array([1, 0, 0, 1]))
+
+        scene.ngeom += 1
+
+    def get_landmark_pos(self):
+        return self._landmark_pos
+
+    def get_landmark_vec(self):
+        return self._landmark_vec
+
+    def get_landmark_mat(self):
+        normalized = self._landmark_vec / (np.linalg.norm(self._landmark_vec) + 1e-12)
+        up = np.array([0, 0, 1])
+
+        if abs(np.dot(up, normalized)) > 0.9:
+            up = np.array([0, 1, 0])
+
+        x = np.cross(up, normalized)
+        x /= np.linalg.norm(x) + 1e-8
+        y = np.cross(normalized, x)
+
+        return np.column_stack([x, y, normalized]).flatten()
 
 
 class MujocoForceRecord:
@@ -38,11 +74,12 @@ class MujocoForceRecord:
 
 class MujocoUtils:
     def __init__(self, stim_mjcf_filepath):
-        self._model = mj.MjModel.from_xml_path(stim_mjcf_filepath)
+        self._model = mj.MjModel.from_xml_path(stim_mjcf_filepath)  # noqa
         self._data = mj.MjData(self._model)
 
+        self._landmark_id_list = []
         self._platform_ids_list = []
-        self._force_registry_list = []
+        self._external_forces_list_by_time = []
 
         self._video_filepath = None
 
@@ -50,8 +87,12 @@ class MujocoUtils:
         with mjv.launch_passive(self._model, self._data) as viewer:
             viewer.cam.type = mj.mjtCamera.mjCAMERA_FIXED
             viewer.cam.fixedcamid = self._model.camera("camera").id
+
+            for landmark in self._landmark_id_list:
+                landmark.add_force_arrow(viewer.user_scn)
+
             while viewer.is_running():
-                mj.mj_step(self._model, self._data)
+                mj.mj_step(self._model, self._data)  # noqa
                 viewer.sync()
 
     def get_body_names_list(self):
@@ -62,7 +103,7 @@ class MujocoUtils:
                 body_names_list.append(body_name)
         return body_names_list
 
-    def get_body_types_list(self):
+    def get_body_meshes_list(self):
         body_types_list = []
         for body_index in range(1, self._model.nbody):
             body_geom = self._model.body_geomadr[body_index]
@@ -73,62 +114,37 @@ class MujocoUtils:
         return body_types_list
 
     def get_body_pose_by_name(self, body_name: str):
-        return_pos_list = []
-        return_rot_list = []
+        return_pos_as_list = []
+        return_rot_as_list = []
         for body_index in range(1, self._model.nbody):
             if mj.mj_id2name(self._model, mj.mjtObj.mjOBJ_BODY, body_index) == body_name:
                 pos = self._model.body_pos[body_index]
                 rot = self._model.body_quat[body_index]
                 rot = ComputeUtils.convert_quat_to_euler([rot[1], rot[2], rot[3], rot[0]])
-                return_pos_list.append(pos)
-                return_rot_list.append(rot)
-        return return_pos_list, return_rot_list
+                return_pos_as_list = pos
+                return_rot_as_list = rot
+                break
+        return return_pos_as_list, return_rot_as_list
 
-    @staticmethod
-    def _apply_forces(force_record: MujocoForceRecord):
-        platform_id = force_record.get_platform_id()
-        nav_force = force_record.get_nav_force()
+    def register_external_forces(self, nav_forces_list):
+        self._external_forces_list_by_time.append(nav_forces_list)
 
-        force_mag = CoreConfig.PYBULLET_FORCE_MAG_MULTIPLIER
-        force_pos = nav_force.get_force_pose().get_position().get_position_as_np_array()
-        force_rot = nav_force.get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
+    def simulate(self):
+        for forces_list in self._external_forces_list_by_time:
+            self._data.qfrc_applied[:] = 0.0
+            self._data.xfrc_applied[:] = 0.0
+            for nav_force in forces_list:
+                force_mag = MujocoConfig.FORCE_SCALE
+                force_pos = nav_force.get_force_pose().get_position().get_position_as_np_array()
+                force_vec = nav_force.get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
 
-        body_xmat = self._data.xmat[platform_id].reshape(3, 3)
-        world_force = body_xmat @ force_vec
+                if NavConfig.DEBUG_DYNAMICS:
+                    self._landmark_id_list.append(MujocoLandmark(force_pos, force_vec))
+                    continue
 
-        if CoreConfig.IS_DEBUG:
-            pybullet.addUserDebugText("X", force_pos, textColorRGB=[1, 0, 0], textSize=1.5)
+                mj.mj_applyFT(self._model, self._data, force_vec, np.zeros(3), force_pos)
 
-        mj.mj_applyFT(platform_id, -1, force_rot, force_pos, pybullet.LINK_FRAME)
+        self.visualize()
 
     def close(self):
-        mj.mj_resetData(self.model, self.data)
-
-    def add_force_on_platform(self, platform_id, force: NavForce, sim_onset_time, sim_stint_time):
-        self._force_registry_list.append(MujocoForceRecord(platform_id, force, sim_onset_time, sim_stint_time))
-
-    def run_simulation(self):
-        sim_current_time = 0.0
-
-        for tick in range(int(CoreConfig.PYBULLET_SIM_TIME_TOTAL / CoreConfig.PYBULLET_SIM_TIME_STEP)):
-            if not pybullet.isConnected():
-                continue
-
-            for force_record in self._force_registry_list:
-                if force_record.get_sim_onset_time() <= sim_current_time < force_record.get_sim_end_time():
-                    self._apply_forces(force_record)
-
-            pybullet.stepSimulation()
-
-            sim_current_time += CoreConfig.PYBULLET_SIM_TIME_STEP
-
-            if CoreConfig.NAV_MODEL_VIEW_DYNAMICS:
-                time.sleep(CoreConfig.PYBULLET_SIM_TIME_STEP)
-
-    def get_platform_ids_list(self):
-        return self._platform_ids_list
-
-    @staticmethod
-    def get_platform_pose(platform_id) -> NavPose:
-        position, orientation = pybullet.getBasePositionAndOrientation(platform_id)
-        return NavPose(NavPosition(*position), NavRotation(*pybullet.getEulerFromQuaternion(orientation)))
+        mj.mj_resetData(self._model, self._data)
