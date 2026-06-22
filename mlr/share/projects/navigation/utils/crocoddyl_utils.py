@@ -60,7 +60,7 @@ class CrocoddylUtils:
                 nav_rot = NavRotation(force_rot[0], force_rot[1], force_rot[2])
 
                 force_pose = NavPose(nav_pos, nav_rot)
-                force_magnitude = np.linalg.norm(force_wrench.linear) / CrocoddylConfig.CROCODDYL_FORCE_SCALING_FACTOR
+                force_magnitude = np.linalg.norm(force_wrench.linear) * CrocoddylConfig.CROCODDYL_FORCE_MULTIPLIER
                 forces_list.append(NavForce(force_pose, force_magnitude))
 
         return forces_list

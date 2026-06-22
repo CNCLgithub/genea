@@ -61,7 +61,7 @@ class StimuliDiff(StimuliSet):
         stimulus.save_to_mjcf()
         stimulus.visualize()
 
-    def _make_rotated_stim_set(self, platform_types_list, parent_ids_list, delta_x_list, delta_y_list):
+    def _make_permuted_stim_set(self, platform_types_list, parent_ids_list, delta_x_list, delta_y_list):
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
         platform_types_list = [platform_types_list[-1]] + platform_types_list[:-1]
@@ -107,7 +107,7 @@ class StimuliDiff(StimuliSet):
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        self._make_permuted_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     def make_stimuli_04(self):
         platform_types_list = [PlatformType(PlatformShape.WIDE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
@@ -116,7 +116,7 @@ class StimuliDiff(StimuliSet):
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        self._make_permuted_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     def make_stimuli_05(self):
         platform_types_list = [PlatformType(PlatformShape.WIDE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
@@ -125,7 +125,7 @@ class StimuliDiff(StimuliSet):
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        self._make_permuted_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     def make_stimuli_06(self):
         platform_types_list = [PlatformType(PlatformShape.WIDE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
@@ -134,7 +134,7 @@ class StimuliDiff(StimuliSet):
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        self._make_permuted_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     # ======================= LONG =======================
     def make_stimuli_07(self):
@@ -144,7 +144,7 @@ class StimuliDiff(StimuliSet):
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        self._make_permuted_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     def make_stimuli_08(self):
         platform_types_list = [PlatformType(PlatformShape.LONG, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
@@ -153,7 +153,7 @@ class StimuliDiff(StimuliSet):
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        self._make_permuted_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     def make_stimuli_09(self):
         platform_types_list = [PlatformType(PlatformShape.LONG, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
@@ -162,7 +162,7 @@ class StimuliDiff(StimuliSet):
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        self._make_permuted_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     def make_stimuli_10(self):
         platform_types_list = [PlatformType(PlatformShape.LONG, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
@@ -171,7 +171,7 @@ class StimuliDiff(StimuliSet):
         parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
         delta_x_list = [0.0 for _ in range(len(platform_types_list))]
         delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_rotated_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        self._make_permuted_stim_set(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     # ======================= WALK =======================
     def make_stimuli_11(self):
@@ -213,7 +213,7 @@ def main():
     stimuli_diff = StimuliDiff()
     # stimuli_diff.make_stimuli_00()
     # stimuli_diff.make_stimuli_01()
-    stimuli_diff.make_stimuli_02()
+    # stimuli_diff.make_stimuli_02()
     # stimuli_diff.make_stimuli_03()
     # stimuli_diff.make_stimuli_04()
     # stimuli_diff.make_stimuli_05()

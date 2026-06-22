@@ -2,8 +2,10 @@ import crocoddyl
 import pinocchio
 import numpy as np
 
+from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
-from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavAgent, NavProblem, NavProblemConstraints
+from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavProblem, NavProblemConstraints, \
+    NavTaskRegistry
 
 
 class WalkTask(NavTask):
@@ -28,11 +30,49 @@ class WalkTask(NavTask):
     def step(self):
         return self._step_length is not None
 
-    def get_step_length(self):
-        return self._step_length
+    def tally_task(self, *platform_names_list):
+        phase1 = NavConfig.WALK_STAND_KNOTS
+        phase2 = NavConfig.WALK_TREAD_KNOTS + 1 + phase1
+        phase3 = NavConfig.WALK_STAND_KNOTS + phase2
+        phase4 = NavConfig.WALK_TREAD_KNOTS + 1 + phase3
+
+        task_forces_by_time_list = self.get_task_forces_by_time_list()
+        for time_index, task_forces_list in enumerate(task_forces_by_time_list):
+            task_registry = NavTaskRegistry()
+
+            if 0 <= time_index < phase1:
+                task_registry.set_force_left(task_forces_list[0])
+                task_registry.set_force_right(task_forces_list[1])
+            elif phase1 <= time_index < phase2:
+                task_registry.set_force_left(task_forces_list[0])
+            elif phase2 <= time_index < phase3:
+                task_registry.set_force_left(task_forces_list[0])
+                task_registry.set_force_right(task_forces_list[1])
+            elif phase3 <= time_index < phase4:
+                task_registry.set_force_right(task_forces_list[0])
+
+            if self.is_lunge_step():
+                if 0 <= time_index < phase1:
+                    task_registry.set_platform_name_left(platform_names_list[0])
+                    task_registry.set_platform_name_right(platform_names_list[0])
+                elif phase1 <= time_index < phase2:
+                    task_registry.set_platform_name_left(platform_names_list[0])
+                elif phase2 <= time_index < phase3:
+                    task_registry.set_platform_name_left(platform_names_list[0])
+                    task_registry.set_platform_name_right(platform_names_list[1])
+                elif phase3 <= time_index < phase4:
+                    task_registry.set_platform_name_right(platform_names_list[1])
+            else:
+                task_registry.set_platform_name_left(platform_names_list[0])
+                task_registry.set_platform_name_right(platform_names_list[0])
+
+            self.add_to_registry(task_registry)
 
     def get_task_problem(self, nav_agent: NavAgent):
         return WalkProblem(nav_agent).create_problem(self)
+
+    def get_step_length(self):
+        return self._step_length
 
 
 class WalkProblem(NavProblem):

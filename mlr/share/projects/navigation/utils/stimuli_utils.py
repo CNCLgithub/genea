@@ -112,7 +112,11 @@ class Stimulus:
             mjcf_filepath = self._stim_mjcf_generator.get_mjcf_filepath()
 
         mj = MujocoUtils(mjcf_filepath)
+
         for platform_name in mj.get_body_names_list():
+            if Platform.from_str(platform_name).is_ground():
+                continue
+
             platform_pos, platform_rot = mj.get_body_pose_by_name(platform_name)
             platform_pose = NavPose(NavPosition(*platform_pos), NavRotation(*platform_rot))
             self._stim_platforms_dict[platform_name] = Platform.from_str(platform_name, platform_pose)

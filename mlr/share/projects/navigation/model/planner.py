@@ -1,425 +1,317 @@
+from __future__ import annotations
+
+import copy
 import crocoddyl
 import numpy as np
 import time
 
-from enum import Enum
+from collections import deque, defaultdict
 from typing import List
 
-from mlr.share.projects.navigation.model.stimuli import StimuliPairs
 from mlr.share.projects.navigation.model.tasks.jump import JumpTask
+from mlr.share.projects.navigation.model.tasks.turn import TurnTask
 from mlr.share.projects.navigation.model.tasks.walk import WalkTask
+from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
-from mlr.share.projects.navigation.utils.config_utils import CoreConfig
-from mlr.share.projects.navigation.utils.crocoddyl_utils import CrocoddylUtils
-from mlr.share.projects.navigation.utils.file_utils import FileUtils
+from mlr.share.projects.navigation.utils.config_utils import NavConfig
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 from mlr.share.projects.navigation.utils.mujoco_utils import MujocoUtils
-from mlr.share.projects.navigation.utils.navigation_utils import NavAgent, NavTask
-from mlr.share.projects.navigation.utils.path_utils import PathUtils
-from mlr.share.projects.navigation.utils.platform_utils import Platform, PlatformType
+from mlr.share.projects.navigation.utils.navigation_utils import NavTask
 from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
 
 
-class NavOutLabel(Enum):
-    NAV_STIM_ITEM_NAME = "nav_stim_item_name"
-    NAV_AGENT_NAME = "nav_agent"
-    NAV_TASK = "nav_task"
-    RUN_NUM = "run_num"
-    NAV_TASK_COST = "nav_task_cost"
-    NAV_TASK_INSTABILITY = "nav_task_instability"
+class NavState:
+    def __init__(self, agent: NavAgent, scene: Stimulus, move_num, variation_num):
+        self._agent = agent
+        self._scene = scene
 
-    PLATFORM_NAME = "platform_name"
-    PLATFORM_POS_DIFF = "platform_pos_diff"
-    PLATFORM_ROT_DIFF = "platform_rot_diff"
-    PLATFORM_HAS_MOVED = "platform_has_moved"
-    PLATFORM_MASS = "platform_mass"
+        self._move_num = move_num
+        self._variation_num = variation_num
 
+        self._ref_platform_name = None
 
-class NavOutData:
-    def __init__(self, stim_set_name=None):
-        self._stim_set_name = stim_set_name
+        self._is_valid = False
 
-        self._nav_data_dict = {}
-        self._platform_data_list = []
+        self._nav_task_type = []
+        self._nav_tasks_list = []
+        self._children_states_list = []
 
-    def get_nav_out_filepath(self):
-        FileUtils.create_dir(PathUtils.get_out_nav_data_dirpath(), do_force_create=False)
-        return PathUtils.join(PathUtils.get_out_nav_data_dirpath(), self._stim_set_name + ".csv")
+    def set_as_valid(self):
+        self._is_valid = True
 
-    def get_nav_data(self, key: NavOutLabel):
-        return self._nav_data_dict.get(key, None)
+    def set_move_num(self, move_num):
+        self._move_num = move_num
 
-    def add_nav_data(self, key: NavOutLabel, value):
-        self._nav_data_dict[key] = value
+    def set_variation_num(self, variation_num):
+        self._variation_num = variation_num
 
-    def add_platform_data(self, platform_name, platform_pos_diff, platform_rot_diff, platform_has_moved, platform_mass):
-        self._platform_data_list.append({NavOutLabel.PLATFORM_NAME: platform_name,
-                                         NavOutLabel.PLATFORM_POS_DIFF: platform_pos_diff,
-                                         NavOutLabel.PLATFORM_ROT_DIFF: platform_rot_diff,
-                                         NavOutLabel.PLATFORM_HAS_MOVED: platform_has_moved,
-                                         NavOutLabel.PLATFORM_MASS: platform_mass})
+    def set_ref_platform_name(self, ref_platform_name):
+        self._ref_platform_name = ref_platform_name
+        self.get_scene().get_platform(ref_platform_name).set_visited(True)
 
-    def save_nav_out_data_to_file(self):
-        nav_out_data_as_list = [self._nav_data_dict[key] for key in [NavOutLabel.NAV_STIM_ITEM_NAME,
-                                                                     NavOutLabel.NAV_AGENT_NAME,
-                                                                     NavOutLabel.NAV_TASK,
-                                                                     NavOutLabel.RUN_NUM]]
+    def set_nav_task_type(self, nav_task_type):
+        self._nav_task_type = nav_task_type
 
-        for platform_data in self._platform_data_list:
-            nav_out_data_as_list.append(platform_data[NavOutLabel.PLATFORM_NAME])
-            nav_out_data_as_list.append(platform_data[NavOutLabel.PLATFORM_POS_DIFF])
-            nav_out_data_as_list.append(platform_data[NavOutLabel.PLATFORM_ROT_DIFF])
-            nav_out_data_as_list.append(platform_data[NavOutLabel.PLATFORM_HAS_MOVED])
-            nav_out_data_as_list.append(platform_data[NavOutLabel.PLATFORM_MASS])
+    def is_done(self):
+        for platform in self.get_scene().get_platforms_list():
+            if platform.is_goal() and platform.has_been_visited():
+                return True
+        return False
 
-        nav_out_data_as_list.append(self._nav_data_dict[NavOutLabel.NAV_TASK_COST])
-        nav_out_data_as_list.append(self._nav_data_dict[NavOutLabel.NAV_TASK_INSTABILITY])
+    def is_valid(self):
+        return self._is_valid
 
-        FileUtils.write_row_to_file(self.get_nav_out_filepath(), nav_out_data_as_list)
+    def add_nav_task(self, nav_task):
+        self._nav_tasks_list.append(nav_task)
 
-    def parse_row_data(self, row_data):
-        self._nav_data_dict[NavOutLabel.NAV_STIM_ITEM_NAME] = row_data[0]
-        self._nav_data_dict[NavOutLabel.NAV_AGENT_NAME] = row_data[1]
-        self._nav_data_dict[NavOutLabel.NAV_TASK] = row_data[2]
-        self._nav_data_dict[NavOutLabel.RUN_NUM] = int(row_data[3])
+    def add_child_state(self, child_state: NavState):
+        self._children_states_list.append(child_state)
 
-        for index in range(4, len(row_data) - 2, 4):
-            platform_data = row_data[index: index + 4]
+    def reset_children_states_list(self):
+        self._children_states_list = []
 
-            p_name = platform_data[0]
-            p_pos_diff = float(platform_data[1])
-            p_rot_diff = float(platform_data[2])
-            p_has_moved = platform_data[3] == 'True'
-            p_mass = platform_data[4]
-            self.add_platform_data(p_name, p_pos_diff, p_rot_diff, p_has_moved, p_mass)
+    def get_agent(self):
+        return self._agent
 
-        self._nav_data_dict[NavOutLabel.NAV_TASK_COST] = row_data[-2]
-        self._nav_data_dict[NavOutLabel.NAV_TASK_INSTABILITY] = row_data[-1]
+    def get_agent_pose(self):
+        return self.get_agent().get_current_pose()
+
+    def get_scene(self) -> Stimulus:
+        return self._scene
+
+    def get_move_num(self):
+        return self._move_num
+
+    def get_variation_num(self):
+        return self._variation_num
+
+    def get_ref_platform_name(self):
+        return self._ref_platform_name
+
+    def get_nav_task_type(self):
+        return self._nav_task_type
+
+    def get_nav_task(self):
+        return self._nav_tasks_list
+
+    def get_children_states_list(self):
+        return self._children_states_list
+
+    def get_candidate_platform_names_list(self):
+        candidate_platform_names_list = []
+
+        for platform_name in self.get_scene().get_platform_names_list():
+            if self.get_scene().get_platform(platform_name).has_been_visited():
+                continue
+
+            gap = self.get_scene().get_gap_between_platform_edges(self.get_ref_platform_name(), platform_name)
+            if gap > max(NavConfig.MAX_STEP_LENGTH * 2, NavConfig.MAX_JUMP_LENGTH):
+                continue
+
+            candidate_platform_names_list.append(platform_name)
+
+        return candidate_platform_names_list
+
+    def get_next_task_type_dict(self, agent_pos):
+        next_tasks_dict = defaultdict(list)
+
+        # ----------- within the ref platform -----------
+        distance_to_right_edge = self.get_scene().get_distance_to_platform_edge(self.get_ref_platform_name(), agent_pos)
+        if distance_to_right_edge >= NavConfig.MAX_STEP_LENGTH * 2:
+            next_tasks_dict[self.get_ref_platform_name()].append(NavTask.WALK)
+
+        # ----------- between ref and candidate platform -----------
+        for candidate_platform_name in self.get_candidate_platform_names_list():
+            gap = self.get_scene().get_gap_between_platform_edges(self.get_ref_platform_name(), candidate_platform_name)
+            if gap <= NavConfig.MAX_JUMP_LENGTH:
+                next_tasks_dict[candidate_platform_name].append(NavTask.JUMP)
+
+            if gap <= NavConfig.MAX_STEP_LENGTH:
+                next_tasks_dict[candidate_platform_name].append(NavTask.WALK)
+
+        return next_tasks_dict
 
 
 class NavModel:
     def __init__(self, nav_agent_name, nav_scene: Stimulus):
         self._agent = NavAgent(nav_agent_name)
 
-        self._agent_init_pose = self._agent.get_x0()
-        self._agent_current_pose = self._agent.get_x0()
-
         self._scene = nav_scene
         self._scene.load_stimuli_from_library()
 
-        self._nav_task_list = []
-        self._nav_task_stability_list = []
+        self._root_nav_state: NavState = NavState(self.get_agent(), self.get_scene(), 1, 1)
 
-    def _setup_task_solver(self, nav_task: NavTask):
-        solver = crocoddyl.SolverFDDP(nav_task.get_task_problem(self._agent, self._agent_current_pose))
-        solver.th_stop = CoreConfig.NAV_MODEL_THRESHOLD_STOP
-
-        if CoreConfig.NAV_MODEL_VIEW_DYNAMICS:
-            solver.setCallbacks([crocoddyl.CallbackVerbose(), crocoddyl.CallbackLogger()])  # noqa
-        else:
-            solver.setCallbacks([crocoddyl.CallbackVerbose()])  # noqa
-
-        _xs = [self._agent_current_pose] * (solver.problem.T + 1)
-        _us = solver.problem.quasiStatic([self._agent_current_pose] * solver.problem.T)
-        solver.solve(_xs, _us, 100, False)
-
-        self._agent_current_pose = solver.xs[-1]
-
-        nav_task.set_task_solver(solver)
-
-    def _view_kinematics(self):
-        display = crocoddyl.MeshcatDisplay(self._agent.get_agent())
-        display.rate = -1
-        display.freq = 1
-        while True:
-            for nav_task in self._nav_task_list:
-                display.displayFromSolver(nav_task.get_task_solver())
-            time.sleep(1.0)
-
-    def _query_on_platform_surface(self, platform_key, query_x, query_y, is_single_platform=False):
-        platform_length = self._get_platform_length(platform_key)
-        platform_width = self._get_platform_width(platform_key)
-
-        if is_single_platform:
-            if abs(query_x) > platform_length:
-                return False
-        else:
-            if abs(query_x) > platform_length / 2.0:
-                return False
-
-        if abs(query_y) > platform_width / 2.0:
-            return False
-
-        return True
-
-    def _get_platform_length(self, platform_key):
-        return self._scene.get_platform_top_surface_xy(platform_key)[0]
-
-    def _get_platform_width(self, platform_key):
-        return self._scene.get_platform_top_surface_xy(platform_key)[0]
-
-    def _get_delta_x(self, platform_key, is_single_platform=False, do_skew=True):
-        p_length = self._get_platform_length(platform_key)
-
-        if is_single_platform:
-            p_length -= 2 * p_length / CoreConfig.NAV_MODEL_SINGLE_PLATFORM_MULTIPLIER
-        else:
-            p_length /= 2
-
-        if do_skew:
-            return ComputeUtils.sample_skew_normal(p_length, CoreConfig.NAV_MODEL_SIGMA, CoreConfig.NAV_MODEL_ALPHA)
-        return ComputeUtils.sample_normal(p_length, CoreConfig.NAV_MODEL_SIGMA / 2)
-
-    def _get_delta_y(self, platform_key):
-        self._get_platform_width(platform_key) / 2
-        return ComputeUtils.sample_normal(0.0, CoreConfig.NAV_MODEL_SIGMA / 2)
+        self._nav_states_queue = deque([])
 
     @staticmethod
-    def has_stimuli_moved(start_pose, final_pose):
-        pos_diff, rot_diff = start_pose.get_pose_diff(final_pose)
-
-        if pos_diff < CoreConfig.PYBULLET_POS_THRESHOLD or rot_diff < CoreConfig.PYBULLET_ROT_THRESHOLD:
-            Msg.print_info(f"INFO [NavModel]: platform stable -- pos={pos_diff}, rot={rot_diff}")
-            return False, pos_diff, rot_diff
-
-        Msg.print_info(f"INFO [NavModel]: platform has moved (unstable) -- pos={pos_diff}, rot={rot_diff}")
-        return True, pos_diff, rot_diff
-
-    def add_jump_task(self):
-        platform_keys_list = self._scene.get_platform_keys_list()
-        is_single_platform = len(platform_keys_list) == 1
-
-        if is_single_platform:
-            delta_platform_key = platform_keys_list[0]
-            jump_cleft = 0.0
-        else:
-            delta_platform_key = platform_keys_list[1]
-            jump_cleft = self._scene.get_gap_between_platforms(platform_keys_list[0], platform_keys_list[1])
-
-        instability_count = 0
-        while True:
-            jump_delta_x = self._get_delta_x(delta_platform_key, is_single_platform=is_single_platform)
-            jump_delta_y = self._get_delta_y(platform_keys_list[0])
-            if self._query_on_platform_surface(delta_platform_key, jump_delta_x, jump_delta_y):
-                break
-
-            instability_count += 1
-
-        jump_vector = np.array([jump_cleft + jump_delta_x, jump_delta_y, 0.0])
-
-        jump_task = JumpTask()
-        jump_task.set_jump_height(CoreConfig.NAV_MODEL_JUMP_HEIGHT)
-        jump_task.set_jump_vector(jump_vector)
-
-        self._setup_task_solver(jump_task)
-        self._nav_task_list.append(jump_task)
-        self._nav_task_stability_list.append(instability_count)
-
-    def add_walk_task(self):
-        platform_key = self._scene.get_platform_keys_list()[0]
-
-        instability_count = 0
-        while True:
-            walk_distance = self._get_delta_x(platform_key, is_single_platform=True, do_skew=False)
-            if self._query_on_platform_surface(platform_key, walk_distance, 0.0):
-                break
-
-            instability_count += 1
-
-        total_steps = max(1, int(walk_distance // CoreConfig.NAV_MODEL_STEP_LENGTH))
-        step_length = walk_distance / total_steps
-
-        for step_num in range(total_steps):
-            walk_task = WalkTask(step_num == 0)
-            walk_task.set_step_height(CoreConfig.NAV_MODEL_STEP_HEIGHT)
-            walk_task.set_step_length(step_length)
-
-            self._setup_task_solver(walk_task)
-            self._nav_task_list.append(walk_task)
-            self._nav_task_stability_list.append(instability_count)
-
-    def run_dynamics(self):
-        if CoreConfig.NAV_MODEL_VIEW_KINEMATICS:
-            self._view_kinematics()
-
-        jump_onset_time = 0.0
-        jump_stint_time = CoreConfig.PYBULLET_SIM_JUMP * CoreConfig.PYBULLET_SIM_TIME_STEP
-
-        walk_onset_time = 0.0
-        walk_stint_time = CoreConfig.PYBULLET_SIM_WALK * CoreConfig.PYBULLET_SIM_TIME_STEP
-
-        mujoco_utils = MujocoUtils(PathUtils.join(self._scene.get_urdf_dirpath(), "stim.urdf"), CoreConfig.NAV_MODEL_VIEW_DYNAMICS)
-
-        ground_rel_filepath = self._scene.get_urdf_rel_filepath(self._scene.get_platform_ground_key())
-
-        # pybullet_utils = PyBulletUtils(ConfigUtils.NAV_MODEL_VIEW_DYNAMICS)
-        # pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), ground_rel_filepath, is_fixed=True)
-        # for platform_key in self._scene.get_platform_keys_list():
-        #     platform_rel_filepath = self._scene.get_urdf_rel_filepath(platform_key)
-        #     pybullet_utils.add_load_urdf(self._scene.get_stimulus_item_dirpath(), platform_rel_filepath)
-        #
-        # p_id_list = pybullet_utils.get_platform_ids_list()
-        #
-        # for nav_task in self._nav_task_list:
-        #     nav_forces = CrocoddylUtils.get_forces_list(nav_task.get_task_solver())
-        #
-        #     # store poses before dynamics
-        #     for p_key, p_id in zip(self._scene.get_platform_keys_list(), p_id_list):
-        #         self._scene.get_platform_by_key(p_key).add_platform_pose(pybullet_utils.get_platform_pose(p_id))
-        #
-        #     for p_id, nf_list in zip(p_id_list, ComputeUtils.chunkify_list(nav_forces, len(p_id_list))):
-        #         for nfs in nf_list:
-        #             if len(nfs) == 0:
-        #                 continue
-        #             if nav_task.get_task_type() == NavTask.JUMP:
-        #                 pybullet_utils.add_force_on_platform(p_id, nfs[0], jump_onset_time, jump_stint_time)
-        #                 pybullet_utils.add_force_on_platform(p_id, nfs[1], jump_onset_time, jump_stint_time)
-        #             elif nav_task.get_task_type() == NavTask.WALK:
-        #                 if len(nfs) == 2:
-        #                     pybullet_utils.add_force_on_platform(p_id, nfs[0], walk_onset_time, walk_stint_time)
-        #                     pybullet_utils.add_force_on_platform(p_id, nfs[1], walk_onset_time, walk_stint_time)
-        #                     continue
-        #                 pybullet_utils.add_force_on_platform(p_id, nfs[0], walk_onset_time, walk_stint_time)
-        #
-        #     walk_onset_time += walk_stint_time
-        #
-        #     pybullet_utils.run_simulation()
-        #
-        #     # store poses after dynamics
-        #     for p_key, p_id in zip(self._scene.get_platform_keys_list(), p_id_list):
-        #         self._scene.get_platform_by_key(p_key).add_platform_pose(pybullet_utils.get_platform_pose(p_id))
-        #
-        # pybullet_utils.close()
-
-    def save_result_to_outfile(self, run_num):
-        for nav_task in self._nav_task_list:
-            nav_out_data = NavOutData(StimuliPairs().get_stimuli_set_name())
-            nav_out_data.add_nav_data(NavOutLabel.NAV_STIM_ITEM_NAME, self._scene.get_stimulus_name(True))
-            nav_out_data.add_nav_data(NavOutLabel.NAV_AGENT_NAME, self._agent.get_name())
-            nav_out_data.add_nav_data(NavOutLabel.NAV_TASK, nav_task.get_task_type())
-            nav_out_data.add_nav_data(NavOutLabel.RUN_NUM, run_num)
-            
-            nav_task_cost = 0.0
-            nav_task_instability = 0
-
-            for platform_key in self._scene.get_platform_keys_list():
-                platform = self._scene.get_platform_by_key(platform_key)
-
-                start_pose = platform.get_platform_pose(0)
-                final_pose = platform.get_platform_pose(-1)
-                has_moved, pos_diff, rot_diff = self.has_stimuli_moved(start_pose, final_pose)
-                mass = CoreConfig.STIMULI_PLATFORM_MASS
-
-                nav_out_data.add_platform_data(platform.get_platform_type(), pos_diff, rot_diff, has_moved, mass)
-                nav_task_cost += nav_task.get_task_cost()
-                if has_moved:
-                    nav_task_instability += 1
-
-            nav_task_cost /= len(self._scene.get_platform_keys_list())
-                    
-            nav_out_data.add_nav_data(NavOutLabel.NAV_TASK_COST, nav_task_cost)
-            nav_out_data.add_nav_data(NavOutLabel.NAV_TASK_INSTABILITY, nav_task_instability)
-
-            nav_out_data.save_nav_out_data_to_file()
-
-
-class NavPlanner:
-    def __init__(self, stim_item: Stimulus):
-        self._stim_item = stim_item
-
-        self._stim_platforms_list: List[Platform] = self._load_stim_platforms_list()
-
-    def _load_stim_platforms_list(self):
-        ordered_platforms_list = []
-
-        stim_platform_keys_list = self._stim_item.get_platform_keys_list()
-        stim_platform_keys_list = [key for key in stim_platform_keys_list if Stimulus.is_platform_movable(key)]
-
-        for platform_key in stim_platform_keys_list:
-            platform = self._stim_item.get_platform_by_key(platform_key)
-            ordered_platforms_list.append(platform)
-
-        return ordered_platforms_list
+    def skew(mu, sigma, alpha, bound_min, bound_max):
+        return ComputeUtils.sample_skew_normal(mu, sigma, alpha, bound_min, bound_max)
 
     @staticmethod
-    def _get_next_nav_tasks_list(platform_name):
-        return_nav_task_list = [NavTask.JUMP]
-        if PlatformType.LONG in platform_name:
-            return_nav_task_list.append(NavTask.WALK)
-        return return_nav_task_list
+    def compute_walk_tasks(nav_state: NavState, start_platform_name, final_platform_name) -> List[NavTask]:
+        if start_platform_name == final_platform_name:
+            dist = nav_state.get_scene().get_distance_to_platform_edge(start_platform_name, nav_state.get_agent_pose())
+            dist -= NavConfig.MIN_PLATFORM_PADDING
+
+            if dist <= NavConfig.MAX_STEP_LENGTH * 2:
+                return []
+
+            dist = NavModel.skew(dist, NavConfig.SMALL_SKEW_SIGMA, -1, 0, dist)
+
+            step_num = int(np.ceil(dist / NavConfig.MAX_STEP_LENGTH))
+            step_len = dist / step_num
+
+            tasks_list: List[NavTask] = [TurnTask(0)]
+            for i in range(1, step_num + 1):
+                tasks_list.append(WalkTask(step_length=step_len, is_first=i == 1, is_close=i == step_num))
+            return tasks_list
+
+        gap = nav_state.get_scene().get_gap_between_platform_edges(start_platform_name, final_platform_name)
+        if gap > NavConfig.MAX_STEP_LENGTH:
+            return []
+
+        walk_vec = nav_state.get_scene().get_point_closest_to_platform(start_platform_name, final_platform_name)
+        walk_vec -= nav_state.get_agent_pose()[:2]
+        walk_vec -= (walk_vec / (np.linalg.norm(walk_vec) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING
+
+        step_num = int(np.ceil(np.linalg.norm(walk_vec) / NavConfig.MAX_STEP_LENGTH - 0.5))
+        step_len = np.linalg.norm(walk_vec) / (step_num + 0.5)
+
+        tasks_list: List[NavTask] = [TurnTask(np.arctan2(walk_vec[1], walk_vec[0]))]
+        for i in range(step_num + 1):
+            tasks_list.append(WalkTask(step_length=step_len, is_first=i == 0, is_close=i == step_num))
+
+        tasks_list.append(TurnTask(0))
+        tasks_list.append(WalkTask(step_length=NavConfig.MAX_STEP_LENGTH, is_lunge=True))
+
+        return tasks_list
+
+    @staticmethod
+    def compute_jump_tasks(nav_state: NavState, final_platform_name) -> List[NavTask]:
+        if nav_state.get_ref_platform_name() == final_platform_name:
+            return []
+
+        jump_vec = nav_state.get_scene().get_platform_center(final_platform_name)
+        jump_vec[0] = NavModel.skew(jump_vec[0], NavConfig.LARGE_SKEW_SIGMA, -1, jump_vec[0] - 1., jump_vec[0] + 1.)
+        jump_vec[1] = NavModel.skew(jump_vec[1], NavConfig.SMALL_SKEW_SIGMA, 0, jump_vec[1] - .5, jump_vec[1] + .5)
+        jump_vec[2] = 0.0
+        jump_vec[:2] -= nav_state.get_agent_pose()[:2]
+
+        if np.linalg.norm(jump_vec) > NavConfig.MAX_JUMP_LENGTH:
+            return []
+
+        return [TurnTask(np.arctan2(jump_vec[1], jump_vec[0])), JumpTask(jump_vec)]
+
+    @staticmethod
+    def run_kinematics(nav_task_type, nav_state: NavState, final_platform_name):
+        if nav_task_type == NavTask.WALK:
+            tasks_list = NavModel.compute_walk_tasks(nav_state, nav_state.get_ref_platform_name(), final_platform_name)
+        elif nav_task_type == NavTask.JUMP:
+            tasks_list = NavModel.compute_jump_tasks(nav_state, final_platform_name)
+        else:
+            return Msg.ERROR
+
+        if len(tasks_list) == 0:
+            return Msg.ERROR
+
+        for task in tasks_list:
+            task.run_task(nav_state.get_agent())
+            task.tally_task(nav_state.get_ref_platform_name(), final_platform_name)
+            nav_state.add_nav_task(task)
+
+        if NavConfig.VIEW_KINEMATICS:
+            display = crocoddyl.MeshcatDisplay(NavAgent.get_robot())
+            display.rate = -1
+            display.freq = 1
+            start_time = time.time()
+            while True:
+                if time.time() - start_time >= 5.0:
+                    break
+                for task in tasks_list:
+                    task_solver = task.get_task_solver()
+                    if task_solver is not None:
+                        display.displayFromSolver(task_solver)
+                time.sleep(0.01)
+
+        return Msg.SUCCESS
+
+    @staticmethod
+    def run_dynamics(nav_state: NavState):
+        mujoco_utils = MujocoUtils(nav_state.get_scene().get_stimulus_mjcf_filepath())
+
+        task_registry_list = []
+        for nav_task in nav_state.get_nav_task():
+            task_registry_list.extend(nav_task.get_task_registry_list())
+
+        mujoco_utils.simulate(task_registry_list)
+        return Msg.SUCCESS
+
+    def init_planner(self):
+        self._root_nav_state.set_as_valid()
+        self._root_nav_state.set_ref_platform_name(self.get_scene().get_platform_names_list()[0])
+        self._nav_states_queue.append(self._root_nav_state)
 
     def run_planner(self):
-        for platform_index, curr_platform in enumerate(self._stim_platforms_list[:-1]):
-            for nav_task in self._get_next_nav_tasks_list(curr_platform.get_platform_name()):
-                nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(stimuli_pair_dirpath, StimuliPairs()))
+        self.init_planner()
 
-                if nav_task == NavTask.JUMP:
-                    next_platform_name = self._stim_platforms_list[platform_index + 1].get_platform_name()
-                    nav_model.add_jump_task()
-                elif nav_task == NavTask.WALK:
-                    nav_model.run_dynamics()
+        while len(self._nav_states_queue) > 0:
+            nav_state = self._nav_states_queue.popleft()
 
+            if nav_state.is_done():
+                continue
 
-    # @staticmethod
-    # def _read_platform_pair_data():
-    #     nav_csv_data = FileUtils.read_csv_file(NavOutData(StimuliPairs().get_stimuli_set_name()).get_nav_out_filepath())
-    #
-    #     nav_out_data = NavOutData()
-    #     for row_data in nav_csv_data:
-    #         nav_out_data.parse_row_data(row_data)
-    #
-    #     return nav_out_data
-    #
-    # def run_planner(self, stim_item):
-    #     stim_ke_dict = {}
-    #     stim_stab_dict = {}
-    #
-    #         platform_key_list = stim_item.get_platform_keys_list()[1:-1]
-    #         if len(platform_key_list) < 2:
-    #             continue
-    #
-    #         for platform_1, platform_2 in zip(platform_key_list, platform_key_list[1:]):
-    #             p1_type = "_".join(platform_1.split('_')[1:])
-    #             p2_type = "_".join(platform_1.split('_')[1:])
-    #
-    #             platform_pair_name = p1_type + "_" + p2_type
-    #
-    #             stim_num = int(stim_item_name.split("/")[-1].split("_")[1])
-    #             prob = platform_pair_instability_dict.get(platform_pair_name, 0)
-    #             if stim_num == 16:
-    #                 prob = 3.0
-    #             if stim_num == 21:
-    #                 prob = 2.0
-    #             if stim_num == 46:
-    #                 prob = 2.0
-    #             if stim_num == 36:
-    #                 prob = 1.0
-    #
-    #             multiplier = np.ceil(ComputeUtils.sample_trunc_normal(prob, 0.0, 100.0, 0.5 * prob + 0.5))
-    #             if prob == 0.0:
-    #                 if "long" in p2_type or "wide" in p2_type or "top" in p2_type:
-    #                     multiplier = np.ceil(ComputeUtils.sample_trunc_normal(5.0, 0.0, 30.0, 0.5 * 5.0 + 0.5))
-    #                 else:
-    #                     multiplier = 1.0
-    #
-    #             stim_ke_dict[stim_item_name] += multiplier * platform_pair_effort_dict.get(platform_pair_name, 0)
-    #             stim_stab_dict[stim_item_name] += prob
-    #
-    #     z_ke_score = ComputeUtils.zscore_list(list(stim_ke_dict.values()))
-    #     z_stab_score = ComputeUtils.zscore_list(list(stim_stab_dict.values()))
-    #
-    #     out_data_filepath = PathUtils.join(PathUtils.get_out_dirpath(), "model.csv")
-    #     FileUtils.create_file(out_data_filepath)
-    #     for key, ke, z_ke, stab, z_stab in zip(stim_ke_dict.keys(), stim_ke_dict.values(), z_ke_score,
-    #                                            stim_stab_dict.values(), z_stab_score):
-    #         t_stim_num = int(key.split("/")[-1].split("_")[1])
-    #
-    #         t_type_num = -1
-    #         if t_stim_num == 5:  # longest path
-    #             t_type_num = 0
-    #         elif t_stim_num % 5 == 2 or t_stim_num % 5 == 3 or t_stim_num % 5 == 4:  # similar triplets
-    #             t_type_num = t_stim_num // 5 * 2 + 1
-    #         elif t_stim_num > 1 and t_stim_num % 5 == 1:  # triplets of the same platform
-    #             t_type_num = t_stim_num // 5 * 2
-    #
-    #         FileUtils.write_row_to_file(out_data_filepath, [t_stim_num, str(t_type_num), ke, z_ke, stab, z_stab])
+            if len(nav_state.get_candidate_platform_names_list()) == 0:
+                continue
+
+            if nav_state.get_move_num() > NavConfig.MAX_TASKS_PER_PLAN:
+                continue
+
+            variation_num = 0
+            next_task_type_dict = nav_state.get_next_task_type_dict(nav_state.get_agent_pose())
+            for next_platform_name, nav_task_type_list in next_task_type_dict.items():
+                for nav_task_type in nav_task_type_list:
+                    if nav_task_type == NavTask.JUMP:
+                        continue
+                    next_nav_state: NavState = copy.deepcopy(nav_state)
+                    status = NavModel.run_kinematics(nav_task_type, next_nav_state, next_platform_name)
+                    if status == Msg.ERROR:
+                        continue
+
+                    status = NavModel.run_dynamics(next_nav_state)
+                    if status == Msg.ERROR:
+                        continue
+
+                    variation_num += 1
+                    next_nav_state.set_move_num(nav_state.get_move_num() + 1)
+                    next_nav_state.set_variation_num(variation_num)
+                    next_nav_state.set_ref_platform_name(next_platform_name)
+                    next_nav_state.set_nav_task_type(nav_task_type)
+                    next_nav_state.set_as_valid()
+                    next_nav_state.reset_children_states_list()
+
+                    nav_state.add_child_state(next_nav_state)
+
+                    self._nav_states_queue.append(next_nav_state)
+
+    def get_all_valid_paths(self):
+        def _explore_state(nav_state: NavState, input_path_str=""):
+            shape = nav_state.get_ref_platform_name().split("_")[0]
+            platform_number = nav_state.get_ref_platform_name().split("_")[-1]
+
+            path_str = input_path_str + f" ---{nav_state.get_nav_task_type()}---> {shape}{platform_number}"
+
+            if nav_state.is_done() and len(nav_state.get_children_states_list()) == 0:
+                print(f"root1{path_str}")
+                return
+
+            for child in nav_state.get_children_states_list():
+                _explore_state(child, path_str)
+
+        for child_state in self._root_nav_state.get_children_states_list():
+            _explore_state(child_state)
+
+    def get_scene(self):
+        return self._scene
+
+    def get_agent(self):
+        return self._agent

@@ -1,4 +1,5 @@
-from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavAgent
+from mlr.share.projects.navigation.utils.agent_utils import NavAgent
+from mlr.share.projects.navigation.utils.navigation_utils import NavTask
 
 
 class TurnTask(NavTask):

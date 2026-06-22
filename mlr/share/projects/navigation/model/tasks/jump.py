@@ -1,8 +1,10 @@
 import crocoddyl
 import pinocchio
 
+from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
-from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavAgent, NavProblem, NavProblemConstraints
+from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavProblem, NavProblemConstraints, \
+    NavTaskRegistry
 
 
 class JumpTask(NavTask):
@@ -10,6 +12,30 @@ class JumpTask(NavTask):
         super().__init__(NavTask.JUMP)
 
         self._jump_vector = jump_vector
+
+    def tally_task(self, *platform_names_list):
+        task_forces_by_time_list = self.get_task_forces_by_time_list()
+
+        for time_index, task_forces_list in enumerate(task_forces_by_time_list):
+            task_registry = NavTaskRegistry()
+
+            phase1 = NavConfig.JUMP_GROUND_KNOTS
+            phase2 = NavConfig.JUMP_FLYING_KNOTS + phase1
+            phase3 = NavConfig.JUMP_FLYING_KNOTS + 1 + phase2
+            phase4 = NavConfig.JUMP_GROUND_KNOTS + phase3
+
+            if 0 <= time_index < phase1:
+                task_registry.set_force_left(task_forces_list[0])
+                task_registry.set_force_right(task_forces_list[1])
+                task_registry.set_platform_name_left(platform_names_list[0])
+                task_registry.set_platform_name_right(platform_names_list[0])
+            elif phase3 <= time_index < phase4:
+                task_registry.set_force_left(task_forces_list[0])
+                task_registry.set_force_right(task_forces_list[1])
+                task_registry.set_platform_name_left(platform_names_list[1])
+                task_registry.set_platform_name_right(platform_names_list[1])
+
+            self.add_to_registry(task_registry)
 
     def get_jump_vector(self):
         return self._jump_vector

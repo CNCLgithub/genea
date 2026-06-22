@@ -2,122 +2,58 @@ import crocoddyl
 import numpy as np
 import pinocchio
 
-from example_robot_data.robots_loader import TalosLegsLoader
-
+from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
+from mlr.share.projects.navigation.utils.core_utils import NavForce
+from mlr.share.projects.navigation.utils.crocoddyl_utils import CrocoddylUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 
 
-class NavAgent:
-    TALOS_LEGS = "talos_legs"
+class NavTaskRegistry:
+    def __init__(self):
+        self._nav_force_left = None
+        self._nav_force_right = None
 
-    def __init__(self, agent_name):
-        self._name = agent_name
+        self._nav_platform_name_left = None
+        self._nav_platform_name_right = None
 
-        self._robot = None
-        self._left_foot_joint_name = None
-        self._right_foot_joint_name = None
+    def set_force_left(self, nav_force: NavForce):
+        self._nav_force_left = nav_force
 
-        self._init_agent()
-        self._reference_pose = self.get_neutral_pose()
-        self._current_pose = self.get_neutral_pose()
+    def set_force_right(self, nav_force: NavForce):
+        self._nav_force_right = nav_force
 
-    def _init_agent(self):
-        if self._name == NavAgent.TALOS_LEGS:
-            self._robot = TalosLegsLoader().robot
-            self._left_foot_joint_name = "left_sole_link"
-            self._right_foot_joint_name = "right_sole_link"
+    def set_platform_name_left(self, platform_name: str):
+        self._nav_platform_name_left = platform_name
 
-    def _get_left_foot_joint_name(self):
-        return self._left_foot_joint_name
+    def set_platform_name_right(self, platform_name: str):
+        self._nav_platform_name_right = platform_name
 
-    def _get_right_foot_joint_name(self):
-        return self._right_foot_joint_name
+    def get_force_left(self) -> NavForce:
+        return self._nav_force_left
 
-    def _get_joint_frame_id(self, joint_name):
-        return self.get_agent_model().getFrameId(joint_name)
+    def get_force_left_pos(self) -> np.ndarray:
+        return self.get_force_left().get_force_pose().get_position().get_position_as_np_array()
 
-    def _get_joint_pos(self, joint_frame_id):
-        return self.get_agent_data().oMf[joint_frame_id].translation
+    def get_force_left_vec(self) -> np.ndarray:
+        force_mag = self.get_force_left().get_force_magnitude()
+        return self.get_force_left().get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
 
-    def _get_joint_rot(self, joint_frame_id):
-        return self.get_agent_data().oMf[joint_frame_id].rotation
+    def get_force_right(self) -> NavForce:
+        return self._nav_force_right
 
-    @staticmethod
-    def rotate_to(agent_x0, target_angle_rad):
-        new_pose = pinocchio.XYZQUATToSE3(agent_x0[:7])
-        new_pose.rotation = pinocchio.utils.rotate("z", target_angle_rad)
-        agent_x0[:7] = pinocchio.SE3ToXYZQUAT(new_pose)
-        return agent_x0
+    def get_force_right_pos(self) -> np.ndarray:
+        return self.get_force_right().get_force_pose().get_position().get_position_as_np_array()
 
-    @staticmethod
-    def get_robot():
-        return TalosLegsLoader().robot
+    def get_force_right_vec(self) -> np.ndarray:
+        force_mag = self.get_force_right().get_force_magnitude()
+        return self.get_force_right().get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
 
-    def set_ref_pose(self, reference_pose):
-        self._reference_pose = reference_pose
+    def get_platform_name_left(self) -> str:
+        return self._nav_platform_name_left
 
-    def update_current_pose(self, current_pose):
-        self._current_pose = current_pose
-
-    def get_name(self):
-        return self._name
-
-    def get_agent_model(self):
-        return self._robot.model
-
-    def get_agent_data(self):
-        return self._robot.data
-
-    def get_left_foot_frame_id(self):
-        return self._get_joint_frame_id(self._get_left_foot_joint_name())
-
-    def get_right_foot_frame_id(self):
-        return self._get_joint_frame_id(self._get_right_foot_joint_name())
-
-    def get_left_foot_pos(self):
-        return self._get_joint_pos(self.get_left_foot_frame_id())
-
-    def get_left_foot_rot(self):
-        return self._get_joint_rot(self.get_left_foot_frame_id())
-
-    def get_right_foot_pos(self):
-        return self._get_joint_pos(self.get_right_foot_frame_id())
-
-    def get_right_foot_rot(self):
-        return self._get_joint_rot(self.get_right_foot_frame_id())
-
-    def get_total_mass(self):
-        return sum([inertial.mass for inertial in self.get_agent_model().inertias])
-
-    def get_nv(self):
-        return self.get_agent_model().nv
-
-    def get_nq(self):
-        return self.get_agent_model().nq
-
-    def get_neutral_pose(self):
-        q0 = self.get_q0()
-        v0 = pinocchio.utils.zero(self.get_nv())
-        return np.concatenate([q0, v0])
-
-    def get_q0(self):
-        return self.get_agent_model().referenceConfigurations["half_sitting"].copy()
-
-    def get_ref_pose(self):
-        return self._reference_pose
-
-    def get_current_pose(self):
-        return self._current_pose
-
-    def get_state(self):
-        return crocoddyl.StateMultibody(self.get_agent_model())
-
-    def get_agent_actuation_model(self):
-        return crocoddyl.ActuationModelFloatingBase(self.get_state())
-
-    def get_nu(self):
-        return self.get_agent_actuation_model().nu
+    def get_platform_name_right(self) -> str:
+        return self._nav_platform_name_right
 
 
 class NavTask:
@@ -128,6 +64,10 @@ class NavTask:
     def __init__(self, task_type):
         self._task_type = task_type
         self._task_solver = None
+        self._task_registry_list = []
+
+    def add_to_registry(self, nav_task_registry: NavTaskRegistry):
+        self._task_registry_list.append(nav_task_registry)
 
     def run_task(self, nav_agent: NavAgent):
         self._task_solver = crocoddyl.SolverFDDP(self.get_task_problem(nav_agent))
@@ -142,17 +82,26 @@ class NavTask:
 
         nav_agent.update_current_pose(self._task_solver.xs[-1])
 
-    def get_task_type(self):
-        return self._task_type
+    def tally_task(self, *platform_names_list):
+        pass
 
     def get_task_problem(self, agent: NavAgent):
         pass
+
+    def get_task_type(self):
+        return self._task_type
 
     def get_task_solver(self):
         return self._task_solver
 
     def get_task_cost(self):
         return self._task_solver.cost
+
+    def get_task_forces_by_time_list(self):
+        return CrocoddylUtils.get_forces_by_time_list(self._task_solver)
+
+    def get_task_registry_list(self):
+        return self._task_registry_list
 
 
 class _NavConstraint:
@@ -288,7 +237,7 @@ class NavProblem:
         state_nv = self._agent.get_state().nv
         state_weights = np.array([0] * 3 + [500.0] * 3 + [0.01] * (state_nv - 6) + [10] * state_nv)
         s_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_ref_pose(), self._agent.get_nu())
-        s_act = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
+        s_act = crocoddyl.ActivationModelWeightedQuad(state_weights ** 2)
         s_cost = crocoddyl.CostModelResidual(self._agent.get_state(), s_act, s_res)
         costs_list.addCost("state_cost", s_cost, 1e1)
 
@@ -319,7 +268,7 @@ class NavProblem:
             costs_list.addCost(str(f_id) + "_foot_track", fp_cost, 1e8)
 
         state_weights = np.array([1.0] * 6 + [0.1] * (self._agent.get_nv() - 6) + [10] * self._agent.get_nv())
-        state_act = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
+        state_act = crocoddyl.ActivationModelWeightedQuad(state_weights ** 2)
         state_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_ref_pose(), 0)
         state_cost = crocoddyl.CostModelResidual(self._agent.get_state(), state_act, state_res)
         costs_list.addCost("state_cost", state_cost, 1e1)
@@ -375,7 +324,7 @@ class NavProblem:
 
         state_nv = self._agent.get_state().nv
         state_weights = np.array([0] * 3 + [500.0] * 3 + [0.01] * (state_nv - 6) + [10] * state_nv)
-        s_act = crocoddyl.ActivationModelWeightedQuad(state_weights**2)
+        s_act = crocoddyl.ActivationModelWeightedQuad(state_weights ** 2)
         s_res = crocoddyl.ResidualModelState(self._agent.get_state(), self._agent.get_ref_pose(), self._agent.get_nu())
         state_cost = crocoddyl.CostModelResidual(self._agent.get_state(), s_act, s_res)
         costs_list.addCost("state_cost", state_cost, 1e1)

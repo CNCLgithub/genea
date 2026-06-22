@@ -59,6 +59,10 @@ class NavPose:
         self._position = position
         self._rotation = rotation
 
+    @staticmethod
+    def neutral():
+        return NavPose(NavPosition(0.0, 0.0, 0.0))
+
     def get_position(self):
         return self._position
 

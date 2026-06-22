@@ -1,17 +1,15 @@
 class NavConfig:
     VIEW_KINEMATICS = False
-    VIEW_DYNAMICS = True
+    VIEW_DYNAMICS = False
 
     DEBUG_KINEMATICS = False
-    DEBUG_DYNAMICS = True
+    DEBUG_DYNAMICS = False
 
     FRICTION_COEFFICIENT = 0.7
     TIME_STEP = 0.02
 
     SMALL_SKEW_SIGMA = 0.25
     LARGE_SKEW_SIGMA = 0.50
-
-    SEARCH_RADIUS = 2.0
 
     MAX_TASKS_PER_PLAN = 10
 
@@ -33,11 +31,11 @@ class NavConfig:
 
 
 class CrocoddylConfig:
-    CROCODDYL_FORCE_SCALING_FACTOR = 0.0001
-    
-    
+    CROCODDYL_FORCE_MULTIPLIER = .1 ** 4
+
+
 class MujocoConfig:
-    FORCE_SCALE = .1
+    SIMULATION_TIME = 5.
 
 
 class StimuliConfig:
@@ -49,8 +47,8 @@ class StimuliConfig:
 
 
 class PlatformConfig:
-    PLATFORM_MASS_WOODY = 10.00
-    PLATFORM_MASS_STONE = 20.00
+    PLATFORM_MASS_WOODY = 3.0
+    PLATFORM_MASS_STONE = 6.0
 
     PLATFORM_HEIGHT = 3.5
     PLATFORM_SIZE_BASE = 3.0

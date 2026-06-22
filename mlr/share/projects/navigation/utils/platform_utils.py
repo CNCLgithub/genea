@@ -85,7 +85,7 @@ class Platform:
         self._has_been_visited = False
 
     @staticmethod
-    def from_str(platform_name, platform_pose: NavPose):
+    def from_str(platform_name, platform_pose: NavPose = NavPose.neutral()):
         platform_shape, platform_scale, platform_material, platform_id = platform_name.split("_")
         return Platform(platform_id, PlatformType(platform_shape, platform_scale, platform_material), platform_pose)
 
@@ -115,6 +115,15 @@ class Platform:
 
     def is_brawn(self):
         return self._platform_type.is_brawn()
+
+    def is_ground(self):
+        return self._platform_type.get_shape() == PlatformShape.GROUND
+
+    def is_root(self):
+        return self._platform_type.get_shape() == PlatformShape.ROOT
+
+    def is_goal(self):
+        return self._platform_type.get_shape() == PlatformShape.GOAL
 
     def has_been_visited(self):
         return self._has_been_visited

@@ -1,10 +1,12 @@
 import mujoco as mj
 import mujoco.viewer as mjv
 import numpy as np
+import time
 
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import MujocoConfig, NavConfig
 from mlr.share.projects.navigation.utils.core_utils import NavForce
+from mlr.share.projects.navigation.utils.navigation_utils import NavTaskRegistry
 
 
 class MujocoLandmark:
@@ -14,33 +16,36 @@ class MujocoLandmark:
 
     def add_force_arrow(self, scene):
         geom = scene.geoms[scene.ngeom]
-        mj.mjv_initGeom(geom,
-                        type=mj.mjtGeom.mjGEOM_ARROW1,
-                        size=[0.1, 0.1, 0.5],
-                        pos=self.get_landmark_pos(),
-                        mat=self.get_landmark_mat(),
-                        rgba=np.array([1, 0, 0, 1]))
 
+        start_pos = self.get_landmark_pos()
+        final_pos = self.get_landmark_pos() + self.get_landmark_vec()
+        mj.mjv_connector(geom, mj.mjtGeom.mjGEOM_ARROW, 0.05, start_pos, final_pos)
+        geom.rgba[:] = [1, 0, 0, 1]
         scene.ngeom += 1
+
+        # geom = scene.geoms[scene.ngeom]
+        # mj.mjv_initGeom(geom,
+        #                 type=mj.mjtGeom.mjGEOM_SPHERE,
+        #                 size=[0.2, 0.2, 0.2],
+        #                 pos=self.get_landmark_pos(),
+        #                 mat=np.eye(3).flatten(),
+        #                 rgba=np.array([1, 0, 0, 1]))
+        # scene.ngeom += 1
+        #
+        # geom = scene.geoms[scene.ngeom]
+        # mj.mjv_initGeom(geom,
+        #                 type=mj.mjtGeom.mjGEOM_SPHERE,
+        #                 size=[0.1, 0.1, 0.1],
+        #                 pos=final_pos,
+        #                 mat=np.eye(3).flatten(),
+        #                 rgba=np.array([1, 1, 0, 1]))
+        # scene.ngeom += 1
 
     def get_landmark_pos(self):
         return self._landmark_pos
 
     def get_landmark_vec(self):
         return self._landmark_vec
-
-    def get_landmark_mat(self):
-        normalized = self._landmark_vec / (np.linalg.norm(self._landmark_vec) + 1e-12)
-        up = np.array([0, 0, 1])
-
-        if abs(np.dot(up, normalized)) > 0.9:
-            up = np.array([0, 1, 0])
-
-        x = np.cross(up, normalized)
-        x /= np.linalg.norm(x) + 1e-8
-        y = np.cross(normalized, x)
-
-        return np.column_stack([x, y, normalized]).flatten()
 
 
 class MujocoForceRecord:
@@ -77,23 +82,93 @@ class MujocoUtils:
         self._model = mj.MjModel.from_xml_path(stim_mjcf_filepath)  # noqa
         self._data = mj.MjData(self._model)
 
+        self._viewer = None
+
         self._landmark_id_list = []
         self._platform_ids_list = []
-        self._external_forces_list_by_time = []
 
         self._video_filepath = None
 
+    def hide_all(self):
+        for i in range(self._model.ngeom):
+            self._model.geom_rgba[i, 3] = 0.0
+
+    def _register_task(self, force_pos, force_vec, platform_name):
+        if NavConfig.DEBUG_DYNAMICS:
+            self._landmark_id_list.append(MujocoLandmark(force_pos, force_vec))
+            return
+
+        mj_body_id = mj.mj_name2id(self._model, mj.mjtObj.mjOBJ_BODY, platform_name)
+        self._model.body_mass[mj_body_id] = 1.
+        mj.mj_applyFT(self._model, self._data, force_vec, np.zeros(3), force_pos, mj_body_id, self._data.qfrc_applied)
+
+    def _step(self, task_registry: NavTaskRegistry):
+        if task_registry.get_force_left() is not None:
+            left_pos = task_registry.get_force_left_pos()
+            left_vec = task_registry.get_force_left_vec()
+            left_loc = task_registry.get_platform_name_left()
+            self._register_task(left_pos, left_vec, left_loc)
+
+        if task_registry.get_force_right() is not None:
+            right_pos = task_registry.get_force_right_pos()
+            right_vec = task_registry.get_force_right_vec()
+            right_loc = task_registry.get_platform_name_right()
+            self._register_task(right_pos, right_vec, right_loc)
+
+    def _close_viewer(self):
+        if self._viewer is None:
+            return
+
+        viewer = self._viewer
+        self._viewer = None
+
+        if hasattr(viewer, "is_running") and viewer.is_running():
+            viewer.close()
+
+    def simulate(self, nav_task_registry_list: list[NavTaskRegistry]):
+        if NavConfig.VIEW_DYNAMICS:
+            self.init_viewer()
+
+        iter_num = 0
+        start_time = time.time()
+        while True:
+            if self._data.time >= MujocoConfig.SIMULATION_TIME:
+                self._close_viewer()
+                break
+
+            if iter_num < len(nav_task_registry_list):
+                self._data.qfrc_applied[:] = 0.0
+                self._data.xfrc_applied[:] = 0.0
+                self._step(nav_task_registry_list[iter_num])
+                iter_num += 1
+
+            if self._viewer is not None and self._viewer.is_running():
+                if time.time() - start_time >= 5.0:
+                    self._close_viewer()
+                    break
+                self._viewer.sync()
+                time.sleep(0.01)
+
+            mj.mj_step(self._model, self._data)  # noqa
+
+    def reset(self):
+        mj.mj_resetData(self._model, self._data)
+
     def visualize(self):
-        with mjv.launch_passive(self._model, self._data) as viewer:
-            viewer.cam.type = mj.mjtCamera.mjCAMERA_FIXED
-            viewer.cam.fixedcamid = self._model.camera("camera").id
+        self.init_viewer()
 
-            for landmark in self._landmark_id_list:
-                landmark.add_force_arrow(viewer.user_scn)
+        for landmark in self._landmark_id_list:
+            landmark.add_force_arrow(self._viewer.user_scn)
 
-            while viewer.is_running():
-                mj.mj_step(self._model, self._data)  # noqa
-                viewer.sync()
+        while self._viewer.is_running():
+            self._viewer.sync()
+
+    def init_viewer(self):
+        if self._viewer is None:
+            self._viewer = mjv.launch_passive(self._model, self._data)
+            self._viewer.cam.type = mj.mjtCamera.mjCAMERA_FIXED
+            self._viewer.cam.fixedcamid = self._model.camera("camera").id
+        return self._viewer
 
     def get_body_names_list(self):
         body_names_list = []
@@ -125,24 +200,3 @@ class MujocoUtils:
                 return_rot_as_list = rot
                 break
         return return_pos_as_list, return_rot_as_list
-
-    def register_external_forces(self, nav_forces_list):
-        self._external_forces_list_by_time.append(nav_forces_list)
-
-    def simulate(self):
-        for forces_list in self._external_forces_list_by_time:
-            self._data.qfrc_applied[:] = 0.0
-            self._data.xfrc_applied[:] = 0.0
-            for nav_force in forces_list:
-                force_mag = MujocoConfig.FORCE_SCALE
-                force_pos = nav_force.get_force_pose().get_position().get_position_as_np_array()
-                force_vec = nav_force.get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
-
-                if NavConfig.DEBUG_DYNAMICS:
-                    self._landmark_id_list.append(MujocoLandmark(force_pos, force_vec))
-                    continue
-
-                mj.mj_applyFT(self._model, self._data, force_vec, np.zeros(3), force_pos)
-
-    def close(self):
-        mj.mj_resetData(self._model, self._data)
