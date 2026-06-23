@@ -21,6 +21,7 @@ class MujocoLandmark:
         final_pos = self.get_landmark_pos() + self.get_landmark_vec()
         mj.mjv_connector(geom, mj.mjtGeom.mjGEOM_ARROW, 0.05, start_pos, final_pos)
         geom.rgba[:] = [1, 0, 0, 1]
+
         scene.ngeom += 1
 
         # geom = scene.geoms[scene.ngeom]
@@ -83,37 +84,42 @@ class MujocoUtils:
         self._data = mj.MjData(self._model)
 
         self._viewer = None
-
-        self._landmark_id_list = []
-        self._platform_ids_list = []
-
         self._video_filepath = None
 
-    def hide_all(self):
-        for i in range(self._model.ngeom):
-            self._model.geom_rgba[i, 3] = 0.0
+        self._landmark_id_list = []
 
-    def _register_task(self, force_pos, force_vec, platform_name):
-        if NavConfig.DEBUG_DYNAMICS:
-            self._landmark_id_list.append(MujocoLandmark(force_pos, force_vec))
-            return
+    def _register_landmark(self, force_pos, force_vec):
+        self._landmark_id_list.append(MujocoLandmark(force_pos, force_vec))
 
+    def _register_force(self, force_pos, force_vec, platform_name):
         mj_body_id = mj.mj_name2id(self._model, mj.mjtObj.mjOBJ_BODY, platform_name)
-        self._model.body_mass[mj_body_id] = 1.
         mj.mj_applyFT(self._model, self._data, force_vec, np.zeros(3), force_pos, mj_body_id, self._data.qfrc_applied)
 
-    def _step(self, task_registry: NavTaskRegistry):
+    def _unpack_task_registry(self, task_registry: NavTaskRegistry):
         if task_registry.get_force_left() is not None:
             left_pos = task_registry.get_force_left_pos()
             left_vec = task_registry.get_force_left_vec()
             left_loc = task_registry.get_platform_name_left()
-            self._register_task(left_pos, left_vec, left_loc)
+            if NavConfig.DEBUG_DYNAMICS:
+                self._register_landmark(left_pos, left_vec)
+            else:
+                self._register_force(left_pos, left_vec, left_loc)
 
         if task_registry.get_force_right() is not None:
             right_pos = task_registry.get_force_right_pos()
             right_vec = task_registry.get_force_right_vec()
             right_loc = task_registry.get_platform_name_right()
-            self._register_task(right_pos, right_vec, right_loc)
+            if NavConfig.DEBUG_DYNAMICS:
+                self._register_landmark(right_pos, right_vec)
+            else:
+                self._register_force(right_pos, right_vec, right_loc)
+
+    def _init_viewer(self):
+        if self._viewer is None:
+            self._viewer = mjv.launch_passive(self._model, self._data)
+            self._viewer.cam.type = mj.mjtCamera.mjCAMERA_FIXED
+            self._viewer.cam.fixedcamid = self._model.camera("camera").id
+        return self._viewer
 
     def _close_viewer(self):
         if self._viewer is None:
@@ -124,10 +130,28 @@ class MujocoUtils:
 
         if hasattr(viewer, "is_running") and viewer.is_running():
             viewer.close()
+            
+    def _add_transparency(self, alpha=0.0):
+        for i in range(self._model.ngeom):
+            self._model.geom_rgba[i, 3] = alpha
+            
+    def visualize(self, nav_task_registry_list=None):
+        self._init_viewer()
+        self._add_transparency(0.4)
+
+        if nav_task_registry_list is not None:
+            for nav_task_registry in nav_task_registry_list:
+                self._unpack_task_registry(nav_task_registry)
+
+            for landmark in self._landmark_id_list:
+                landmark.add_force_arrow(self._viewer.user_scn)
+
+        while self._viewer.is_running():
+            self._viewer.sync()
 
     def simulate(self, nav_task_registry_list: list[NavTaskRegistry]):
         if NavConfig.VIEW_DYNAMICS:
-            self.init_viewer()
+            self._init_viewer()
 
         iter_num = 0
         start_time = time.time()
@@ -139,7 +163,7 @@ class MujocoUtils:
             if iter_num < len(nav_task_registry_list):
                 self._data.qfrc_applied[:] = 0.0
                 self._data.xfrc_applied[:] = 0.0
-                self._step(nav_task_registry_list[iter_num])
+                self._unpack_task_registry(nav_task_registry_list[iter_num])
                 iter_num += 1
 
             if self._viewer is not None and self._viewer.is_running():
@@ -153,22 +177,6 @@ class MujocoUtils:
 
     def reset(self):
         mj.mj_resetData(self._model, self._data)
-
-    def visualize(self):
-        self.init_viewer()
-
-        for landmark in self._landmark_id_list:
-            landmark.add_force_arrow(self._viewer.user_scn)
-
-        while self._viewer.is_running():
-            self._viewer.sync()
-
-    def init_viewer(self):
-        if self._viewer is None:
-            self._viewer = mjv.launch_passive(self._model, self._data)
-            self._viewer.cam.type = mj.mjtCamera.mjCAMERA_FIXED
-            self._viewer.cam.fixedcamid = self._model.camera("camera").id
-        return self._viewer
 
     def get_body_names_list(self):
         body_names_list = []

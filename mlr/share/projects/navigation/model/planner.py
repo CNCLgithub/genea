@@ -243,7 +243,11 @@ class NavModel:
         for nav_task in nav_state.get_nav_task():
             task_registry_list.extend(nav_task.get_task_registry_list())
 
+        if NavConfig.DEBUG_DYNAMICS:
+            mujoco_utils.visualize(task_registry_list)
+
         mujoco_utils.simulate(task_registry_list)
+
         return Msg.SUCCESS
 
     def init_planner(self):
