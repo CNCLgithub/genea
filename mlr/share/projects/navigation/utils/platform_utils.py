@@ -141,8 +141,6 @@ class Platform:
         scale_const = 1.0
         if platform_type.is_top_scaled():
             scale_const = PlatformConfig.PLATFORM_SCALE_TOP_FACTOR
-        if platform_type.is_bot_scaled():
-            scale_const = PlatformConfig.PLATFORM_SCALE_BOT_FACTOR
 
         platform_shape = platform_type.get_shape()
 
@@ -156,26 +154,27 @@ class Platform:
             return PlatformConfig.PLATFORM_SIZE_BASE * scale_const, PlatformConfig.PLATFORM_SIZE_SLIM * scale_const
 
         if platform_shape == PlatformShape.WALK:
-            return PlatformConfig.PLATFORM_SIZE_WALK, PlatformConfig.PLATFORM_SIZE_SLIM
+            return PlatformConfig.PLATFORM_SIZE_WALK, PlatformConfig.PLATFORM_SIZE_BASE
 
         return PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_SIZE_BULK
 
-    def get_platform_bounding_box(self):
-        platform_shape = self.get_platform_type().get_shape()
+    @staticmethod
+    def get_platform_bounding_box(platform_type):
+        platform_shape = platform_type.get_shape()
 
         if platform_shape == PlatformShape.BASE:
-            return PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_HEIGHT
+            return PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_SIZE_BASE
 
         if platform_shape == PlatformShape.WIDE:
-            return PlatformConfig.PLATFORM_SIZE_SLIM, PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_HEIGHT
+            return PlatformConfig.PLATFORM_SIZE_SLIM, PlatformConfig.PLATFORM_SIZE_BASE
 
         if platform_shape == PlatformShape.LONG:
-            return PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_SIZE_SLIM, PlatformConfig.PLATFORM_HEIGHT
+            return PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_SIZE_SLIM
 
         if platform_shape == PlatformShape.WALK:
-            return PlatformConfig.PLATFORM_SIZE_WALK, PlatformConfig.PLATFORM_SIZE_SLIM, PlatformConfig.PLATFORM_HEIGHT
+            return PlatformConfig.PLATFORM_SIZE_WALK, PlatformConfig.PLATFORM_SIZE_BASE
 
-        return PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_SIZE_BULK, PlatformConfig.PLATFORM_HEIGHT
+        return PlatformConfig.PLATFORM_SIZE_BASE, PlatformConfig.PLATFORM_SIZE_BULK
 
     def get_platform_name(self):
         platform_shape = self.get_platform_type().get_shape()

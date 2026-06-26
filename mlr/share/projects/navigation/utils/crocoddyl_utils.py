@@ -37,14 +37,6 @@ class CrocoddylUtils:
         return False
 
     @staticmethod
-    def _get_cost_model(model):
-        if hasattr(model, "differential"):
-            return model.differential.costs.costs
-        elif isinstance(model, ActionModelImpulseFwdDynamics):
-            return model.costs.costs
-        return False
-
-    @staticmethod
     def _get_forces_list(state, contact_model, contact_data):
         forces_list = []
         for key, contact in contact_data.todict().items():
@@ -83,5 +75,5 @@ class CrocoddylUtils:
         data_list = [*crocoddyl_solver.problem.runningDatas.tolist(), crocoddyl_solver.problem.terminalData]
         for model, data in zip(model_list, data_list):
             if CrocoddylUtils._has_contacts(data):
-                costs_list.append(CrocoddylUtils._get_cost_model(model))
+                costs_list.append(data.cost)
         return costs_list

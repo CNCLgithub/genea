@@ -13,7 +13,7 @@ class NavConfig:
 
     MAX_TASKS_PER_PLAN = 10
 
-    MAX_JUMP_LENGTH = 5.5
+    MAX_JUMP_LENGTH = 5.2
     MAX_JUMP_HEIGHT = 2.0
 
     MAX_STEP_LENGTH = 1.0
@@ -40,6 +40,7 @@ class MujocoConfig:
 
 class StimuliConfig:
     MIN_GAP_X = 1.2
+    WALK_GAP_X = 0.25
 
     GROUND_LENGTH = 30
     GROUND_WIDTH = 8

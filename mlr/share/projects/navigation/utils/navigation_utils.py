@@ -94,8 +94,29 @@ class NavTask:
     def get_task_solver(self):
         return self._task_solver
 
-    def get_task_cost(self):
-        return self._task_solver.cost
+    def get_task_cost_crocoddyl(self):
+        if self._task_solver is None:
+            return 0.0
+        return sum(CrocoddylUtils.get_costs_list(self._task_solver))
+
+    def get_task_cost_ke(self):
+        if self._task_solver is None:
+            return 0.0
+
+        total_ke = 0.0
+
+        pin_model = self.get_task_solver().problem.runningModels[0].state.pinocchio
+        pin_data = pin_model.createData()
+
+        for pose_vec in self.get_task_solver().xs:
+            nq = pin_model.nq
+            nv = pin_model.nv
+
+            q = pose_vec[:nq]
+            v = pose_vec[nq:nq + nv]
+
+            total_ke += pinocchio.computeKineticEnergy(pin_model, pin_data, q, v)
+        return total_ke
 
     def get_task_forces_by_time_list(self):
         return CrocoddylUtils.get_forces_by_time_list(self._task_solver)

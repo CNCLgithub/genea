@@ -29,25 +29,33 @@ class StimuliSet:
         self._stimuli_dirpath = PathUtils.get_stimuli_set_dirpath(stimuli_set_name)
         self._prepare_directories()
 
-        self._stimuli_counter = StimuliCounter(0)
+        self._stimuli_version_counter = StimuliCounter(0)
+        self._stimuli_variant_counter = StimuliCounter(1)
 
     def _prepare_directories(self):
         FileUtils.create_dir(self.get_stimuli_set_dirpath())
 
-    def add_stimulus(self):
-        self._stimuli_counter += 1
+    def _get_version(self) -> int:
+        return self._stimuli_version_counter()
+
+    def _get_variant(self) -> int:
+        return self._stimuli_variant_counter()
+
+    def add_stimulus(self, is_variant=False):
+        if not is_variant:
+            self._stimuli_version_counter += 1
+            self._stimuli_variant_counter = StimuliCounter(1)
+        else:
+            self._stimuli_variant_counter += 1
 
     def get_stimuli_set_name(self):
         return self._stimuli_set_name
-
-    def get_stimuli_count(self) -> int:
-        return self._stimuli_counter()
 
     def get_stimuli_set_dirpath(self):
         return self._stimuli_dirpath
 
     def get_next_stimulus_name(self):
-        return self.get_stimuli_set_name() + "_" + str(self.get_stimuli_count())
+        return self.get_stimuli_set_name() + "_" + str(self._get_version()) + "_" + str(self._get_variant())
 
     @staticmethod
     def get_available_platform_types_list():
@@ -56,14 +64,13 @@ class StimuliSet:
 
 
 class Stimulus:
-    def __init__(self, stimuli_set: StimuliSet, stimulus_name=None):
+    def __init__(self, stimuli_set: StimuliSet, stimulus_name=None, is_variant=False):
         self._stim_set = stimuli_set
+        self._stim_set.add_stimulus(is_variant)
 
         self._stim_name = self._stim_set.get_next_stimulus_name()
         if stimulus_name:
             self._stim_name = stimulus_name
-
-        self._stim_set.add_stimulus()
 
         self._stim_platforms_dict = {}
         self._stim_platforms_counter = 0
@@ -137,29 +144,24 @@ class Stimulus:
             Msg.print_error(f"ERROR [Stimuli]: Platform {ref_platform_index} not found.")
             assert False
 
-        ref_platform_name = self.get_platform_name_by_index(ref_platform_index)
+        ref_platform = self.get_platform_by_index(ref_platform_index)
 
-        next_x = self.get_platform(ref_platform_name).get_platform_pose().get_position().get_x()
-        next_y = self.get_platform(ref_platform_name).get_platform_pose().get_position().get_y()
-
-        ref_surface_xy = self.get_platform_top_surface_xy(ref_platform_name)
-        next_x += ref_surface_xy[0] / 2
-
+        next_x = ref_platform.get_platform_pose().get_position().get_x()
+        next_x += Platform.get_platform_bounding_box(ref_platform.get_platform_type())[0] / 2
         next_x += StimuliConfig.MIN_GAP_X + delta_x
-        next_y += delta_y
+        next_x += Platform.get_platform_bounding_box(query_platform_type)[0] / 2
 
-        query_surface_xy = Platform.get_platform_top_surface_xy(query_platform_type)
-        next_x += query_surface_xy[0] / 2
+        next_y = ref_platform.get_platform_pose().get_position().get_y()
+        next_y += delta_y
 
         return NavPose(NavPosition(next_x, next_y, -PlatformConfig.PLATFORM_HEIGHT))
 
     def get_goal_platform_pose(self, delta_x, delta_y) -> NavPose:
-        query_surface_xy = Platform.get_platform_top_surface_xy(PlatformType.get_goal())
+        query_bounds_xy = Platform.get_platform_bounding_box(PlatformType.get_goal())
 
         goal_x = self.get_max_x()
-        goal_x += StimuliConfig.MIN_GAP_X
-        goal_x += query_surface_xy[0] / 2
-        goal_x += delta_x
+        goal_x += StimuliConfig.MIN_GAP_X + delta_x
+        goal_x += query_bounds_xy[0] / 2
 
         goal_y = 0.0
         goal_y += delta_y
@@ -191,7 +193,7 @@ class Stimulus:
 
         return query_platform_name
 
-    def get_platform_by_index(self, query_index):
+    def get_platform_by_index(self, query_index) -> Platform:
         query_platform_name = self.get_platform_name_by_index(query_index)
         if self.get_platform_name_by_index(query_index):
             return self.get_platform(query_platform_name)
@@ -216,42 +218,36 @@ class Stimulus:
 
         return self.get_platform(platform_name).get_platform_pose().get_position().get_position_as_np_array()
 
-    def get_platform_top_surface_xy(self, platform_name):
-        if platform_name not in self._stim_platforms_dict:
-            Msg.print_error(f"ERROR [Stimuli]: platform {platform_name} not found")
-            assert False
-
-        return Platform.get_platform_top_surface_xy(self.get_platform(platform_name).get_platform_type())
-
     def get_point_closest_to_platform(self, ref_platform_name, goal_platform_name):
         if ref_platform_name not in self._stim_platforms_dict or goal_platform_name not in self._stim_platforms_dict:
             Msg.print_error(f"ERROR [Stimuli]: Platforms {ref_platform_name} or {goal_platform_name} not found.")
 
-        bevel_p1 = self.get_platform(ref_platform_name).get_platform_bevel_width()
+        p1 = self.get_platform(ref_platform_name)
+        p2 = self.get_platform(goal_platform_name)
 
-        pos_p1 = self.get_platform(ref_platform_name).get_platform_pose().get_position().get_position_as_np_array()[:2]
-        pos_p2 = self.get_platform(goal_platform_name).get_platform_pose().get_position().get_position_as_np_array()[:2]
+        p1_pos = p1.get_platform_pose().get_position().get_position_as_np_array()[:2]
+        p2_pos = p2.get_platform_pose().get_position().get_position_as_np_array()[:2]
 
-        surface_xy_p1 = self.get_platform_top_surface_xy(ref_platform_name)
-        surface_xy_p1 = surface_xy_p1[0] / 2, surface_xy_p1[1] / 2
+        p1_surface_xy = Platform.get_platform_top_surface_xy(p1.get_platform_type())
+        p1_surface_xy = p1_surface_xy[0] / 2, p1_surface_xy[1] / 2
 
-        closest_x = np.clip(pos_p2[0], pos_p1[0] - surface_xy_p1[0], pos_p1[0] + surface_xy_p1[0])
-        closest_y = np.clip(pos_p2[1], pos_p1[1] - surface_xy_p1[1], pos_p1[1] + surface_xy_p1[1])
+        closest_x = np.clip(p2_pos[0], p1_pos[0] - p1_surface_xy[0], p1_pos[0] + p1_surface_xy[0])
+        closest_y = np.clip(p2_pos[1], p1_pos[1] - p1_surface_xy[1], p1_pos[1] + p1_surface_xy[1])
 
-        local_xy = np.array([closest_x, closest_y]) - pos_p1
+        local_xy = np.array([closest_x, closest_y]) - p1_pos
         if np.deg2rad(45) < np.arctan2(abs(local_xy[1]), abs(local_xy[0])) < np.deg2rad(55):
-            local_xy -= (local_xy / (np.linalg.norm(local_xy) + 1e-12)) * (bevel_p1 / 2)
+            local_xy -= (local_xy / (np.linalg.norm(local_xy) + 1e-12)) * (p1.get_platform_bevel_width() / 2)
 
-        return pos_p1 + local_xy
+        return p1_pos + local_xy
 
     def get_gap_between_platform_centers(self, platform_name1, platform_name2):
         if platform_name1 not in self._stim_platforms_dict or platform_name2 not in self._stim_platforms_dict:
             Msg.print_error(f"ERROR [Stimuli]: Platforms {platform_name1} or {platform_name2} not found.")
             assert False
 
-        pos_p1 = self.get_platform(platform_name1).get_platform_pose().get_position().get_position_as_list()
-        pos_p2 = self.get_platform(platform_name2).get_platform_pose().get_position().get_position_as_list()
-        return ComputeUtils.compute_l2_distance(pos_p1, pos_p2)
+        p1_pos = self.get_platform(platform_name1).get_platform_pose().get_position().get_position_as_list()
+        p2_pos = self.get_platform(platform_name2).get_platform_pose().get_position().get_position_as_list()
+        return ComputeUtils.compute_l2_distance(p1_pos, p2_pos)
 
     def get_gap_between_platform_edges(self, platform_name1, platform_name2):
         if platform_name1 not in self._stim_platforms_dict or platform_name2 not in self._stim_platforms_dict:
@@ -262,14 +258,17 @@ class Stimulus:
         if gap_between_centers == 0.0:
             return gap_between_centers
 
-        pos_p2 = self.get_platform(platform_name2).get_platform_pose().get_position().get_position_as_np_array()
-        pos_p1 = self.get_platform(platform_name1).get_platform_pose().get_position().get_position_as_np_array()
+        p1 = self.get_platform(platform_name1)
+        p2 = self.get_platform(platform_name2)
 
-        surface_xy_p1 = self.get_platform_top_surface_xy(platform_name1)
-        surface_xy_p2 = self.get_platform_top_surface_xy(platform_name2)
+        p1_pos = p1.get_platform_pose().get_position().get_position_as_np_array()
+        p2_pos = p2.get_platform_pose().get_position().get_position_as_np_array()
 
-        dx = abs(pos_p2[0] - pos_p1[0]) - (surface_xy_p1[0] / 2 + surface_xy_p2[0] / 2)
-        dy = abs(pos_p2[1] - pos_p1[1]) - (surface_xy_p1[1] / 2 + surface_xy_p2[1] / 2)
+        p1_surface_xy = Platform.get_platform_top_surface_xy(p1.get_platform_type())
+        p2_surface_xy = Platform.get_platform_top_surface_xy(p2.get_platform_type())
+
+        dx = abs(p2_pos[0] - p1_pos[0]) - (p1_surface_xy[0] / 2 + p2_surface_xy[0] / 2)
+        dy = abs(p2_pos[1] - p1_pos[1]) - (p1_surface_xy[1] / 2 + p2_surface_xy[1] / 2)
 
         dx = max(dx, 0.0)
         dy = max(dy, 0.0)
@@ -289,8 +288,10 @@ class Stimulus:
             Msg.print_error(f"ERROR [Stimuli]: platform {platform_name} not found")
             assert False
 
-        ref_pos = self.get_platform(platform_name).get_platform_pose().get_position().get_position_as_np_array()
-        ref_surface_xy = self.get_platform_top_surface_xy(platform_name)
+        ref_platform = self.get_platform(platform_name)
+
+        ref_pos = ref_platform.get_platform_pose().get_position().get_position_as_np_array()
+        ref_surface_xy = Platform.get_platform_top_surface_xy(ref_platform.get_platform_type())
 
         return ref_pos[0] + ref_surface_xy[0] / 2 - ref_pos_array[0]
 
@@ -298,8 +299,11 @@ class Stimulus:
         min_platform_list = []
         max_platform_list = []
         for platform_name in self.get_platform_names_list():
-            platform_x = self.get_platform(platform_name).get_platform_pose().get_position().get_x()
-            surface_xy = self.get_platform_top_surface_xy(platform_name)
+            platform = self.get_platform(platform_name)
+
+            platform_x = platform.get_platform_pose().get_position().get_x()
+            surface_xy = Platform.get_platform_top_surface_xy(platform.get_platform_type())
+
             min_platform_list.append(platform_x - surface_xy[0] / 2)
             max_platform_list.append(platform_x + surface_xy[0] / 2)
 
@@ -311,7 +315,8 @@ class Stimulus:
     def get_max_x(self):
         max_platform_list = []
         for platform_name in self.get_platform_names_list():
-            platform_x = self.get_platform(platform_name).get_platform_pose().get_position().get_x()
-            surface_xy = self.get_platform_top_surface_xy(platform_name)
+            platform = self.get_platform(platform_name)
+            platform_x = platform.get_platform_pose().get_position().get_x()
+            surface_xy = Platform.get_platform_bounding_box(platform.get_platform_type())
             max_platform_list.append(platform_x + surface_xy[0] / 2)
         return max(max_platform_list)

@@ -477,7 +477,7 @@ class BPYUtils:
     @staticmethod
     def save_scene_as_stl(stl_filepath: str):
         BPYUtils.bpy_object_mode()
-        bpy.ops.export_mesh.stl(filepath=stl_filepath, use_selection=True)
+        bpy.ops.wm.stl_export(filepath=stl_filepath)
 
     @staticmethod
     def render_video(out_video_filepath: str):
@@ -630,7 +630,7 @@ class RoundedCuboidPlatform(Platform):
 
         obj = bpy.context.object
 
-        obj.scale = (self.get_platform_bounding_box())
+        obj.scale = (self.get_platform_bounding_box(self.get_platform_type()))
         bpy.ops.object.transform_apply(scale=True)
 
         obj.location.z += self.get_platform_height() / 2
