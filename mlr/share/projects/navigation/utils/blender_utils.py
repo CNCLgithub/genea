@@ -13,6 +13,7 @@ ROOT_DIRPATH = "/home/jakiroshah/PycharmProjects/genea"
 BASE_DIRPATH = os.path.join(ROOT_DIRPATH, "mlr/share/projects/navigation")
 PLATFORMS_DIRPATH = os.path.join(BASE_DIRPATH, "library", "platforms")
 STIMULI_DIRPATH = os.path.join(BASE_DIRPATH, "library", "stimuli")
+MISC_DIRPATH = os.path.join(BASE_DIRPATH, "library", "misc")
 OUT_DIRPATH = os.path.join(BASE_DIRPATH, "library", "out")
 UTILS_DIRPATH = os.path.join(BASE_DIRPATH, "utils")
 
@@ -53,6 +54,12 @@ class _FileUtils:
 
 
 class BPYUtils:
+    @staticmethod
+    def _import_obj_file(filepath: str):
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"ERROR [video_utils]: file not found: {filepath}")
+        bpy.ops.wm.obj_import(filepath=filepath)
+
     @staticmethod
     def _import_stl_file(filepath: str):
         if not os.path.exists(filepath):
@@ -275,10 +282,10 @@ class BPYUtils:
         camera.constraints["Track To"].up_axis = 'UP_Y'
 
     @staticmethod
-    def _add_lighting(light_energy=5000.0, light_size=40):
-        light_location1 = (BPYUtils.get_stim_center_x(), BPYUtils.get_stim_center_y(), BPYUtils.get_stim_height() * 10)
-        light_location2 = (BPYUtils.get_stim_x_min(), -BPYUtils.get_stim_width() * 5, 0)
-        light_location3 = (BPYUtils.get_stim_x_min(), BPYUtils.get_stim_width() * 5, 0)
+    def _add_lighting(light_energy=9000.0, light_size=40):
+        light_location1 = (BPYUtils.get_stim_center_x(), BPYUtils.get_stim_center_y(), BPYUtils.get_stim_height() * 12)
+        light_location2 = (BPYUtils.get_stim_x_min(), -BPYUtils.get_stim_width() * 20, -18)
+        light_location3 = (BPYUtils.get_stim_x_min(), BPYUtils.get_stim_width() * 20, -18)
 
         bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_location1)
         area = bpy.context.object
@@ -287,13 +294,13 @@ class BPYUtils:
 
         bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_location2)
         area = bpy.context.object
-        area.data.energy = light_energy / 1.25
+        area.data.energy = light_energy
         area.data.size = light_size
         area.rotation_euler[0] = math.radians(90)
 
         bpy.ops.object.light_add(type='AREA', align='WORLD', location=light_location3)
         area = bpy.context.object
-        area.data.energy = light_energy / 1.25
+        area.data.energy = light_energy
         area.data.size = light_size
         area.rotation_euler[0] = math.radians(-90)
 
@@ -448,6 +455,8 @@ class BPYUtils:
             BPYUtils._add_color(obj, "bland", (0.625, 0.625, 0.625, 1.0))
         elif material == PlatformMaterial.BRAWN:
             BPYUtils._add_texture_woody(obj, True)
+        elif material == PlatformMaterial.BROWN:
+            BPYUtils._add_color(obj, "brown", (0.78, 0.52, 0.25, 1.0))
         else:
             raise ValueError(f"ERROR [BPYUtils]: invalid material -- {material}")
 
@@ -482,30 +491,51 @@ class BPYUtils:
     @staticmethod
     def render_video(out_video_filepath: str):
         scene = bpy.context.scene
-        scene.render.image_settings.media_type = 'VIDEO'
-        scene.render.filepath = out_video_filepath
-        scene.render.image_settings.file_format = 'FFMPEG'
-        scene.render.ffmpeg.format = 'MPEG4'
-        scene.render.ffmpeg.codec = "H264"
+        scene.render.image_settings.media_type = 'IMAGE'
+        scene.render.image_settings.file_format = 'PNG'
         scene.render.image_settings.color_mode = "RGB"
-        scene.frame_end = BlenderConfig.VIDEO_FRAME_COUNT + 1
+        scene.render.filepath = out_video_filepath
+        scene.frame_end = 2 + 1
 
         scene.render.fps = 24
         scene.render.resolution_x = 1920
         scene.render.resolution_y = 1080
         scene.render.resolution_percentage = 100
 
+        prefs = bpy.context.preferences.addons["cycles"].preferences
+        prefs.compute_device_type = 'CUDA'
+        prefs.refresh_devices()
+        for device in prefs.devices:
+            device.use = True
+
         scene.render.engine = 'CYCLES'
         scene.cycles.device = 'GPU'
-        bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
-        bpy.context.preferences.addons['cycles'].preferences.refresh_devices()
+
+        scene.cycles.samples = 4
+        scene.cycles.use_adaptive_sampling = True
+        scene.cycles.adaptive_threshold = 0.05
+        scene.cycles.adaptive_min_samples = 0
+
+        scene.cycles.max_bounces = 1
+        scene.cycles.transparent_max_bounces = 0
+        scene.cycles.diffuse_bounces = 1
+        scene.cycles.glossy_bounces = 0
+        scene.cycles.transmission_bounces = 0
+        scene.cycles.volume_bounces = 0
+        scene.cycles.caustics_reflective = False
+        scene.cycles.caustics_refractive = False
+        scene.render.use_motion_blur = False
+        scene.cycles.use_denoising = True
+
+        scene.render.use_persistent_data = True
         bpy.ops.render.render(animation=True)
 
     @staticmethod
-    def render_frame(out_path: str, frame: int):
+    def render_frame(out_path: str, frame_num: int):
         scene = bpy.context.scene
-        scene.frame_set(frame)
+        scene.frame_set(frame_num)
         scene.render.filepath = out_path
+        scene.render.image_settings.media_type = 'IMAGE'
         scene.render.image_settings.file_format = 'PNG'
         bpy.ops.render.render(write_still=True)
 
@@ -528,6 +558,12 @@ class BPYUtils:
 
         BPYUtils._add_lighting()
         BPYUtils._add_camera()
+
+        BPYUtils._import_obj_file(os.path.join(MISC_DIRPATH, "agent.obj"))
+        obj = bpy.context.object
+        obj.name = "agent"
+        obj.scale = (0.4, 0.4, 0.4)
+        BPYUtils.add_material(obj, PlatformMaterial.BROWN)
 
         for bpy_obj in bpy.context.scene.objects:
             if PLATFORM_NAME in bpy_obj.keys():
@@ -770,19 +806,19 @@ def make_platforms():
 def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False):
     stimuli_path_list = _FileUtils.get_dir_list_in_directory(os.path.join(STIMULI_DIRPATH, stimuli_set_name))
     for stimulus_dir_path in stimuli_path_list:
-        stimuli_num = int(stimulus_dir_path.split("/")[-1].split("_")[-1])
+        stim_name = stimulus_dir_path.split("/")[-1]
 
         BPYUtils.load_scene(stimulus_dir_path, os.path.join(stimulus_dir_path, "stimulus.mjcf"))
 
         if save_as_img:
             out_img_dirpath = os.path.join(OUT_DIRPATH, "stim_images")
-            out_img_filepath = os.path.join(out_img_dirpath, f"stim_{stimuli_num}.png")
+            out_img_filepath = os.path.join(out_img_dirpath, f"{stim_name}.png")
             _FileUtils.create_dir(out_img_dirpath)
             BPYUtils.render_frame(out_img_filepath, BlenderConfig.VIDEO_FRAME_COUNT + 1)
 
         if save_as_video:
-            out_vid_dirpath = os.path.join(OUT_DIRPATH, "stim_videos")
-            out_vid_filepath = os.path.join(out_vid_dirpath, f"stim_{stimuli_num}.mp4")
+            out_vid_dirpath = os.path.join(OUT_DIRPATH, "stim_videos", f"{stim_name}")
+            out_vid_filepath = os.path.join(out_vid_dirpath, f"{stim_name}")
             _FileUtils.create_dir(out_vid_dirpath)
             BPYUtils.render_video(out_vid_filepath)
 
@@ -791,7 +827,7 @@ def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False):
 
 def main():
     # make_platforms()
-    make_stimuli("diff", save_as_img=True, save_as_video=False)
+    make_stimuli("diff", save_as_img=False, save_as_video=True)
 
 
 if __name__ == '__main__':

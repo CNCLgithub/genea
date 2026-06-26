@@ -1,7 +1,7 @@
 import numpy as np
 import pinocchio
 
-from crocoddyl import ActionDataImpulseFwdDynamics, StdVec_DiffActionData, ActionModelImpulseFwdDynamics
+from crocoddyl import ActionDataImpulseFwdDynamics, StdVec_DiffActionData
 from crocoddyl import DifferentialActionDataContactFwdDynamics as FwdDynamics
 from crocoddyl import DifferentialActionModelContactInvDynamics as InvDynamics
 from typing import List

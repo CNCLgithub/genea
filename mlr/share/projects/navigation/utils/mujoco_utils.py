@@ -24,24 +24,6 @@ class MujocoLandmark:
 
         scene.ngeom += 1
 
-        # geom = scene.geoms[scene.ngeom]
-        # mj.mjv_initGeom(geom,
-        #                 type=mj.mjtGeom.mjGEOM_SPHERE,
-        #                 size=[0.2, 0.2, 0.2],
-        #                 pos=self.get_landmark_pos(),
-        #                 mat=np.eye(3).flatten(),
-        #                 rgba=np.array([1, 0, 0, 1]))
-        # scene.ngeom += 1
-        #
-        # geom = scene.geoms[scene.ngeom]
-        # mj.mjv_initGeom(geom,
-        #                 type=mj.mjtGeom.mjGEOM_SPHERE,
-        #                 size=[0.1, 0.1, 0.1],
-        #                 pos=final_pos,
-        #                 mat=np.eye(3).flatten(),
-        #                 rgba=np.array([1, 1, 0, 1]))
-        # scene.ngeom += 1
-
     def get_landmark_pos(self):
         return self._landmark_pos
 

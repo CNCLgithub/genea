@@ -23,6 +23,7 @@ class PlatformMaterial:
     STONE = "stone"
     BLAND = "bland"
     BRAWN = "brawn"
+    BROWN = "brown"
 
 
 class PlatformType:
