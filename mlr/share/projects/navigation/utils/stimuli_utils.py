@@ -275,25 +275,30 @@ class Stimulus:
 
         return np.linalg.norm([dx, dy])
 
-    def get_distance_to_platform_center(self, platform_name, ref_pos_array):
+    def get_x_to_platform_center(self, platform_name, ref_pos_list):
         if platform_name not in self._stim_platforms_dict:
             Msg.print_error(f"ERROR [Stimuli]: platform {platform_name} not found")
             assert False
 
         ref_pos = self.get_platform(platform_name).get_platform_pose().get_position().get_position_as_np_array()
-        return ref_pos[0] - ref_pos_array[0]
+        return ref_pos[0] - ref_pos_list[0]
 
-    def get_distance_to_platform_edge(self, platform_name, ref_pos_array):
-        if platform_name not in self._stim_platforms_dict:
-            Msg.print_error(f"ERROR [Stimuli]: platform {platform_name} not found")
+    def get_x_to_platform_edge(self, query_platform_name, ref_pos_list):
+        """
+        return: left and right x-coords on the query platform relative to the reference pos list
+        """
+        if query_platform_name not in self._stim_platforms_dict:
+            Msg.print_error(f"ERROR [Stimuli]: platform {query_platform_name} not found")
             assert False
 
-        ref_platform = self.get_platform(platform_name)
+        query_platform = self.get_platform(query_platform_name)
 
-        ref_pos = ref_platform.get_platform_pose().get_position().get_position_as_np_array()
-        ref_surface_xy = Platform.get_platform_top_surface_xy(ref_platform.get_platform_type())
+        query_pos = query_platform.get_platform_pose().get_position().get_position_as_np_array()
+        query_pos[0] -= ref_pos_list[0]
 
-        return ref_pos[0] + ref_surface_xy[0] / 2 - ref_pos_array[0]
+        query_surface_xy = Platform.get_platform_top_surface_xy(query_platform.get_platform_type())
+
+        return query_pos[0] - query_surface_xy[0] / 2, query_pos[0] + query_surface_xy[0] / 2
 
     def get_center_x(self):
         min_platform_list = []

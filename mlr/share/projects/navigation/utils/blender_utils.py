@@ -267,11 +267,17 @@ class BPYUtils:
         bpy.context.scene.camera = camera
         camera.data.angle = fov_rad
 
-        tracer_height = BPYUtils.get_stim_z_min() + BPYUtils.get_stim_height() * 0.9
-        camera_height = BPYUtils.get_stim_z_min() + BPYUtils.get_stim_height() * 2.5
+        # tracer_height = BPYUtils.get_stim_z_min() + BPYUtils.get_stim_height() * 0.9
+        # camera_height = BPYUtils.get_stim_z_min() + BPYUtils.get_stim_height() * 2.5
+        #
+        # tracer_radius = BPYUtils._compute_orbit_radius(tracer_height, fov_rad) * 0.25
+        # camera_radius = BPYUtils._compute_orbit_radius(camera_height, fov_rad)
 
-        tracer_radius = BPYUtils._compute_orbit_radius(tracer_height, fov_rad) * 0.25
-        camera_radius = BPYUtils._compute_orbit_radius(camera_height, fov_rad)
+        tracer_radius = 7.0
+        tracer_height = -0.4
+
+        camera_radius = 26.5
+        camera_height = 7.0
 
         BPYUtils._set_camera_trajectory(tracer, tracer_radius, tracer_height, BlenderConfig.VIDEO_FRAME_COUNT)
         BPYUtils._set_camera_trajectory(camera, camera_radius, camera_height, BlenderConfig.VIDEO_FRAME_COUNT)
@@ -434,7 +440,6 @@ class BPYUtils:
     @staticmethod
     def _add_color(bpy_obj, color_name: str, color_rgba: tuple):
         bpy_material = bpy.data.materials.new(name=color_name)
-        bpy_material.use_nodes = True
 
         bsdf = bpy_material.node_tree.nodes.get("Principled BSDF")
         if bsdf:
@@ -495,7 +500,7 @@ class BPYUtils:
         scene.render.image_settings.file_format = 'PNG'
         scene.render.image_settings.color_mode = "RGB"
         scene.render.filepath = out_video_filepath
-        scene.frame_end = 2 + 1
+        scene.frame_end = BlenderConfig.VIDEO_FRAME_COUNT + 1
 
         scene.render.fps = 24
         scene.render.resolution_x = 1920
@@ -805,8 +810,10 @@ def make_platforms():
 
 def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False):
     stimuli_path_list = _FileUtils.get_dir_list_in_directory(os.path.join(STIMULI_DIRPATH, stimuli_set_name))
+    stimuli_path_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
     for stimulus_dir_path in stimuli_path_list:
         stim_name = stimulus_dir_path.split("/")[-1]
+        print(f"running {stim_name}...")
 
         BPYUtils.load_scene(stimulus_dir_path, os.path.join(stimulus_dir_path, "stimulus.mjcf"))
 
@@ -822,12 +829,10 @@ def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False):
             _FileUtils.create_dir(out_vid_dirpath)
             BPYUtils.render_video(out_vid_filepath)
 
-        break
-
 
 def main():
     # make_platforms()
-    make_stimuli("diff", save_as_img=False, save_as_video=True)
+    make_stimuli("diff", save_as_img=True, save_as_video=True)
 
 
 if __name__ == '__main__':
