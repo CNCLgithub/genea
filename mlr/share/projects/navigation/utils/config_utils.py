@@ -25,7 +25,7 @@ class NavConfig:
     WALK_STAND_KNOTS = 4
     WALK_TREAD_KNOTS = 20
 
-    MIN_PLATFORM_PADDING = 0.2
+    MIN_PLATFORM_PADDING = 0.25
 
     DYNAMICS_THRESHOLD = 1e-7
 
@@ -67,4 +67,4 @@ class PlatformConfig:
 
 
 class BlenderConfig:
-    VIDEO_FRAME_COUNT = 110
+    VIDEO_FRAME_COUNT = 220

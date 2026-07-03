@@ -23,11 +23,11 @@ class PathUtils:
         return os.path.relpath(path_to, path_from)
 
     @staticmethod
-    def get_root_dirpath():
+    def get_root_dirpath() -> str:
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     @staticmethod
-    def get_library_dirpath():
+    def get_library_dirpath() -> str:
         return os.path.join(PathUtils.get_root_dirpath(), "library")
 
     @staticmethod
@@ -37,6 +37,10 @@ class PathUtils:
     @staticmethod
     def get_out_nav_data_dirpath():
         return os.path.join(PathUtils.get_out_dirpath(), "nav_data")
+
+    @staticmethod
+    def get_out_videos_dirpath():
+        return os.path.join(PathUtils.get_out_dirpath(), "stim_videos")
 
     @staticmethod
     def get_platforms_dirpath():

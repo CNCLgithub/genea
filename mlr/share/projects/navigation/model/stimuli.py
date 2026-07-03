@@ -84,15 +84,22 @@ class StimuliDiff(StimuliSet):
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
 
     def make_stimuli_02(self):
-        platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
-                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
-                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
-                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY),
-                               PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY)]
-        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
-        delta_x_list = [0.0 for _ in range(len(platform_types_list))]
-        delta_y_list = [0.0 for _ in range(len(platform_types_list))]
-        self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)
+        platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE)]
+
+        parent_ids_list = [parent_id for parent_id in [0, 1, 0, 0, 4, 5, 4]]
+        offset_x1 = -StimuliConfig.MIN_GAP_X + StimuliConfig.WALK_GAP_X
+        offset_x2 = -StimuliConfig.MIN_GAP_X + 1.75
+        offset_x3 = -StimuliConfig.MIN_GAP_X + 6.75
+        delta_x_list = [offset_x1, offset_x1, offset_x2, offset_x3, offset_x1, offset_x1, offset_x2]
+        delta_y_list = [-1.5, -0.0, 1.75, 0.0, 1.5, 0.0, -1.75]
+
+        self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, offset_x1, 0.0)
 
     # ======================= WIDE =======================
     def make_stimuli_03(self):
@@ -278,20 +285,20 @@ class StimuliDiff(StimuliSet):
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, offset_x, 0.0)
 
     def make_stimuli_20(self):
-        platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE),
-                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.STONE)]
+        platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY),
+                               PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY)]
 
         parent_ids_list = [parent_id for parent_id in [0, 1, 0, 0, 4, 5, 4]]
         offset_x1 = -StimuliConfig.MIN_GAP_X + StimuliConfig.WALK_GAP_X
-        offset_x2 = -StimuliConfig.MIN_GAP_X + 2.5
+        offset_x2 = -StimuliConfig.MIN_GAP_X + 1.75
         offset_x3 = -StimuliConfig.MIN_GAP_X + 6.75
         delta_x_list = [offset_x1, offset_x1, offset_x2, offset_x3, offset_x1, offset_x1, offset_x2]
-        delta_y_list = [-2.0, 0.0, 2.0, 0.0, 2.0, 0.0, -2.0]
+        delta_y_list = [-1.5, -0.0, 1.75, 0.0, 1.5, 0.0, -1.75]
 
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, offset_x1, 0.0)
 
@@ -310,6 +317,21 @@ class StimuliDiff(StimuliSet):
         delta_y_list = [0.0, 0.0, 0.0, 0.0, 3.5, -3.5]
 
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, 0.0, 0.0)
+
+    def make_stimuli_22(self):
+        offset_x = -StimuliConfig.MIN_GAP_X + 2.
+
+        platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.STONE)]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
+        delta_x_list = [offset_x for _ in range(len(platform_types_list))]
+        delta_y_list = [0.0 for _ in range(len(platform_types_list))]
+        self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, offset_x)
+
+        platform_types_list = [PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY)]
+        parent_ids_list = [parent_id for parent_id in range(len(platform_types_list))]
+        delta_x_list = [offset_x for _ in range(len(platform_types_list))]
+        delta_y_list = [0.0 for _ in range(len(platform_types_list))]
+        self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list, offset_x, 0.0, var=True)
 
 
 def main():
@@ -336,6 +358,7 @@ def main():
     stimuli_diff.make_stimuli_19()
     stimuli_diff.make_stimuli_20()
     stimuli_diff.make_stimuli_21()
+    stimuli_diff.make_stimuli_22()
 
 
 if __name__ == '__main__':

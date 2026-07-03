@@ -6,6 +6,7 @@ import numpy as np
 import time
 
 from collections import deque, defaultdict
+from enum import Enum
 from typing import List
 
 from mlr.share.projects.navigation.model.tasks.jump import JumpTask
@@ -14,10 +15,20 @@ from mlr.share.projects.navigation.model.tasks.walk import WalkTask
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
+from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 from mlr.share.projects.navigation.utils.mujoco_utils import MujocoUtils
 from mlr.share.projects.navigation.utils.navigation_utils import NavTask
+from mlr.share.projects.navigation.utils.platform_utils import Platform, PlatformType
 from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
+
+
+class NavOut(Enum):
+    STIMULUS_NAME = 0
+    PATH_AS_STR = 1
+    PATH_SYM_LEN = 2
+    PATH_COST_KE = 3
+    PATH_COST_CROCODDYL = 4
 
 
 class NavState:
@@ -97,6 +108,12 @@ class NavState:
     def get_children_states_list(self):
         return self._children_states_list
 
+    def get_total_cost_ke(self):
+        return sum([nav_task.get_task_cost_ke() for nav_task in self.get_nav_task()])
+
+    def get_total_cost_crocoddyl(self):
+        return sum([task.get_task_cost_crocoddyl() for task in self.get_nav_task()])
+
     def get_candidate_platform_names_list(self):
         candidate_platform_names_list = []
 
@@ -104,32 +121,28 @@ class NavState:
             if self.get_scene().get_platform(platform_name).has_been_visited():
                 continue
 
+            if not self.get_scene().is_platform_progressive(platform_name, self.get_agent_pose()):
+                continue
+
             gap = self.get_scene().get_gap_between_platform_edges(self.get_ref_platform_name(), platform_name)
-            if gap > max(NavConfig.MAX_STEP_LENGTH * 2, NavConfig.MAX_JUMP_LENGTH):
+            if gap > max(NavConfig.MAX_STEP_LENGTH, NavConfig.MAX_JUMP_LENGTH):
                 continue
 
             candidate_platform_names_list.append(platform_name)
 
         return candidate_platform_names_list
 
-    def get_next_task_type_dict(self, agent_pos):
-        next_tasks_dict = defaultdict(list)
+    def get_ref_task_items(self):
+        return {self.get_ref_platform_name(): [NavTask.WALK]}.items()
 
-        # ----------- within the ref platform -----------
-        distance_to_right_edge = self.get_scene().get_distance_to_platform_edge(self.get_ref_platform_name(), agent_pos)
-        if distance_to_right_edge >= NavConfig.MAX_STEP_LENGTH * 2:
-            next_tasks_dict[self.get_ref_platform_name()].append(NavTask.WALK)
-
-        # ----------- between ref and candidate platform -----------
+    def get_candidate_task_items(self, add_walk=False, add_jump=False):
+        candidate_task_dict = defaultdict(list)
         for candidate_platform_name in self.get_candidate_platform_names_list():
-            gap = self.get_scene().get_gap_between_platform_edges(self.get_ref_platform_name(), candidate_platform_name)
-            if gap <= NavConfig.MAX_JUMP_LENGTH:
-                next_tasks_dict[candidate_platform_name].append(NavTask.JUMP)
-
-            if gap <= NavConfig.MAX_STEP_LENGTH:
-                next_tasks_dict[candidate_platform_name].append(NavTask.WALK)
-
-        return next_tasks_dict
+            if add_walk:
+                candidate_task_dict[candidate_platform_name].append(NavTask.WALK)
+            if add_jump:
+                candidate_task_dict[candidate_platform_name].append(NavTask.JUMP)
+        return candidate_task_dict.items()
 
 
 class NavModel:
@@ -148,23 +161,27 @@ class NavModel:
         return ComputeUtils.sample_skew_normal(mu, sigma, alpha, bound_min, bound_max)
 
     @staticmethod
+    def _get_walk_on_platform_tasks(nav_state, platform_name, agent_pos_x):
+        dist = nav_state.get_scene().get_x_to_platform_edge(platform_name, agent_pos_x)[1]
+        dist -= NavConfig.MIN_PLATFORM_PADDING
+
+        if dist < 1.5 * NavConfig.MAX_STEP_LENGTH:
+            return []
+
+        dist = NavModel.skew(dist, NavConfig.SMALL_SKEW_SIGMA, -1, 0, dist)
+
+        step_num = int(np.ceil(dist / NavConfig.MAX_STEP_LENGTH - 0.5))
+        step_len = dist / (step_num + 0.5)
+
+        tasks_list: List[NavTask] = [TurnTask(0)]
+        for i in range(1, step_num + 1):
+            tasks_list.append(WalkTask(step_length=step_len, is_first=i == 1, is_close=i == step_num))
+        return tasks_list
+
+    @staticmethod
     def compute_walk_tasks(nav_state: NavState, start_platform_name, final_platform_name) -> List[NavTask]:
         if start_platform_name == final_platform_name:
-            dist = nav_state.get_scene().get_distance_to_platform_edge(start_platform_name, nav_state.get_agent_pose())
-            dist -= NavConfig.MIN_PLATFORM_PADDING
-
-            if dist <= NavConfig.MAX_STEP_LENGTH * 2:
-                return []
-
-            dist = NavModel.skew(dist, NavConfig.SMALL_SKEW_SIGMA, -1, 0, dist)
-
-            step_num = int(np.ceil(dist / NavConfig.MAX_STEP_LENGTH))
-            step_len = dist / step_num
-
-            tasks_list: List[NavTask] = [TurnTask(0)]
-            for i in range(1, step_num + 1):
-                tasks_list.append(WalkTask(step_length=step_len, is_first=i == 1, is_close=i == step_num))
-            return tasks_list
+            return NavModel._get_walk_on_platform_tasks(nav_state, start_platform_name, nav_state.get_agent_pose()[0])
 
         gap = nav_state.get_scene().get_gap_between_platform_edges(start_platform_name, final_platform_name)
         if gap > NavConfig.MAX_STEP_LENGTH:
@@ -172,7 +189,12 @@ class NavModel:
 
         walk_vec = nav_state.get_scene().get_point_closest_to_platform(start_platform_name, final_platform_name)
         walk_vec -= nav_state.get_agent_pose()[:2]
-        walk_vec -= (walk_vec / (np.linalg.norm(walk_vec) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING
+        if -25. < np.rad2deg(np.arctan2(walk_vec[1], walk_vec[0])) < 25.:
+            walk_vec -= (walk_vec / (np.linalg.norm(walk_vec) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING
+        else:  # compensate for the beveled corners
+            walk_vec -= (walk_vec / (np.linalg.norm(walk_vec) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING * 2
+
+        goal_vec = walk_vec[0] + nav_state.get_agent_pose()[0] + NavConfig.MAX_STEP_LENGTH
 
         step_num = int(np.ceil(np.linalg.norm(walk_vec) / NavConfig.MAX_STEP_LENGTH - 0.5))
         step_len = np.linalg.norm(walk_vec) / (step_num + 0.5)
@@ -184,6 +206,8 @@ class NavModel:
         tasks_list.append(TurnTask(0))
         tasks_list.append(WalkTask(step_length=NavConfig.MAX_STEP_LENGTH, is_lunge=True))
 
+        tasks_list += NavModel._get_walk_on_platform_tasks(nav_state, final_platform_name, goal_vec)
+
         return tasks_list
 
     @staticmethod
@@ -191,14 +215,33 @@ class NavModel:
         if nav_state.get_ref_platform_name() == final_platform_name:
             return []
 
+        min_dist = nav_state.get_scene().get_x_to_platform_edge(final_platform_name, nav_state.get_agent_pose()[0])[0]
+        if min_dist >= NavConfig.MAX_JUMP_LENGTH - NavConfig.MIN_PLATFORM_PADDING:
+            return []
+
+        surface_xy = Platform.get_platform_top_surface_xy(PlatformType.get_base())
+
+        skewed_x_bound = surface_xy[0] / 2 - NavConfig.MIN_PLATFORM_PADDING
+        skewed_y_bound = surface_xy[1] / 6
+
+        skewed_x = NavModel.skew(0, NavConfig.LARGE_SKEW_SIGMA, 0, -skewed_x_bound, skewed_x_bound)
+        skewed_y = NavModel.skew(0, NavConfig.SMALL_SKEW_SIGMA, 1, -skewed_y_bound, skewed_y_bound)
+        skewed_y = abs(skewed_y)
+
         jump_vec = nav_state.get_scene().get_platform_center(final_platform_name)
-        jump_vec[0] = NavModel.skew(jump_vec[0], NavConfig.LARGE_SKEW_SIGMA, -1, jump_vec[0] - 1., jump_vec[0] + 1.)
-        jump_vec[1] = NavModel.skew(jump_vec[1], NavConfig.SMALL_SKEW_SIGMA, 0, jump_vec[1] - .5, jump_vec[1] + .5)
         jump_vec[2] = 0.0
+        jump_vec[0] += skewed_x
         jump_vec[:2] -= nav_state.get_agent_pose()[:2]
 
+        if not (-15.0 < np.rad2deg(np.arctan2(jump_vec[1], jump_vec[0])) < 15.0):
+            if jump_vec[1] > 0:
+                jump_vec[1] -= skewed_y
+            else:
+                jump_vec[1] += skewed_y
+
         if np.linalg.norm(jump_vec) > NavConfig.MAX_JUMP_LENGTH:
-            return []
+            jump_vec = (jump_vec / (np.linalg.norm(jump_vec) + 1e-12)) * NavConfig.MAX_JUMP_LENGTH
+            return [TurnTask(np.arctan2(jump_vec[1], jump_vec[0])), JumpTask(jump_vec)]
 
         return [TurnTask(np.arctan2(jump_vec[1], jump_vec[0])), JumpTask(jump_vec)]
 
@@ -271,14 +314,22 @@ class NavModel:
                 continue
 
             variation_num = 0
-            next_task_type_dict = nav_state.get_next_task_type_dict(nav_state.get_agent_pose())
-            for next_platform_name, nav_task_type_list in next_task_type_dict.items():
+            next_tasks_queue = deque(nav_state.get_ref_task_items())
+
+            while len(next_tasks_queue) > 0:
+
+                next_platform_name, nav_task_type_list = next_tasks_queue.popleft()
+
                 for nav_task_type in nav_task_type_list:
-                    if nav_task_type == NavTask.JUMP:
-                        continue
                     next_nav_state: NavState = copy.deepcopy(nav_state)
                     status = NavModel.run_kinematics(nav_task_type, next_nav_state, next_platform_name)
+
                     if status == Msg.ERROR:
+                        if nav_task_type == NavTask.WALK:
+                            if nav_state.get_ref_platform_name() == next_platform_name:
+                                next_tasks_queue.extend(next_nav_state.get_candidate_task_items(add_walk=True))
+                            else:
+                                next_tasks_queue.extend({next_platform_name: [NavTask.JUMP]}.items())
                         continue
 
                     status = NavModel.run_dynamics(next_nav_state)
@@ -297,15 +348,44 @@ class NavModel:
 
                     self._nav_states_queue.append(next_nav_state)
 
-    def get_all_valid_paths(self):
+    def print_possible_paths(self):
         def _explore_state(nav_state: NavState, input_path_str=""):
             shape = nav_state.get_ref_platform_name().split("_")[0]
             platform_number = nav_state.get_ref_platform_name().split("_")[-1]
 
-            path_str = input_path_str + f" ---{nav_state.get_nav_task_type()}---> {shape}{platform_number}"
+            path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
 
             if nav_state.is_done() and len(nav_state.get_children_states_list()) == 0:
                 print(f"root1{path_str}")
+                return
+
+            for child in nav_state.get_children_states_list():
+                _explore_state(child, path_str)
+
+        for child_state in self._root_nav_state.get_children_states_list():
+            _explore_state(child_state)
+
+    def save_state_to_file(self, out_filepath):
+        FileUtils.create_file(out_filepath)
+        FileUtils.write_row_to_file(out_filepath, [NavOut.STIMULUS_NAME.name,
+                                                   NavOut.PATH_AS_STR.name,
+                                                   NavOut.PATH_SYM_LEN.name,
+                                                   NavOut.PATH_COST_KE.name,
+                                                   NavOut.PATH_COST_CROCODDYL.name])
+
+        def _explore_state(nav_state: NavState, input_path_str=""):
+            shape = nav_state.get_ref_platform_name().split("_")[0]
+            platform_number = nav_state.get_ref_platform_name().split("_")[-1]
+
+            path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
+            symbolic_len = path_str.count("->")
+
+            if nav_state.is_done() and len(nav_state.get_children_states_list()) == 0:
+                FileUtils.write_row_to_file(out_filepath, [nav_state.get_scene().get_stimulus_name().split("/")[-1],
+                                                           f"root1{path_str}",
+                                                           symbolic_len,
+                                                           nav_state.get_total_cost_ke(),
+                                                           nav_state.get_total_cost_crocoddyl()])
                 return
 
             for child in nav_state.get_children_states_list():

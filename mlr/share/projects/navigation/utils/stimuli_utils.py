@@ -135,6 +135,15 @@ class Stimulus:
         mj = MujocoUtils(self._stim_mjcf_generator.get_mjcf_filepath())
         mj.visualize()
 
+    def is_platform_progressive(self, query_platform_name, ref_pos_list):
+        query_platform = self.get_platform(query_platform_name)
+
+        query_pos = query_platform.get_platform_pose().get_position().get_position_as_np_array()
+        if query_pos[0] - ref_pos_list[0] < 0:
+            return False
+
+        return True
+
     @staticmethod
     def get_root_platform_pose() -> NavPose:
         return NavPose(NavPosition(0.0, 0.0, -PlatformConfig.PLATFORM_HEIGHT))
@@ -283,7 +292,7 @@ class Stimulus:
         ref_pos = self.get_platform(platform_name).get_platform_pose().get_position().get_position_as_np_array()
         return ref_pos[0] - ref_pos_list[0]
 
-    def get_x_to_platform_edge(self, query_platform_name, ref_pos_list):
+    def get_x_to_platform_edge(self, query_platform_name, ref_pos_x):
         """
         return: left and right x-coords on the query platform relative to the reference pos list
         """
@@ -294,7 +303,7 @@ class Stimulus:
         query_platform = self.get_platform(query_platform_name)
 
         query_pos = query_platform.get_platform_pose().get_position().get_position_as_np_array()
-        query_pos[0] -= ref_pos_list[0]
+        query_pos[0] -= ref_pos_x
 
         query_surface_xy = Platform.get_platform_top_surface_xy(query_platform.get_platform_type())
 

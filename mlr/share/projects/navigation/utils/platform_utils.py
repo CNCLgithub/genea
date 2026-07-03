@@ -65,6 +65,10 @@ class PlatformType:
         return self._platform_material
 
     @staticmethod
+    def get_base():
+        return PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.BLAND)
+
+    @staticmethod
     def get_ground():
         return PlatformType(PlatformShape.GROUND, PlatformScale.NOT_SCALED, PlatformMaterial.BRAWN)
 

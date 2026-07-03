@@ -24,6 +24,16 @@ class MujocoLandmark:
 
         scene.ngeom += 1
 
+    def add_agent_steps(self, scene):
+        geom = scene.geoms[scene.ngeom]
+        mj.mjv_initGeom(geom,
+                        type=mj.mjtGeom.mjGEOM_SPHERE,
+                        size=[0.2, 0.2, 0.2],
+                        pos=self.get_landmark_pos(),
+                        mat=np.eye(3).flatten(),
+                        rgba=np.array([1, 0, 0, 1]))
+        scene.ngeom += 1
+
     def get_landmark_pos(self):
         return self._landmark_pos
 
@@ -126,7 +136,7 @@ class MujocoUtils:
                 self._unpack_task_registry(nav_task_registry)
 
             for landmark in self._landmark_id_list:
-                landmark.add_force_arrow(self._viewer.user_scn)
+                landmark.add_agent_steps(self._viewer.user_scn)
 
         while self._viewer.is_running():
             self._viewer.sync()

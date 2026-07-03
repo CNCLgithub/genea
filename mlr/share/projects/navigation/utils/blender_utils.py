@@ -808,9 +808,13 @@ def make_platforms():
     platform.save_as_stl()
 
 
-def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False):
+def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False, render_index=-1):
     stimuli_path_list = _FileUtils.get_dir_list_in_directory(os.path.join(STIMULI_DIRPATH, stimuli_set_name))
     stimuli_path_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
+
+    if render_index != -1:
+        stimuli_path_list = [stimuli_path_list[render_index]]
+
     for stimulus_dir_path in stimuli_path_list:
         stim_name = stimulus_dir_path.split("/")[-1]
         print(f"running {stim_name}...")
@@ -832,7 +836,11 @@ def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False):
 
 def main():
     # make_platforms()
-    make_stimuli("diff", save_as_img=True, save_as_video=True)
+
+    frame_number = -1
+    if len(sys.argv) == 5:
+        frame_number = int(sys.argv[4])
+    make_stimuli("diff", save_as_img=False, save_as_video=True, render_index=frame_number)
 
 
 if __name__ == '__main__':

@@ -3,6 +3,8 @@ import os
 import re
 import shutil
 
+from typing import List
+
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 
 
@@ -86,7 +88,7 @@ class FileUtils:
             assert False
 
     @staticmethod
-    def get_files_in_directory(dirpath, is_sorted=True, is_recursive=False):
+    def get_files_in_directory(dirpath, is_sorted=True, is_recursive=False) -> List[str]:
         try:
             file_paths_list = list(filter(
                 os.path.isfile, [os.path.join(dirpath, i) for i in os.listdir(dirpath) if not i.startswith('.')])
