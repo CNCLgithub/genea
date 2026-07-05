@@ -1,3 +1,8 @@
+class CoreConfig:
+    EXP_ITERATIONS = 30
+    EXP_WORKERS = 42
+
+
 class NavConfig:
     VIEW_KINEMATICS = False
     VIEW_DYNAMICS = False

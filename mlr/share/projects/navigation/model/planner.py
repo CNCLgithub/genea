@@ -417,7 +417,7 @@ class NavModel:
             symbolic_len = path_str.count("->")
 
             if nav_state.is_done():
-                FileUtils.write_row_to_file(out_filepath, [nav_state.get_scene().get_stimulus_name().split("/")[-1],
+                FileUtils.write_row_to_file(out_filepath, [nav_state.get_scene().get_stimulus_name(),
                                                            nav_state.get_nav_status().lower(),
                                                            f"root1{path_str}",
                                                            symbolic_len,
