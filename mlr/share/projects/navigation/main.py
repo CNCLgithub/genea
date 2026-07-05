@@ -22,13 +22,6 @@ class Experiment:
             nav_model.save_state_to_file(out_filepath)
 
     @staticmethod
-    def run_print():
-        total = 0
-        for i in range(100_000_000):
-            total += i
-        print(total)
-
-    @staticmethod
     def run_exp_diff():
         stim_diff = StimuliDiff()
         stim_dir_list = FileUtils.get_dir_list_in_directory(stim_diff.get_stimuli_set_dirpath())
@@ -40,8 +33,7 @@ class Experiment:
             for stimulus_dirpath in stim_dir_list:
                 stimulus_dirname = FileUtils.get_basename(stimulus_dirpath)
                 out_filepath = PathUtils.join(PathUtils.get_out_dirpath(), f"{stimulus_dirname}.csv")
-                # process_result_list.append(executor.submit(Experiment.run_stimulus, stimulus_dirpath, out_filepath))
-                process_result_list.append(executor.submit(Experiment.run_print))
+                process_result_list.append(executor.submit(Experiment.run_stimulus, stimulus_dirpath, out_filepath))
 
             for processed_result in as_completed(process_result_list):
                 processed_result.result()
