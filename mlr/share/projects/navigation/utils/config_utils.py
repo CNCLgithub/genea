@@ -1,6 +1,6 @@
 class CoreConfig:
     EXP_ITERATIONS = 30
-    EXP_WORKERS = 42
+    EXP_WORKERS = 16
 
 
 class NavConfig:
