@@ -11,7 +11,7 @@ class Experiment:
     @staticmethod
     def run_exp_diff():
         out_filepath = PathUtils.get_out_dirpath() + "exp_v2.csv"
-        
+
         stim_diff = StimuliDiff()
         stim_dir_list = FileUtils.get_dir_list_in_directory(stim_diff.get_stimuli_set_dirpath())
         stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
@@ -19,10 +19,11 @@ class Experiment:
         for stimulus_dirname in stim_dir_list:
             Msg.print_success("Running model on stimulus: " + stimulus_dirname)
 
-            nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(StimuliDiff(), stimulus_dirname))
-            nav_model.run_planner()
-            nav_model.print_possible_paths()
-            nav_model.save_state_to_file(out_filepath)
+            for _ in range(10):
+                nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(StimuliDiff(), stimulus_dirname))
+                nav_model.run_planner()
+                nav_model.print_possible_paths()
+                nav_model.save_state_to_file(out_filepath)
 
 
 if __name__ == '__main__':

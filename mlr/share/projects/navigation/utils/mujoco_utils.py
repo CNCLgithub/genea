@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import mujoco as mj
 import mujoco.viewer as mjv
 import numpy as np
@@ -6,6 +8,7 @@ import time
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import MujocoConfig, NavConfig
 from mlr.share.projects.navigation.utils.core_utils import NavForce
+from mlr.share.projects.navigation.utils.msg_utils import Msg
 from mlr.share.projects.navigation.utils.navigation_utils import NavTaskRegistry
 
 
@@ -126,7 +129,7 @@ class MujocoUtils:
     def _add_transparency(self, alpha=0.0):
         for i in range(self._model.ngeom):
             self._model.geom_rgba[i, 3] = alpha
-            
+
     def visualize(self, nav_task_registry_list=None):
         self._init_viewer()
         self._add_transparency(0.4)
@@ -141,7 +144,9 @@ class MujocoUtils:
         while self._viewer.is_running():
             self._viewer.sync()
 
-    def simulate(self, nav_task_registry_list: list[NavTaskRegistry]):
+    def simulate(self, nav_task_registry_list: list[NavTaskRegistry]):  # TODO: get platform dim and check force within
+        start_body_pos_list = [self.get_init_pose(body_name) for body_name in self.get_body_names_list()]
+
         if NavConfig.VIEW_DYNAMICS:
             self._init_viewer()
 
@@ -167,6 +172,16 @@ class MujocoUtils:
 
             mj.mj_step(self._model, self._data)  # noqa
 
+        final_body_pos_list = [self.get_curr_pose(body_name) for body_name in self.get_body_names_list()]
+
+        for start, final in zip(start_body_pos_list, final_body_pos_list):
+            pos_diff = np.linalg.norm(start[0] - final[0]).item()
+            rot_diff = np.linalg.norm(start[1] - final[1]).item()
+            if pos_diff > NavConfig.DYNAMICS_TOLERANCE_POS or rot_diff > NavConfig.DYNAMICS_TOLERANCE_ROT:
+                Msg.print_info(f"ERROR [MujocoUtils]: pos -- {pos_diff} | rot -- {rot_diff}")
+                return Msg.FAILURE
+        return Msg.SUCCESS
+
     def reset(self):
         mj.mj_resetData(self._model, self._data)
 
@@ -178,25 +193,26 @@ class MujocoUtils:
                 body_names_list.append(body_name)
         return body_names_list
 
-    def get_body_meshes_list(self):
-        body_types_list = []
-        for body_index in range(1, self._model.nbody):
-            body_geom = self._model.body_geomadr[body_index]
-            mesh_id = self._model.geom_dataid[body_geom]
-            body_type = mj.mj_id2name(self._model, mj.mjtObj.mjOBJ_MESH, mesh_id)
-            if body_type:
-                body_types_list.append(body_type)
-        return body_types_list
+    def get_init_pose(self, body_name: str):
+        body_id = mj.mj_name2id(self._model, mj.mjtObj.mjOBJ_BODY, body_name)
+        if body_id == -1:
+            Msg.print_error(f"ERROR [MujocoUtils]: body {body_name} not found")
+            assert False
 
-    def get_body_pose_by_name(self, body_name: str):
-        return_pos_as_list = []
-        return_rot_as_list = []
-        for body_index in range(1, self._model.nbody):
-            if mj.mj_id2name(self._model, mj.mjtObj.mjOBJ_BODY, body_index) == body_name:
-                pos = self._model.body_pos[body_index]
-                rot = self._model.body_quat[body_index]
-                rot = ComputeUtils.convert_quat_to_euler([rot[1], rot[2], rot[3], rot[0]])
-                return_pos_as_list = pos
-                return_rot_as_list = rot
-                break
-        return return_pos_as_list, return_rot_as_list
+        pos = self._model.body_pos[body_id].copy()
+        rot = self._model.body_quat[body_id].copy()
+        rot = ComputeUtils.convert_quat_to_euler([rot[1], rot[2], rot[3], rot[0]])
+
+        return pos, rot
+
+    def get_curr_pose(self, body_name: str):
+        body_id = mj.mj_name2id(self._model, mj.mjtObj.mjOBJ_BODY, body_name)
+        if body_id == -1:
+            Msg.print_error(f"ERROR [MujocoUtils]: body {body_name} not found")
+            assert False
+
+        pos = self._data.xpos[body_id].copy()
+        rot = self._data.xquat[body_id].copy()
+        rot = ComputeUtils.convert_quat_to_euler([rot[1], rot[2], rot[3], rot[0]])
+
+        return pos, rot

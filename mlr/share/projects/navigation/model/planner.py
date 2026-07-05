@@ -25,10 +25,17 @@ from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
 
 class NavOut(Enum):
     STIMULUS_NAME = 0
-    PATH_AS_STR = 1
-    PATH_SYM_LEN = 2
-    PATH_COST_KE = 3
-    PATH_COST_CROCODDYL = 4
+    STATUS = 1
+    PATH_AS_STR = 2
+    PATH_SYM_LEN = 3
+    PATH_COST_KE = 4
+    PATH_COST_CROCODDYL = 5
+
+
+class NavStatus:
+    NAV_SUCCESS = "NAV_SUCCESS"
+    NAV_DYN_VAL_FAILURE = "NAV_DYNAMICS_VALIDATION_FAILURE"
+    NAV_DYN_SIM_FAILURE = "NAV_DYNAMICS_FAILURE"
 
 
 class NavState:
@@ -41,14 +48,10 @@ class NavState:
 
         self._ref_platform_name = None
 
-        self._is_valid = False
-
+        self._nav_status = None
         self._nav_task_type = []
         self._nav_tasks_list = []
         self._children_states_list = []
-
-    def set_as_valid(self):
-        self._is_valid = True
 
     def set_move_num(self, move_num):
         self._move_num = move_num
@@ -60,6 +63,9 @@ class NavState:
         self._ref_platform_name = ref_platform_name
         self.get_scene().get_platform(ref_platform_name).set_visited(True)
 
+    def set_nav_status(self, nav_status):
+        self._nav_status = nav_status
+
     def set_nav_task_type(self, nav_task_type):
         self._nav_task_type = nav_task_type
 
@@ -68,9 +74,6 @@ class NavState:
             if platform.is_goal() and platform.has_been_visited():
                 return True
         return False
-
-    def is_valid(self):
-        return self._is_valid
 
     def add_nav_task(self, nav_task):
         self._nav_tasks_list.append(nav_task)
@@ -98,6 +101,9 @@ class NavState:
 
     def get_ref_platform_name(self):
         return self._ref_platform_name
+
+    def get_nav_status(self):
+        return self._nav_status
 
     def get_nav_task_type(self):
         return self._nav_task_type
@@ -224,7 +230,7 @@ class NavModel:
         skewed_x_bound = surface_xy[0] / 2 - NavConfig.MIN_PLATFORM_PADDING
         skewed_y_bound = surface_xy[1] / 6
 
-        skewed_x = NavModel.skew(0, NavConfig.LARGE_SKEW_SIGMA, 0, -skewed_x_bound, skewed_x_bound)
+        skewed_x = NavModel.skew(0, NavConfig.LARGE_SKEW_SIGMA, -1, -skewed_x_bound, skewed_x_bound)
         skewed_y = NavModel.skew(0, NavConfig.SMALL_SKEW_SIGMA, 1, -skewed_y_bound, skewed_y_bound)
         skewed_y = abs(skewed_y)
 
@@ -252,10 +258,10 @@ class NavModel:
         elif nav_task_type == NavTask.JUMP:
             tasks_list = NavModel.compute_jump_tasks(nav_state, final_platform_name)
         else:
-            return Msg.ERROR
+            return Msg.FAILURE
 
         if len(tasks_list) == 0:
-            return Msg.ERROR
+            return Msg.FAILURE
 
         for task in tasks_list:
             task.run_task(nav_state.get_agent())
@@ -279,7 +285,28 @@ class NavModel:
         return Msg.SUCCESS
 
     @staticmethod
-    def run_dynamics(nav_state: NavState):
+    def run_dynamics_validator(nav_state: NavState):
+        task_registry_list = []
+        for nav_task in nav_state.get_nav_task():
+            task_registry_list.extend(nav_task.get_task_registry_list())
+
+        for task_registry in task_registry_list:
+            if task_registry.get_force_left() is not None:
+                left_pos = task_registry.get_force_left_pos()
+                left_loc = task_registry.get_platform_name_left()
+                if not nav_state.get_scene().is_within_bounds(left_loc, left_pos):
+                    return Msg.FAILURE
+
+            if task_registry.get_force_right() is not None:
+                right_pos = task_registry.get_force_right_pos()
+                right_loc = task_registry.get_platform_name_right()
+                if not nav_state.get_scene().is_within_bounds(right_loc, right_pos):
+                    return Msg.FAILURE
+
+        return Msg.SUCCESS
+
+    @staticmethod
+    def run_dynamics_simulator(nav_state: NavState):
         mujoco_utils = MujocoUtils(nav_state.get_scene().get_stimulus_mjcf_filepath())
 
         task_registry_list = []
@@ -289,12 +316,12 @@ class NavModel:
         if NavConfig.DEBUG_DYNAMICS:
             mujoco_utils.visualize(task_registry_list)
 
-        mujoco_utils.simulate(task_registry_list)
+        status = mujoco_utils.simulate(task_registry_list)
 
-        return Msg.SUCCESS
+        return status
 
     def init_planner(self):
-        self._root_nav_state.set_as_valid()
+        self._root_nav_state.set_nav_status(NavStatus.NAV_SUCCESS)
         self._root_nav_state.set_ref_platform_name(self.get_scene().get_platform_names_list()[0])
         self._nav_states_queue.append(self._root_nav_state)
 
@@ -322,9 +349,9 @@ class NavModel:
 
                 for nav_task_type in nav_task_type_list:
                     next_nav_state: NavState = copy.deepcopy(nav_state)
-                    status = NavModel.run_kinematics(nav_task_type, next_nav_state, next_platform_name)
 
-                    if status == Msg.ERROR:
+                    kin_status = NavModel.run_kinematics(nav_task_type, next_nav_state, next_platform_name)
+                    if kin_status == Msg.FAILURE:
                         if nav_task_type == NavTask.WALK:
                             if nav_state.get_ref_platform_name() == next_platform_name:
                                 next_tasks_queue.extend(next_nav_state.get_candidate_task_items(add_walk=True))
@@ -332,20 +359,28 @@ class NavModel:
                                 next_tasks_queue.extend({next_platform_name: [NavTask.JUMP]}.items())
                         continue
 
-                    status = NavModel.run_dynamics(next_nav_state)
-                    if status == Msg.ERROR:
-                        continue
+                    dyn_val_status = NavModel.run_dynamics_validator(next_nav_state)
+                    if dyn_val_status == Msg.FAILURE:
+                        Msg.print_info(f"INFO [NavModel]: failed dynamics validator")
+                        next_nav_state.set_nav_status(NavStatus.NAV_DYN_VAL_FAILURE)
+                        next_nav_state.get_agent().update_current_pose(nav_state.get_agent_pose())
+                    else:
+                        dyn_sim_status = NavModel.run_dynamics_simulator(next_nav_state)
+                        if dyn_sim_status == Msg.FAILURE:
+                            Msg.print_info(f"INFO [NavModel]: failed dynamics simulator")
+                            next_nav_state.set_nav_status(NavStatus.NAV_DYN_SIM_FAILURE)
+                            next_nav_state.get_agent().update_current_pose(nav_state.get_agent_pose())
+                        else:
+                            Msg.print_info(f"INFO [NavModel]: planner move successful!")
+                            next_nav_state.set_nav_status(NavStatus.NAV_SUCCESS)
+                            next_nav_state.set_ref_platform_name(next_platform_name)
 
                     variation_num += 1
                     next_nav_state.set_move_num(nav_state.get_move_num() + 1)
                     next_nav_state.set_variation_num(variation_num)
-                    next_nav_state.set_ref_platform_name(next_platform_name)
                     next_nav_state.set_nav_task_type(nav_task_type)
-                    next_nav_state.set_as_valid()
                     next_nav_state.reset_children_states_list()
-
                     nav_state.add_child_state(next_nav_state)
-
                     self._nav_states_queue.append(next_nav_state)
 
     def print_possible_paths(self):
@@ -355,7 +390,7 @@ class NavModel:
 
             path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
 
-            if nav_state.is_done() and len(nav_state.get_children_states_list()) == 0:
+            if nav_state.is_done() or nav_state.get_move_num() ==  NavConfig.MAX_TASKS_PER_PLAN:
                 print(f"root1{path_str}")
                 return
 
@@ -368,6 +403,7 @@ class NavModel:
     def save_state_to_file(self, out_filepath):
         FileUtils.create_file(out_filepath)
         FileUtils.write_row_to_file(out_filepath, [NavOut.STIMULUS_NAME.name,
+                                                   NavOut.STATUS.name,
                                                    NavOut.PATH_AS_STR.name,
                                                    NavOut.PATH_SYM_LEN.name,
                                                    NavOut.PATH_COST_KE.name,
@@ -380,8 +416,9 @@ class NavModel:
             path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
             symbolic_len = path_str.count("->")
 
-            if nav_state.is_done() and len(nav_state.get_children_states_list()) == 0:
+            if nav_state.is_done():
                 FileUtils.write_row_to_file(out_filepath, [nav_state.get_scene().get_stimulus_name().split("/")[-1],
+                                                           nav_state.get_nav_status().lower(),
                                                            f"root1{path_str}",
                                                            symbolic_len,
                                                            nav_state.get_total_cost_ke(),

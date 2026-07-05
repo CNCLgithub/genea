@@ -9,7 +9,7 @@ class NavConfig:
     TIME_STEP = 0.02
 
     SMALL_SKEW_SIGMA = 0.25
-    LARGE_SKEW_SIGMA = 0.50
+    LARGE_SKEW_SIGMA = 0.75
 
     MAX_TASKS_PER_PLAN = 10
 
@@ -28,6 +28,8 @@ class NavConfig:
     MIN_PLATFORM_PADDING = 0.25
 
     DYNAMICS_THRESHOLD = 1e-7
+    DYNAMICS_TOLERANCE_POS = 0.1
+    DYNAMICS_TOLERANCE_ROT = 0.1
 
 
 class CrocoddylConfig:

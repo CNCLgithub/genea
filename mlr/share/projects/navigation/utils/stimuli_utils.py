@@ -118,13 +118,13 @@ class Stimulus:
         if mjcf_filepath is None:
             mjcf_filepath = self._stim_mjcf_generator.get_mjcf_filepath()
 
-        mj = MujocoUtils(mjcf_filepath)
+        mj_utils = MujocoUtils(mjcf_filepath)
 
-        for platform_name in mj.get_body_names_list():
+        for platform_name in mj_utils.get_body_names_list():
             if Platform.from_str(platform_name).is_ground():
                 continue
 
-            platform_pos, platform_rot = mj.get_body_pose_by_name(platform_name)
+            platform_pos, platform_rot = mj_utils.get_init_pose(platform_name)
             platform_pose = NavPose(NavPosition(*platform_pos), NavRotation(*platform_rot))
             self._stim_platforms_dict[platform_name] = Platform.from_str(platform_name, platform_pose)
 
@@ -143,6 +143,19 @@ class Stimulus:
             return False
 
         return True
+
+    def is_within_bounds(self, ref_platform_name, query_pos_list):
+        ref_platform = self.get_platform(ref_platform_name)
+
+        center_xy = ref_platform.get_platform_pose().get_position().get_position_as_np_array()[:2]
+        surface_xy = Platform.get_platform_top_surface_xy(ref_platform.get_platform_type())
+
+        condition1 = center_xy[0] - surface_xy[0] / 2 < query_pos_list[0] < center_xy[0] + surface_xy[0] / 2
+        condition2 = center_xy[1] - surface_xy[1] / 2 < query_pos_list[1] < center_xy[1] + surface_xy[1] / 2
+
+        if condition1 and condition2:
+            return True
+        return False
 
     @staticmethod
     def get_root_platform_pose() -> NavPose:

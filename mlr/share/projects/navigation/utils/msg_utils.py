@@ -2,7 +2,7 @@ import sys
 
 
 class Msg:
-    ERROR = "ERROR"
+    FAILURE = "FAILURE"
     SUCCESS = "SUCCESS"
 
     IS_DEBUG = False
