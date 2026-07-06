@@ -28,10 +28,14 @@ class FileUtils:
         os.makedirs(dirpath)
 
     @staticmethod
-    def create_file(out_filepath):
+    def create_file(out_filepath, do_force_create=False):
         FileUtils.create_dir(os.path.dirname(out_filepath))
-        file = open(out_filepath, 'wb')
-        file.close()
+
+        try:
+            with open(out_filepath, 'wb' if do_force_create else 'xb'):
+                pass
+        except FileExistsError:
+            pass
 
     @staticmethod
     def delete_file(filepath):

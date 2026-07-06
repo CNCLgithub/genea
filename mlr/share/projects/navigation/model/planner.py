@@ -390,7 +390,7 @@ class NavModel:
 
             path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
 
-            if nav_state.is_done() or nav_state.get_move_num() ==  NavConfig.MAX_TASKS_PER_PLAN:
+            if nav_state.is_done() or nav_state.get_move_num() == NavConfig.MAX_TASKS_PER_PLAN:
                 print(f"root1{path_str}")
                 return
 
@@ -401,13 +401,14 @@ class NavModel:
             _explore_state(child_state)
 
     def save_state_to_file(self, out_filepath):
-        FileUtils.create_file(out_filepath)
-        FileUtils.write_row_to_file(out_filepath, [NavOut.STIMULUS_NAME.name,
-                                                   NavOut.STATUS.name,
-                                                   NavOut.PATH_AS_STR.name,
-                                                   NavOut.PATH_SYM_LEN.name,
-                                                   NavOut.PATH_COST_KE.name,
-                                                   NavOut.PATH_COST_CROCODDYL.name])
+        if not FileUtils.is_file(out_filepath):
+            FileUtils.create_file(out_filepath)
+            FileUtils.write_row_to_file(out_filepath, [NavOut.STIMULUS_NAME.name,
+                                                       NavOut.STATUS.name,
+                                                       NavOut.PATH_AS_STR.name,
+                                                       NavOut.PATH_SYM_LEN.name,
+                                                       NavOut.PATH_COST_KE.name,
+                                                       NavOut.PATH_COST_CROCODDYL.name])
 
         def _explore_state(nav_state: NavState, input_path_str=""):
             shape = nav_state.get_ref_platform_name().split("_")[0]
