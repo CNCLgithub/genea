@@ -11,6 +11,6 @@
 
 pwd; hostname; date
 
-./run.sh nav python main.py -s $SLURM_ARRAY_TASK_ID
+./run.sh nav python main.py -si $SLURM_ARRAY_TASK_ID
 
 date
