@@ -28,11 +28,31 @@ class Experiment:
             nav_model.print_possible_paths()
             nav_model.save_state_to_file(out_filepath)
 
+    @staticmethod
+    def combine_results(stimuli, out_filepath):
+        stim_dir_list = FileUtils.get_dir_list_in_directory(stimuli.get_stimuli_set_dirpath())
+        stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
+
+        for stim_index, stim_dirpath in enumerate(stim_dir_list):
+            stim_dirname = FileUtils.get_basename(stim_dirpath)
+            stim_filepath = PathUtils.join(PathUtils.get_out_dirpath(), f"{stim_dirname}.csv")
+
+            if not FileUtils.is_file(stim_filepath):
+                continue
+
+            stim_data = FileUtils.read_csv_file(stim_filepath)
+            if stim_index > 0:
+                stim_data = stim_data[1:]
+
+            for data in stim_data:
+                FileUtils.write_row_to_file(out_filepath, data)
+
 
 @click.command()
 @click.option("-si", "--stim_index", type=click.STRING, help="the index of the stimulus to run")
 def main(stim_index):
-    Experiment.run_exp_diff(int(stim_index))
+    # Experiment.run_exp_diff(int(stim_index))
+    Experiment.combine_results(StimuliDiff(), PathUtils.join(PathUtils.get_out_dirpath(), "exp_v2.csv"))
 
 
 if __name__ == '__main__':
