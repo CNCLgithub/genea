@@ -6,11 +6,11 @@
 #SBATCH --mail-user=aalap.shah@yale.edu
 #SBATCH --mail-type=ALL
 #SBATCH --output=job_%A_%a.out
-#SBATCH --array=0:41
+#SBATCH --array=0-41
+
+
 pwd; hostname; date
 
-
 ./run.sh nav python main.py -s $SLURM_ARRAY_TASK_ID
-
 
 date

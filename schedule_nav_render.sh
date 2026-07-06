@@ -9,6 +9,8 @@
 #SBATCH --mail-type=ALL
 #SBATCH --output=job_%A_%a.out
 #SBATCH --array=0-41
+
+
 pwd; hostname; date
 
 blender/blender -b -P mlr/share/projects/navigation/utils/blender_utils.py $SLURM_ARRAY_TASK_ID
