@@ -9,7 +9,7 @@ from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavPro
 
 
 class WalkTask(NavTask):
-    def __init__(self, step_length=None, is_first=False, is_close=False, is_lunge=False):
+    def __init__(self, step_length=None, is_first=False, is_close=False, is_lunge=False, is_other=False):
         super().__init__(NavTask.WALK)
 
         self._step_length = step_length
@@ -17,6 +17,7 @@ class WalkTask(NavTask):
         self._is_first_step = is_first
         self._is_close_step = is_close
         self._is_lunge_step = is_lunge
+        self._is_other_step = is_other
 
     def is_first_step(self):
         return self._is_first_step
@@ -27,14 +28,18 @@ class WalkTask(NavTask):
     def is_lunge_step(self):
         return self._is_lunge_step
 
+    def is_other_step(self):
+        return self._is_other_step
+
     def step(self):
         return self._step_length is not None
 
     def tally_task(self, *platform_names_list):
         phase1 = NavConfig.WALK_STAND_KNOTS
-        phase2 = NavConfig.WALK_TREAD_KNOTS + 1 + phase1
-        phase3 = NavConfig.WALK_STAND_KNOTS + phase2
-        phase4 = NavConfig.WALK_TREAD_KNOTS + 1 + phase3
+        phase2 = NavConfig.WALK_TREAD_KNOTS + phase1
+        phase3 = 1 + phase2
+        phase4 = NavConfig.WALK_STAND_KNOTS + phase3
+        phase5 = NavConfig.WALK_TREAD_KNOTS + 1 + phase4
 
         task_forces_by_time_list = self.get_task_forces_by_time_list()
         for time_index, task_forces_list in enumerate(task_forces_by_time_list):
@@ -46,9 +51,11 @@ class WalkTask(NavTask):
             elif phase1 <= time_index < phase2:
                 task_registry.set_force_left(task_forces_list[0])
             elif phase2 <= time_index < phase3:
+                task_registry.set_force_right(task_forces_list[0])
+            elif phase3 <= time_index < phase4:
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
-            elif phase3 <= time_index < phase4:
+            elif phase4 <= time_index < phase5:
                 task_registry.set_force_right(task_forces_list[0])
 
             if self.is_lunge_step():
@@ -58,10 +65,15 @@ class WalkTask(NavTask):
                 elif phase1 <= time_index < phase2:
                     task_registry.set_platform_name_left(platform_names_list[0])
                 elif phase2 <= time_index < phase3:
-                    task_registry.set_platform_name_left(platform_names_list[0])
                     task_registry.set_platform_name_right(platform_names_list[1])
                 elif phase3 <= time_index < phase4:
+                    task_registry.set_platform_name_left(platform_names_list[0])
                     task_registry.set_platform_name_right(platform_names_list[1])
+                elif phase4 <= time_index < phase5:
+                    task_registry.set_platform_name_right(platform_names_list[1])
+            elif self.is_other_step():
+                task_registry.set_platform_name_left(platform_names_list[1])
+                task_registry.set_platform_name_right(platform_names_list[1])
             else:
                 task_registry.set_platform_name_left(platform_names_list[0])
                 task_registry.set_platform_name_right(platform_names_list[0])

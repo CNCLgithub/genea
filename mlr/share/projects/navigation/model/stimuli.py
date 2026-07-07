@@ -14,7 +14,7 @@ class StimuliTestWalk(StimuliSet):
 
         stimulus = Stimulus(self)
         stimulus.add_platform(platform_type, NavPose(NavPosition(0.0, 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
-        stimulus.add_ground(NavPose(NavPosition(stimulus.get_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
+        stimulus.add_ground(NavPose(NavPosition(stimulus.get_stim_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
         stimulus.add_camera()
         stimulus.save_to_mjcf()
         stimulus.visualize()
@@ -31,7 +31,7 @@ class StimuliTestJump(StimuliSet):
         stimulus = Stimulus(self)
         stimulus.add_platform(platform_type1, NavPose(NavPosition(0.0, 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
         stimulus.add_platform(platform_type2, stimulus.get_next_platform_pose(platform_type2, 0, 0.0, 0.0))
-        stimulus.add_ground(NavPose(NavPosition(stimulus.get_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
+        stimulus.add_ground(NavPose(NavPosition(stimulus.get_stim_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
         stimulus.add_camera()
         stimulus.save_to_mjcf()
         stimulus.visualize()
@@ -50,7 +50,7 @@ class StimuliDiff(StimuliSet):
             stimulus.add_platform(platform_type, platform_pose)
         stimulus.add_platform(PlatformType.get_goal(), stimulus.get_goal_platform_pose(dx_goal, dy_goal))
 
-        stimulus.add_ground(NavPose(NavPosition(stimulus.get_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
+        stimulus.add_ground(NavPose(NavPosition(stimulus.get_stim_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
         stimulus.add_camera()
         stimulus.save_to_mjcf()
         stimulus.visualize()

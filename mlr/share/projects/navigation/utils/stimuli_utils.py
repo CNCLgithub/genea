@@ -1,4 +1,5 @@
 import numpy as np
+from shapely.geometry import point
 
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import StimuliConfig, PlatformConfig
@@ -111,7 +112,7 @@ class Stimulus:
         self._stim_mjcf_generator.add_ground(platform.get_platform_name(), ground_pose_str, ground_size)
 
     def add_camera(self):
-        camera_pos_str = f"{self.get_center_x()} -30 10"
+        camera_pos_str = f"{self.get_stim_center_x()} -30 10"
         self._stim_mjcf_generator.add_camera(camera_pos_str, "1.000 -0.016 -0.000 0.005 0.328 0.945")
 
     def load_stimuli_from_library(self, mjcf_filepath=None):
@@ -181,7 +182,7 @@ class Stimulus:
     def get_goal_platform_pose(self, delta_x, delta_y) -> NavPose:
         query_bounds_xy = Platform.get_platform_bounding_box(PlatformType.get_goal())
 
-        goal_x = self.get_max_x()
+        goal_x = self.get_stim_max_x()
         goal_x += StimuliConfig.MIN_GAP_X + delta_x
         goal_x += query_bounds_xy[0] / 2
 
@@ -240,7 +241,19 @@ class Stimulus:
 
         return self.get_platform(platform_name).get_platform_pose().get_position().get_position_as_np_array()
 
-    def get_point_closest_to_platform(self, ref_platform_name, goal_platform_name):
+    def get_platform_vantage_right(self, platform_name):
+        if platform_name not in self._stim_platforms_dict:
+            Msg.print_error(f"ERROR [Stimuli]: platform {platform_name} not found")
+            assert False
+
+        p_sur_x = Platform.get_platform_top_surface_xy(self.get_platform(platform_name).get_platform_type())[0] / 2
+
+        p_pos = self.get_platform(platform_name).get_platform_pose().get_position().get_position_as_np_array()
+        p_pos[0] += p_sur_x - min(1.5, p_sur_x)
+
+        return p_pos
+
+    def get_vec_closest_to_goal_platform(self, ref_platform_name, goal_platform_name):
         if ref_platform_name not in self._stim_platforms_dict or goal_platform_name not in self._stim_platforms_dict:
             Msg.print_error(f"ERROR [Stimuli]: Platforms {ref_platform_name} or {goal_platform_name} not found.")
 
@@ -260,7 +273,31 @@ class Stimulus:
         if np.deg2rad(45) < np.arctan2(abs(local_xy[1]), abs(local_xy[0])) < np.deg2rad(55):
             local_xy -= (local_xy / (np.linalg.norm(local_xy) + 1e-12)) * (p1.get_platform_bevel_width() / 2)
 
-        return p1_pos + local_xy
+        return local_xy + p1_pos
+
+    def get_vec_to_next_platform(self, ref_pos_vec, next_platform_name):
+        if next_platform_name not in self._stim_platforms_dict:
+            Msg.print_error(f"ERROR [Stimuli]: Platform {next_platform_name} not found.")
+
+        next_platform = self.get_platform(next_platform_name)
+
+        np_pos = next_platform.get_platform_pose().get_position().get_position_as_np_array()[:2]
+
+        np_surface_xy = Platform.get_platform_top_surface_xy(next_platform.get_platform_type())
+        np_surface_xy = np_surface_xy[0] / 2, np_surface_xy[1] / 2
+
+        x_min = np_pos[0] - np_surface_xy[0]
+        x_max = np_pos[0] + np_surface_xy[0]
+        y_min = np_pos[1] - np_surface_xy[1]
+        y_max = np_pos[1] + np_surface_xy[1]
+
+        closest_x = np.clip(max(ref_pos_vec[0], x_min), x_min, x_max)
+        closest_y = np.clip(ref_pos_vec[1], y_min, y_max)
+
+        closest_vec = np.array([closest_x, closest_y]) - ref_pos_vec
+        closest_vec /= np.linalg.norm(closest_vec)
+
+        return closest_vec
 
     def get_gap_between_platform_centers(self, platform_name1, platform_name2):
         if platform_name1 not in self._stim_platforms_dict or platform_name2 not in self._stim_platforms_dict:
@@ -297,13 +334,47 @@ class Stimulus:
 
         return np.linalg.norm([dx, dy])
 
-    def get_x_to_platform_center(self, platform_name, ref_pos_list):
+    def get_space_to_platform_edge(self, platform_name, ref_pos_xy, ref_dir_xy=None):
         if platform_name not in self._stim_platforms_dict:
             Msg.print_error(f"ERROR [Stimuli]: platform {platform_name} not found")
             assert False
 
-        ref_pos = self.get_platform(platform_name).get_platform_pose().get_position().get_position_as_np_array()
-        return ref_pos[0] - ref_pos_list[0]
+        if ref_dir_xy is None:
+            ref_dir_xy = [1.0, 0.0]
+
+        p_center = self.get_platform(platform_name).get_platform_pose().get_position().get_position_as_np_array()[:2]
+
+        p_half_size = Platform.get_platform_top_surface_xy(self.get_platform(platform_name).get_platform_type())
+        p_half_size = np.array([p_half_size[0] / 2.0, p_half_size[1] / 2.0])
+
+        ref_pos_xy = np.array(ref_pos_xy)
+        ref_dir_xy = np.array(ref_dir_xy)
+        ref_dir_xy /= (np.linalg.norm(ref_dir_xy) + 1e-12)
+
+        p_min = p_center - p_half_size
+        p_max = p_center + p_half_size
+
+        candidate_distances = []
+        if abs(ref_dir_xy[0]) > 1e-12:
+            for x_edge in (p_min[0], p_max[0]):
+                t = (x_edge - ref_pos_xy[0]) / ref_dir_xy[0]
+                if t >= 0:
+                    y = ref_pos_xy[1] + t * ref_dir_xy[1]
+                    if p_min[1] - 1e-12 <= y <= p_max[1] + 1e-12:
+                        candidate_distances.append(t)
+
+        if abs(ref_dir_xy[1]) > 1e-12:
+            for y_edge in (p_min[1], p_max[1]):
+                t = (y_edge - ref_pos_xy[1]) / ref_dir_xy[1]
+                if t >= 0:
+                    x = ref_pos_xy[0] + t * ref_dir_xy[0]
+                    if p_min[0] - 1e-12 <= x <= p_max[0] + 1e-12:
+                        candidate_distances.append(t)
+
+        if len(candidate_distances) == 0:
+            return 0.0
+
+        return min(candidate_distances)
 
     def get_x_to_platform_edge(self, query_platform_name, ref_pos_x):
         """
@@ -322,7 +393,7 @@ class Stimulus:
 
         return query_pos[0] - query_surface_xy[0] / 2, query_pos[0] + query_surface_xy[0] / 2
 
-    def get_center_x(self):
+    def get_stim_center_x(self):
         min_platform_list = []
         max_platform_list = []
         for platform_name in self.get_platform_names_list():
@@ -339,7 +410,7 @@ class Stimulus:
 
         return min_x + (max_x - min_x) / 2.0
 
-    def get_max_x(self):
+    def get_stim_max_x(self):
         max_platform_list = []
         for platform_name in self.get_platform_names_list():
             platform = self.get_platform(platform_name)

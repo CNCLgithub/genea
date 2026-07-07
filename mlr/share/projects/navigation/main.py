@@ -22,11 +22,11 @@ class Experiment:
 
         Msg.print_success("Running model on stimulus: " + stim_dirname)
 
-        for _ in range(CoreConfig.EXP_ITERATIONS):
+        for run_num in range(CoreConfig.EXP_ITERATIONS):
             nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(StimuliDiff(), stim_dirname))
             nav_model.run_planner()
             nav_model.print_possible_paths()
-            nav_model.save_state_to_file(out_filepath)
+            nav_model.save_state_to_file(out_filepath, run_num + 1)
 
     @staticmethod
     def combine_results(stimuli, out_filepath):
@@ -51,8 +51,8 @@ class Experiment:
 @click.command()
 @click.option("-si", "--stim_index", type=click.STRING, help="the index of the stimulus to run")
 def main(stim_index):
-    # Experiment.run_exp_diff(int(stim_index))
-    Experiment.combine_results(StimuliDiff(), PathUtils.join(PathUtils.get_out_dirpath(), "exp_v2.csv"))
+    Experiment.run_exp_diff(int(stim_index))
+    # Experiment.combine_results(StimuliDiff(), PathUtils.join(PathUtils.get_out_dirpath(), "exp_v2.csv"))
 
 
 if __name__ == '__main__':

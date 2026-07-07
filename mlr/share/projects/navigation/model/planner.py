@@ -25,11 +25,14 @@ from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
 
 class NavOut(Enum):
     STIMULUS_NAME = 0
-    STATUS = 1
-    PATH_AS_STR = 2
-    PATH_SYM_LEN = 3
-    PATH_COST_KE = 4
-    PATH_COST_CROCODDYL = 5
+    MOVE_NUM = 1
+    VARIATION_NUM = 2
+    RUN_NUM = 3
+    STATUS = 4
+    PATH_AS_STR = 5
+    PATH_SYM_LEN = 6
+    PATH_COST_KE = 7
+    PATH_COST_CROCODDYL = 8
 
 
 class NavStatus:
@@ -167,54 +170,60 @@ class NavModel:
         return ComputeUtils.sample_skew_normal(mu, sigma, alpha, bound_min, bound_max)
 
     @staticmethod
-    def _get_walk_on_platform_tasks(nav_state, platform_name, agent_pos_x):
-        dist = nav_state.get_scene().get_x_to_platform_edge(platform_name, agent_pos_x)[1]
-        dist -= NavConfig.MIN_PLATFORM_PADDING
+    def _correct_walk(walk_vec_xy): # compensate for the beveled corners
+        if -25. < np.rad2deg(np.arctan2(walk_vec_xy[1], walk_vec_xy[0])) < 25.:
+            walk_vec_xy -= (walk_vec_xy / (np.linalg.norm(walk_vec_xy) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING
+        elif -47.5 < np.rad2deg(np.arctan2(walk_vec_xy[1], walk_vec_xy[0])) < 47.5:
+            walk_vec_xy -= (walk_vec_xy / (np.linalg.norm(walk_vec_xy) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING * 2.5
+        else:
+            walk_vec_xy -= (walk_vec_xy / (np.linalg.norm(walk_vec_xy) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING * 1.25
+        return walk_vec_xy
 
-        if dist < 1.5 * NavConfig.MAX_STEP_LENGTH:
-            return []
+    @staticmethod
+    def _compute_walk(walk_vec_xy, do_skew=False, is_other=False):
+        walk_disp_xy = np.linalg.norm(walk_vec_xy)
 
-        dist = NavModel.skew(dist, NavConfig.SMALL_SKEW_SIGMA, -1, 0, dist)
+        if do_skew:
+            walk_disp_xy = NavModel.skew(walk_disp_xy, NavConfig.SMALL_SKEW_SIGMA, -1, 0, walk_disp_xy)
 
-        step_num = int(np.ceil(dist / NavConfig.MAX_STEP_LENGTH - 0.5))
-        step_len = dist / (step_num + 0.5)
+        step_num = int(np.ceil(walk_disp_xy / NavConfig.MAX_STEP_LENGTH - 0.5))
+        step_len = walk_disp_xy / (step_num + 0.5)
 
-        tasks_list: List[NavTask] = [TurnTask(0)]
-        for i in range(1, step_num + 1):
-            tasks_list.append(WalkTask(step_length=step_len, is_first=i == 1, is_close=i == step_num))
-        return tasks_list
+        task_list: List[NavTask] = [TurnTask(np.arctan2(walk_vec_xy[1], walk_vec_xy[0]))]
+        for i in range(step_num + 1):
+            task_list.append(WalkTask(step_length=step_len, is_first=i == 0, is_close=i == step_num, is_other=is_other))
+        return task_list
 
     @staticmethod
     def compute_walk_tasks(nav_state: NavState, start_platform_name, final_platform_name) -> List[NavTask]:
         if start_platform_name == final_platform_name:
-            return NavModel._get_walk_on_platform_tasks(nav_state, start_platform_name, nav_state.get_agent_pose()[0])
+            dist = nav_state.get_scene().get_space_to_platform_edge(start_platform_name, nav_state.get_agent_pose()[:2])
+            walk_vec_xy = np.array([1., 0]) * dist
+            walk_vec_xy = NavModel._correct_walk(walk_vec_xy)
+
+            if np.linalg.norm(walk_vec_xy) < 1.5 * NavConfig.MAX_STEP_LENGTH:
+                return []
+            return NavModel._compute_walk(walk_vec_xy, do_skew=True)
 
         gap = nav_state.get_scene().get_gap_between_platform_edges(start_platform_name, final_platform_name)
         if gap > NavConfig.MAX_STEP_LENGTH:
             return []
 
-        walk_vec = nav_state.get_scene().get_point_closest_to_platform(start_platform_name, final_platform_name)
-        walk_vec -= nav_state.get_agent_pose()[:2]
-        if -25. < np.rad2deg(np.arctan2(walk_vec[1], walk_vec[0])) < 25.:
-            walk_vec -= (walk_vec / (np.linalg.norm(walk_vec) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING
-        else:  # compensate for the beveled corners
-            walk_vec -= (walk_vec / (np.linalg.norm(walk_vec) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING * 2
+        walk_vec_xy = nav_state.get_scene().get_vec_closest_to_goal_platform(start_platform_name, final_platform_name)
+        walk_vec_xy -= nav_state.get_agent_pose()[:2]
+        walk_vec_xy = NavModel._correct_walk(walk_vec_xy)
+        task_list = NavModel._compute_walk(walk_vec_xy, do_skew=False)
 
-        goal_vec = walk_vec[0] + nav_state.get_agent_pose()[0] + NavConfig.MAX_STEP_LENGTH
+        agent_xy = nav_state.get_agent_pose()[:2] + walk_vec_xy
+        walk_vec_xy = nav_state.get_scene().get_vec_to_next_platform(agent_xy, final_platform_name)
+        task_list.append(TurnTask(np.arctan2(walk_vec_xy[1], walk_vec_xy[0])))
+        task_list.append(WalkTask(step_length=NavConfig.MAX_STEP_LENGTH, is_lunge=True))
 
-        step_num = int(np.ceil(np.linalg.norm(walk_vec) / NavConfig.MAX_STEP_LENGTH - 0.5))
-        step_len = np.linalg.norm(walk_vec) / (step_num + 0.5)
+        walk_vec_xy = agent_xy + (walk_vec_xy / (np.linalg.norm(walk_vec_xy) + 1e-12)) * NavConfig.MAX_STEP_LENGTH
+        walk_vec_xy = nav_state.get_scene().get_platform_vantage_right(final_platform_name)[:2] - walk_vec_xy
+        task_list += NavModel._compute_walk(walk_vec_xy, do_skew=False, is_other=True)
 
-        tasks_list: List[NavTask] = [TurnTask(np.arctan2(walk_vec[1], walk_vec[0]))]
-        for i in range(step_num + 1):
-            tasks_list.append(WalkTask(step_length=step_len, is_first=i == 0, is_close=i == step_num))
-
-        tasks_list.append(TurnTask(0))
-        tasks_list.append(WalkTask(step_length=NavConfig.MAX_STEP_LENGTH, is_lunge=True))
-
-        tasks_list += NavModel._get_walk_on_platform_tasks(nav_state, final_platform_name, goal_vec)
-
-        return tasks_list
+        return task_list
 
     @staticmethod
     def compute_jump_tasks(nav_state: NavState, final_platform_name) -> List[NavTask]:
@@ -290,7 +299,7 @@ class NavModel:
         for nav_task in nav_state.get_nav_task():
             task_registry_list.extend(nav_task.get_task_registry_list())
 
-        for task_registry in task_registry_list:
+        for task_index, task_registry in enumerate(task_registry_list):
             if task_registry.get_force_left() is not None:
                 left_pos = task_registry.get_force_left_pos()
                 left_loc = task_registry.get_platform_name_left()
@@ -343,11 +352,14 @@ class NavModel:
             variation_num = 0
             next_tasks_queue = deque(nav_state.get_ref_task_items())
 
+            Msg.print_info(f"{nav_state.get_move_num()}_{nav_state.get_variation_num()} {len(self._nav_states_queue)}")
             while len(next_tasks_queue) > 0:
 
                 next_platform_name, nav_task_type_list = next_tasks_queue.popleft()
 
                 for nav_task_type in nav_task_type_list:
+                    Msg.print_info(f"{nav_state.get_ref_platform_name()} -- {nav_task_type} -> {next_platform_name}")
+
                     next_nav_state: NavState = copy.deepcopy(nav_state)
 
                     kin_status = NavModel.run_kinematics(nav_task_type, next_nav_state, next_platform_name)
@@ -400,10 +412,13 @@ class NavModel:
         for child_state in self._root_nav_state.get_children_states_list():
             _explore_state(child_state)
 
-    def save_state_to_file(self, out_filepath):
+    def save_state_to_file(self, out_filepath, run_num):
         if not FileUtils.is_file(out_filepath):
             FileUtils.create_file(out_filepath)
             FileUtils.write_row_to_file(out_filepath, [NavOut.STIMULUS_NAME.name,
+                                                       NavOut.MOVE_NUM.name,
+                                                       NavOut.VARIATION_NUM.name,
+                                                       NavOut.RUN_NUM.name,
                                                        NavOut.STATUS.name,
                                                        NavOut.PATH_AS_STR.name,
                                                        NavOut.PATH_SYM_LEN.name,
@@ -417,8 +432,11 @@ class NavModel:
             path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
             symbolic_len = path_str.count("->")
 
-            if nav_state.is_done():
+            if nav_state.is_done() or nav_state.get_move_num() == NavConfig.MAX_TASKS_PER_PLAN:
                 FileUtils.write_row_to_file(out_filepath, [nav_state.get_scene().get_stimulus_name(),
+                                                           str(nav_state.get_move_num()),
+                                                           str(nav_state.get_variation_num()),
+                                                           str(run_num),
                                                            nav_state.get_nav_status().lower(),
                                                            f"root1{path_str}",
                                                            symbolic_len,
