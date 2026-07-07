@@ -1,5 +1,6 @@
 class CoreConfig:
     EXP_ITERATIONS = 30
+    EXP_MOVE_MAX_ATTEMPTS = 10
 
 
 class NavConfig:

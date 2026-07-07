@@ -5,7 +5,7 @@ import crocoddyl
 import numpy as np
 import time
 
-from collections import deque, defaultdict
+from collections import deque
 from enum import Enum
 from typing import List
 
@@ -14,7 +14,7 @@ from mlr.share.projects.navigation.model.tasks.turn import TurnTask
 from mlr.share.projects.navigation.model.tasks.walk import WalkTask
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
-from mlr.share.projects.navigation.utils.config_utils import NavConfig
+from mlr.share.projects.navigation.utils.config_utils import NavConfig, CoreConfig
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 from mlr.share.projects.navigation.utils.mujoco_utils import MujocoUtils
@@ -28,17 +28,60 @@ class NavOut(Enum):
     MOVE_NUM = 1
     VARIATION_NUM = 2
     RUN_NUM = 3
-    STATUS = 4
     PATH_AS_STR = 5
     PATH_SYM_LEN = 6
-    PATH_COST_KE = 7
-    PATH_COST_CROCODDYL = 8
+    PATH_ATTEMPTS = 7
+    PATH_COST_KE = 8
+    PATH_COST_CROCODDYL = 9
 
 
-class NavStatus:
-    NAV_SUCCESS = "NAV_SUCCESS"
-    NAV_DYN_VAL_FAILURE = "NAV_DYNAMICS_VALIDATION_FAILURE"
-    NAV_DYN_SIM_FAILURE = "NAV_DYNAMICS_FAILURE"
+class NavMove:
+    def __init__(self, source_platform_name, target_platform_name, nav_task_type=NavTask.WALK):
+        self._source_platform_name = source_platform_name
+        self._target_platform_name = target_platform_name
+        self._nav_task_type = nav_task_type
+
+        self._attempts = 1
+
+        self._cost_ke = 0.0
+        self._cost_crocoddyl = 0.0
+
+    def set_attempts(self, attempts):
+        self._attempts = attempts
+
+    def add_cost_ke(self, cost_ke):
+        self._cost_ke += cost_ke
+
+    def add_cost_crocoddyl(self, cost_crocoddyl):
+        self._cost_crocoddyl += cost_crocoddyl
+
+    def jump(self):
+        if not self.get_source_platform_name() == self.get_target_platform_name():
+            return [NavMove(self.get_source_platform_name(), self.get_target_platform_name(), NavTask.JUMP)]
+        return []
+
+    def redo(self):
+        nav_move = NavMove(self.get_source_platform_name(), self.get_target_platform_name(), self.get_nav_task_type())
+        nav_move.set_attempts(self.get_attempts() + 1)
+        return nav_move
+
+    def get_source_platform_name(self):
+        return self._source_platform_name
+
+    def get_target_platform_name(self):
+        return self._target_platform_name
+
+    def get_nav_task_type(self):
+        return self._nav_task_type
+
+    def get_attempts(self):
+        return self._attempts
+
+    def get_cost_ke(self):
+        return self._cost_ke
+
+    def get_cost_crocoddyl(self):
+        return self._cost_crocoddyl
 
 
 class NavState:
@@ -51,9 +94,13 @@ class NavState:
 
         self._ref_platform_name = None
 
-        self._nav_status = None
-        self._nav_task_type = []
+        self._nav_task_type = None
         self._nav_tasks_list = []
+
+        self._nav_total_cost_ke = 0.0
+        self._nav_total_cost_crocoddyl = 0.0
+        self._nav_total_attempts = 0
+
         self._children_states_list = []
 
     def set_move_num(self, move_num):
@@ -66,11 +113,17 @@ class NavState:
         self._ref_platform_name = ref_platform_name
         self.get_scene().get_platform(ref_platform_name).set_visited(True)
 
-    def set_nav_status(self, nav_status):
-        self._nav_status = nav_status
-
     def set_nav_task_type(self, nav_task_type):
         self._nav_task_type = nav_task_type
+
+    def set_nav_total_cost_ke(self, nav_cost_ke):
+        self._nav_total_cost_ke = nav_cost_ke
+
+    def set_nav_total_cost_crocoddyl(self, nav_cost_crocoddyl):
+        self._nav_total_cost_crocoddyl = nav_cost_crocoddyl
+
+    def set_total_attempts(self, attempts):
+        self._nav_total_attempts = attempts
 
     def is_done(self):
         for platform in self.get_scene().get_platforms_list():
@@ -84,8 +137,17 @@ class NavState:
     def add_child_state(self, child_state: NavState):
         self._children_states_list.append(child_state)
 
-    def reset_children_states_list(self):
+    def reset(self):
         self._children_states_list = []
+        self._nav_tasks_list = []
+        self._nav_total_cost_ke = 0.0
+        self._nav_total_cost_crocoddyl = 0.0
+
+    def compute_task_cost_ke(self):
+        return sum([nav_task.get_task_cost_ke() for nav_task in self.get_nav_task()])
+
+    def compute_task_cost_crocoddyl(self):
+        return sum([task.get_task_cost_crocoddyl() for task in self.get_nav_task()])
 
     def get_agent(self):
         return self._agent
@@ -105,9 +167,6 @@ class NavState:
     def get_ref_platform_name(self):
         return self._ref_platform_name
 
-    def get_nav_status(self):
-        return self._nav_status
-
     def get_nav_task_type(self):
         return self._nav_task_type
 
@@ -118,10 +177,13 @@ class NavState:
         return self._children_states_list
 
     def get_total_cost_ke(self):
-        return sum([nav_task.get_task_cost_ke() for nav_task in self.get_nav_task()])
+        return self._nav_total_cost_ke
 
     def get_total_cost_crocoddyl(self):
-        return sum([task.get_task_cost_crocoddyl() for task in self.get_nav_task()])
+        return self._nav_total_cost_crocoddyl
+
+    def get_total_attempts(self):
+        return self._nav_total_attempts
 
     def get_candidate_platform_names_list(self):
         candidate_platform_names_list = []
@@ -141,17 +203,11 @@ class NavState:
 
         return candidate_platform_names_list
 
-    def get_ref_task_items(self):
-        return {self.get_ref_platform_name(): [NavTask.WALK]}.items()
-
-    def get_candidate_task_items(self, add_walk=False, add_jump=False):
-        candidate_task_dict = defaultdict(list)
+    def get_candidate_moves(self) -> List[NavMove]:
+        candidate_moves_list = [NavMove(self._ref_platform_name, self._ref_platform_name)]
         for candidate_platform_name in self.get_candidate_platform_names_list():
-            if add_walk:
-                candidate_task_dict[candidate_platform_name].append(NavTask.WALK)
-            if add_jump:
-                candidate_task_dict[candidate_platform_name].append(NavTask.JUMP)
-        return candidate_task_dict.items()
+            candidate_moves_list.append(NavMove(self._ref_platform_name, candidate_platform_name))
+        return candidate_moves_list
 
 
 class NavModel:
@@ -261,9 +317,9 @@ class NavModel:
         return [TurnTask(np.arctan2(jump_vec[1], jump_vec[0])), JumpTask(jump_vec)]
 
     @staticmethod
-    def run_kinematics(nav_task_type, nav_state: NavState, final_platform_name):
+    def run_kinematics(nav_task_type, nav_state: NavState, start_platform_name, final_platform_name):
         if nav_task_type == NavTask.WALK:
-            tasks_list = NavModel.compute_walk_tasks(nav_state, nav_state.get_ref_platform_name(), final_platform_name)
+            tasks_list = NavModel.compute_walk_tasks(nav_state, start_platform_name, final_platform_name)
         elif nav_task_type == NavTask.JUMP:
             tasks_list = NavModel.compute_jump_tasks(nav_state, final_platform_name)
         else:
@@ -274,7 +330,7 @@ class NavModel:
 
         for task in tasks_list:
             task.run_task(nav_state.get_agent())
-            task.tally_task(nav_state.get_ref_platform_name(), final_platform_name)
+            task.tally_task(start_platform_name, final_platform_name)
             nav_state.add_nav_task(task)
 
         if NavConfig.VIEW_KINEMATICS:
@@ -330,7 +386,6 @@ class NavModel:
         return status
 
     def init_planner(self):
-        self._root_nav_state.set_nav_status(NavStatus.NAV_SUCCESS)
         self._root_nav_state.set_ref_platform_name(self.get_scene().get_platform_names_list()[0])
         self._nav_states_queue.append(self._root_nav_state)
 
@@ -349,51 +404,63 @@ class NavModel:
             if nav_state.get_move_num() > NavConfig.MAX_TASKS_PER_PLAN:
                 continue
 
-            variation_num = 0
-            next_tasks_queue = deque(nav_state.get_ref_task_items())
-
             Msg.print_info(f"{nav_state.get_move_num()}_{nav_state.get_variation_num()} {len(self._nav_states_queue)}")
-            while len(next_tasks_queue) > 0:
 
-                next_platform_name, nav_task_type_list = next_tasks_queue.popleft()
+            variation_num = 0
+            next_moves_list: List[NavMove] = nav_state.get_candidate_moves()
+            while len(next_moves_list) > 0:
+                next_move = next_moves_list.pop(0)
+                src_platform = next_move.get_source_platform_name()
+                dst_platform = next_move.get_target_platform_name()
+                nav_task_type = next_move.get_nav_task_type()
 
-                for nav_task_type in nav_task_type_list:
-                    Msg.print_info(f"{nav_state.get_ref_platform_name()} -- {nav_task_type} -> {next_platform_name}")
+                Msg.print_info(f"{src_platform} -- {nav_task_type} -> {dst_platform}")
 
-                    next_nav_state: NavState = copy.deepcopy(nav_state)
+                next_nav_state: NavState = copy.deepcopy(nav_state)
+                next_nav_state.reset()
 
-                    kin_status = NavModel.run_kinematics(nav_task_type, next_nav_state, next_platform_name)
-                    if kin_status == Msg.FAILURE:
-                        if nav_task_type == NavTask.WALK:
-                            if nav_state.get_ref_platform_name() == next_platform_name:
-                                next_tasks_queue.extend(next_nav_state.get_candidate_task_items(add_walk=True))
-                            else:
-                                next_tasks_queue.extend({next_platform_name: [NavTask.JUMP]}.items())
+                kin_status = NavModel.run_kinematics(nav_task_type, next_nav_state, src_platform, dst_platform)
+                if kin_status == Msg.FAILURE:
+                    Msg.print_info(f"INFO [NavModel]: failed kinematics")
+                    if nav_task_type == NavTask.WALK:
+                        next_moves_list.extend(next_move.jump())
+                    continue
+
+                next_move.add_cost_ke(next_nav_state.compute_task_cost_ke())
+                next_move.add_cost_crocoddyl(next_nav_state.compute_task_cost_crocoddyl())
+                if src_platform == dst_platform:
+                    next_moves_list = []
+
+                dyn_val_status = NavModel.run_dynamics_validator(next_nav_state)
+                if dyn_val_status == Msg.FAILURE:
+                    Msg.print_info(f"INFO [NavModel]: failed dynamics validator")
+                    if nav_task_type == NavTask.WALK:
+                        next_moves_list.extend(next_move.jump())
+                    elif nav_task_type == NavTask.JUMP and next_move.get_attempts() < CoreConfig.EXP_MOVE_MAX_ATTEMPTS:
+                        next_moves_list.append(next_move.redo())
+                    continue
+
+                dyn_sim_status = NavModel.run_dynamics_simulator(next_nav_state)
+                if dyn_sim_status == Msg.FAILURE:
+                    Msg.print_info(f"INFO [NavModel]: failed dynamics simulator")
+                    if next_move.get_attempts() < CoreConfig.EXP_MOVE_MAX_ATTEMPTS:
+                        next_moves_list.append(next_move.redo())
                         continue
 
-                    dyn_val_status = NavModel.run_dynamics_validator(next_nav_state)
-                    if dyn_val_status == Msg.FAILURE:
-                        Msg.print_info(f"INFO [NavModel]: failed dynamics validator")
-                        next_nav_state.set_nav_status(NavStatus.NAV_DYN_VAL_FAILURE)
-                        next_nav_state.get_agent().update_current_pose(nav_state.get_agent_pose())
-                    else:
-                        dyn_sim_status = NavModel.run_dynamics_simulator(next_nav_state)
-                        if dyn_sim_status == Msg.FAILURE:
-                            Msg.print_info(f"INFO [NavModel]: failed dynamics simulator")
-                            next_nav_state.set_nav_status(NavStatus.NAV_DYN_SIM_FAILURE)
-                            next_nav_state.get_agent().update_current_pose(nav_state.get_agent_pose())
-                        else:
-                            Msg.print_info(f"INFO [NavModel]: planner move successful!")
-                            next_nav_state.set_nav_status(NavStatus.NAV_SUCCESS)
-                            next_nav_state.set_ref_platform_name(next_platform_name)
+                Msg.print_info(f"INFO [NavModel]: SUCCESS!")
 
-                    variation_num += 1
-                    next_nav_state.set_move_num(nav_state.get_move_num() + 1)
-                    next_nav_state.set_variation_num(variation_num)
-                    next_nav_state.set_nav_task_type(nav_task_type)
-                    next_nav_state.reset_children_states_list()
-                    nav_state.add_child_state(next_nav_state)
-                    self._nav_states_queue.append(next_nav_state)
+                variation_num += 1
+                next_nav_state.set_move_num(nav_state.get_move_num() + 1)
+                next_nav_state.set_variation_num(variation_num)
+                next_nav_state.set_nav_task_type(nav_task_type)
+                next_nav_state.set_ref_platform_name(dst_platform)
+
+                next_nav_state.set_nav_total_cost_ke(next_move.get_cost_ke())
+                next_nav_state.set_nav_total_cost_crocoddyl(next_move.get_cost_crocoddyl())
+                next_nav_state.set_total_attempts(next_move.get_attempts())
+
+                nav_state.add_child_state(next_nav_state)
+                self._nav_states_queue.append(next_nav_state)
 
     def print_possible_paths(self):
         def _explore_state(nav_state: NavState, input_path_str=""):
@@ -419,9 +486,9 @@ class NavModel:
                                                        NavOut.MOVE_NUM.name,
                                                        NavOut.VARIATION_NUM.name,
                                                        NavOut.RUN_NUM.name,
-                                                       NavOut.STATUS.name,
                                                        NavOut.PATH_AS_STR.name,
                                                        NavOut.PATH_SYM_LEN.name,
+                                                       NavOut.PATH_ATTEMPTS.name,
                                                        NavOut.PATH_COST_KE.name,
                                                        NavOut.PATH_COST_CROCODDYL.name])
 
@@ -437,9 +504,9 @@ class NavModel:
                                                            str(nav_state.get_move_num()),
                                                            str(nav_state.get_variation_num()),
                                                            str(run_num),
-                                                           nav_state.get_nav_status().lower(),
                                                            f"root1{path_str}",
                                                            symbolic_len,
+                                                           nav_state.get_total_attempts(),
                                                            nav_state.get_total_cost_ke(),
                                                            nav_state.get_total_cost_crocoddyl()])
                 return
