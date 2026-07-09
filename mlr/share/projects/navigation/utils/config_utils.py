@@ -1,5 +1,9 @@
 class CoreConfig:
+    RUN_DYNAMICS = False
+
     EXP_ITERATIONS = 30
+    EXP_STABILITY_MOVES = 1000
+    EXP_STABILITY_COUNT = 10
     EXP_MOVE_MAX_ATTEMPTS = 10
 
 

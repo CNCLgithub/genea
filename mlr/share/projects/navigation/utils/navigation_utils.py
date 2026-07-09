@@ -4,7 +4,7 @@ import pinocchio
 
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
-from mlr.share.projects.navigation.utils.core_utils import NavForce
+from mlr.share.projects.navigation.utils.core_utils import NavForce, NavPose, NavPosition
 from mlr.share.projects.navigation.utils.crocoddyl_utils import CrocoddylUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 
@@ -65,6 +65,17 @@ class NavTask:
         self._task_type = task_type
         self._task_solver = None
         self._task_registry_list = []
+
+    @staticmethod
+    def get_random_force(force_pos_vec):
+        roll = np.random.uniform(-100, 100)
+        pitch = np.random.uniform(-100, 100)
+        yaw = np.random.uniform(-1000, -2500)
+
+        force_pose = NavPose(NavPosition(force_pos_vec[0], force_pos_vec[1], force_pos_vec[2]))
+        force_pose.set_rpy(roll, pitch, yaw)
+
+        return NavForce(force_pose, 0.001)
 
     def add_to_registry(self, nav_task_registry: NavTaskRegistry):
         self._task_registry_list.append(nav_task_registry)

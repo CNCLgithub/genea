@@ -11,8 +11,10 @@ from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
 
 
 class Experiment:
+    VERSION = "v2"
+
     @staticmethod
-    def run_exp_diff(stim_index):
+    def run_exp_diff_planner(stim_index):
         stim_diff = StimuliDiff()
         stim_dir_list = FileUtils.get_dir_list_in_directory(stim_diff.get_stimuli_set_dirpath())
         stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
@@ -29,9 +31,28 @@ class Experiment:
             nav_model.save_state_to_file(out_filepath, run_num + 1)
 
     @staticmethod
-    def combine_results(stimuli, out_filepath):
+    def run_exp_diff_stability():
+        stim_diff = StimuliDiff()
+        stim_dir_list = FileUtils.get_dir_list_in_directory(stim_diff.get_stimuli_set_dirpath())
+        stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
+
+        for stim_index, stim_dirpath in enumerate(stim_dir_list):
+            if not stim_index == 12:
+                continue
+            stim_dirname = FileUtils.get_basename(stim_dir_list[stim_index])
+            out_filepath = PathUtils.join(PathUtils.get_out_dirpath(), f"exp_{Experiment.VERSION}_stability.csv")
+
+            Msg.print_success("Running stability heuristic on stimulus: " + stim_dirname)
+
+            nav_model = NavModel(NavAgent.TALOS_LEGS, Stimulus(StimuliDiff(), stim_dirname))
+            nav_model.run_stability_heuristic(out_filepath)
+
+    @staticmethod
+    def combine_results(stimuli):
         stim_dir_list = FileUtils.get_dir_list_in_directory(stimuli.get_stimuli_set_dirpath())
         stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
+
+        out_filepath = PathUtils.join(PathUtils.get_out_dirpath(), f"exp_{Experiment.VERSION}.csv")
 
         for stim_index, stim_dirpath in enumerate(stim_dir_list):
             stim_dirname = FileUtils.get_basename(stim_dirpath)
@@ -51,8 +72,10 @@ class Experiment:
 @click.command()
 @click.option("-si", "--stim_index", type=click.STRING, help="the index of the stimulus to run")
 def main(stim_index):
-    Experiment.run_exp_diff(int(stim_index))
-    # Experiment.combine_results(StimuliDiff(), PathUtils.join(PathUtils.get_out_dirpath(), "exp_v2.csv"))
+    # Experiment.run_exp_diff_planner(int("0"))
+    # Experiment.combine_results(StimuliDiff())
+
+    Experiment.run_exp_diff_stability()
 
 
 if __name__ == '__main__':

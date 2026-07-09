@@ -18,13 +18,14 @@ from mlr.share.projects.navigation.utils.config_utils import NavConfig, CoreConf
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 from mlr.share.projects.navigation.utils.mujoco_utils import MujocoUtils
-from mlr.share.projects.navigation.utils.navigation_utils import NavTask
+from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavTaskRegistry
 from mlr.share.projects.navigation.utils.platform_utils import Platform, PlatformType
 from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
 
 
-class NavOut(Enum):
+class NavOutPlanner(Enum):
     STIMULUS_NAME = 0
+    STIMULUS_PLATFORM_COUNT = 1
     MOVE_NUM = 1
     VARIATION_NUM = 2
     RUN_NUM = 3
@@ -33,6 +34,20 @@ class NavOut(Enum):
     PATH_ATTEMPTS = 7
     PATH_COST_KE = 8
     PATH_COST_CROCODDYL = 9
+
+
+class NavOutHeuristic(Enum):
+    STIMULUS_NAME = 0
+    PLATFORM_COUNT = 1
+    P1 = 2
+    P2 = 3
+    P3 = 4
+    P4 = 5
+    P5 = 6
+    P6 = 7
+    P7 = 8
+    P8 = 9
+    P9 = 10
 
 
 class NavMove:
@@ -351,6 +366,9 @@ class NavModel:
 
     @staticmethod
     def run_dynamics_validator(nav_state: NavState):
+        if not CoreConfig.RUN_DYNAMICS:
+            return Msg.SUCCESS
+
         task_registry_list = []
         for nav_task in nav_state.get_nav_task():
             task_registry_list.extend(nav_task.get_task_registry_list())
@@ -372,6 +390,9 @@ class NavModel:
 
     @staticmethod
     def run_dynamics_simulator(nav_state: NavState):
+        if not CoreConfig.RUN_DYNAMICS:
+            return Msg.SUCCESS
+
         mujoco_utils = MujocoUtils(nav_state.get_scene().get_stimulus_mjcf_filepath())
 
         task_registry_list = []
@@ -428,8 +449,13 @@ class NavModel:
 
                 next_move.add_cost_ke(next_nav_state.compute_task_cost_ke())
                 next_move.add_cost_crocoddyl(next_nav_state.compute_task_cost_crocoddyl())
+
                 if src_platform == dst_platform:
                     next_moves_list = []
+
+                task_registry_list = []
+                for nav_task in next_nav_state.get_nav_task():
+                    task_registry_list.extend(nav_task.get_task_registry_list())
 
                 dyn_val_status = NavModel.run_dynamics_validator(next_nav_state)
                 if dyn_val_status == Msg.FAILURE:
@@ -462,6 +488,57 @@ class NavModel:
                 nav_state.add_child_state(next_nav_state)
                 self._nav_states_queue.append(next_nav_state)
 
+    def run_stability_heuristic(self, out_filepath):
+        platform_instability_count_list = [0] * 9
+
+        platform_names_list = self.get_scene().get_platform_names_list()
+        platform_names_list = platform_names_list[1:-1]
+
+        for platform_index, platform_name in enumerate(platform_names_list):
+            for _ in range(CoreConfig.EXP_STABILITY_MOVES):
+                task_registry_list = []
+                for _ in range(CoreConfig.EXP_STABILITY_COUNT):
+                    platform = self.get_scene().get_platform(platform_name)
+                    platform_surface_xy = Platform.get_platform_top_surface_xy(platform.get_platform_type())
+
+                    force_pos_vec = self.get_scene().get_platform_center(platform_name)
+                    force_pos_vec[0] = np.random.uniform(-platform_surface_xy[0] / 2, platform_surface_xy[0] / 2)
+                    force_pos_vec[1] = np.random.uniform(-platform_surface_xy[1] / 2, platform_surface_xy[1] / 2)
+
+                    force_left = NavTask.get_random_force(force_pos_vec)
+                    force_right = NavTask.get_random_force(force_pos_vec)
+
+                    task_registry = NavTaskRegistry()
+                    task_registry.set_platform_name_left(platform_name)
+                    task_registry.set_platform_name_right(platform_name)
+                    task_registry.set_force_left(force_left)
+                    task_registry.set_force_right(force_right)
+
+                    task_registry_list.append(task_registry)
+
+                mujoco_utils = MujocoUtils(self.get_scene().get_stimulus_mjcf_filepath())
+                sim_status = mujoco_utils.simulate(task_registry_list)
+
+                platform_instability_count_list[platform_index] += int(sim_status == Msg.FAILURE)
+
+        if not FileUtils.is_file(out_filepath):
+            FileUtils.create_file(out_filepath)
+            FileUtils.write_row_to_file(out_filepath, [NavOutHeuristic.STIMULUS_NAME.name,
+                                                       NavOutHeuristic.PLATFORM_COUNT.name,
+                                                       NavOutHeuristic.P1.name,
+                                                       NavOutHeuristic.P2.name,
+                                                       NavOutHeuristic.P3.name,
+                                                       NavOutHeuristic.P4.name,
+                                                       NavOutHeuristic.P5.name,
+                                                       NavOutHeuristic.P6.name,
+                                                       NavOutHeuristic.P7.name,
+                                                       NavOutHeuristic.P8.name,
+                                                       NavOutHeuristic.P9.name])
+
+        FileUtils.write_row_to_file(out_filepath, [self.get_scene().get_stimulus_name(),
+                                                   len(platform_names_list),
+                                                   *platform_instability_count_list])
+
     def print_possible_paths(self):
         def _explore_state(nav_state: NavState, input_path_str=""):
             shape = nav_state.get_ref_platform_name().split("_")[0]
@@ -482,15 +559,15 @@ class NavModel:
     def save_state_to_file(self, out_filepath, run_num):
         if not FileUtils.is_file(out_filepath):
             FileUtils.create_file(out_filepath)
-            FileUtils.write_row_to_file(out_filepath, [NavOut.STIMULUS_NAME.name,
-                                                       NavOut.MOVE_NUM.name,
-                                                       NavOut.VARIATION_NUM.name,
-                                                       NavOut.RUN_NUM.name,
-                                                       NavOut.PATH_AS_STR.name,
-                                                       NavOut.PATH_SYM_LEN.name,
-                                                       NavOut.PATH_ATTEMPTS.name,
-                                                       NavOut.PATH_COST_KE.name,
-                                                       NavOut.PATH_COST_CROCODDYL.name])
+            FileUtils.write_row_to_file(out_filepath, [NavOutPlanner.STIMULUS_NAME.name,
+                                                       NavOutPlanner.MOVE_NUM.name,
+                                                       NavOutPlanner.VARIATION_NUM.name,
+                                                       NavOutPlanner.RUN_NUM.name,
+                                                       NavOutPlanner.PATH_AS_STR.name,
+                                                       NavOutPlanner.PATH_SYM_LEN.name,
+                                                       NavOutPlanner.PATH_ATTEMPTS.name,
+                                                       NavOutPlanner.PATH_COST_KE.name,
+                                                       NavOutPlanner.PATH_COST_CROCODDYL.name])
 
         def _explore_state(nav_state: NavState, input_path_str=""):
             shape = nav_state.get_ref_platform_name().split("_")[0]

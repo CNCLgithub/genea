@@ -63,6 +63,9 @@ class NavPose:
     def neutral():
         return NavPose(NavPosition(0.0, 0.0, 0.0))
 
+    def set_rpy(self, roll, pitch, yaw):
+        self._rotation = NavRotation(roll, pitch, yaw)
+
     def get_position(self):
         return self._position
 
