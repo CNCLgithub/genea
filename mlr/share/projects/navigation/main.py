@@ -37,8 +37,6 @@ class Experiment:
         stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
 
         for stim_index, stim_dirpath in enumerate(stim_dir_list):
-            if not stim_index == 12:
-                continue
             stim_dirname = FileUtils.get_basename(stim_dir_list[stim_index])
             out_filepath = PathUtils.join(PathUtils.get_out_dirpath(), f"exp_{Experiment.VERSION}_stability.csv")
 
