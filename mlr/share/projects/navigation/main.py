@@ -69,10 +69,10 @@ class ModelRunner:
 @click.command()
 @click.option("-si", "--stim_index", type=click.STRING, help="the index of the stimulus to run")
 def main(stim_index):
-    # ModelRunner.run_diff_planner(stim_index)
-    # ModelRunner.combine_results(StimuliDiff(), "model.csv")
+    # ModelRunner.run_diff_planner(int(stim_index))
+    # ModelRunner.combine_results(StimuliDiff(), "model_genea.csv")
 
-    ModelRunner.run_diff_stability(stim_index)
+    ModelRunner.run_diff_stability(int(stim_index))
     # ModelRunner.combine_results(StimuliDiff(), "model_stability.csv")
 
 
