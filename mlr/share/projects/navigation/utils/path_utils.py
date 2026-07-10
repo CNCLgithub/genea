@@ -35,6 +35,14 @@ class PathUtils:
         return os.path.join(PathUtils.get_library_dirpath(), "out")
 
     @staticmethod
+    def get_out_model_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "model")
+
+    @staticmethod
+    def get_out_prolific_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "prolific")
+
+    @staticmethod
     def get_out_nav_data_dirpath():
         return os.path.join(PathUtils.get_out_dirpath(), "nav_data")
 
