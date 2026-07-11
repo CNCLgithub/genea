@@ -569,11 +569,14 @@ class NavModel:
                                                        NavOutPlanner.PATH_COST_KE.name,
                                                        NavOutPlanner.PATH_COST_CROCODDYL.name])
 
-        def _explore_state(nav_state: NavState, input_path_str=""):
+        def _explore_state(nav_state: NavState, input_path_str="", total_attempts=0, total_ke=0.0, total_crocoddyl=0.0):
             shape = nav_state.get_ref_platform_name().split("_")[0]
             platform_number = nav_state.get_ref_platform_name().split("_")[-1]
 
             path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
+            attempts = total_attempts + nav_state.get_total_attempts()
+            cost_ke = total_ke + nav_state.get_total_cost_ke()
+            cost_crocoddyl = total_crocoddyl + nav_state.get_total_cost_crocoddyl()
             symbolic_len = path_str.count("->")
 
             if nav_state.is_done() or nav_state.get_move_num() == NavConfig.MAX_TASKS_PER_PLAN:
@@ -583,13 +586,13 @@ class NavModel:
                                                            str(run_num),
                                                            f"root1{path_str}",
                                                            symbolic_len,
-                                                           nav_state.get_total_attempts(),
-                                                           nav_state.get_total_cost_ke(),
-                                                           nav_state.get_total_cost_crocoddyl()])
+                                                           attempts,
+                                                           cost_ke,
+                                                           cost_crocoddyl])
                 return
 
             for child in nav_state.get_children_states_list():
-                _explore_state(child, path_str)
+                _explore_state(child, path_str, attempts, cost_ke, cost_crocoddyl)
 
         for child_state in self._root_nav_state.get_children_states_list():
             _explore_state(child_state)

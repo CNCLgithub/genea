@@ -51,9 +51,9 @@ class ModelRunner:
 
         for stim_index, stim_dirpath in enumerate(stim_dir_list):
             stim_dirname = FileUtils.get_basename(stim_dirpath)
-            stim_filepath = PathUtils.join(PathUtils.get_out_dirpath(), f"{stim_dirname}.csv")
+            stim_filepath = PathUtils.join(PathUtils.get_out_model_dirpath(), f"{stim_dirname}.csv")
             if "stability" in out_filename:
-                stim_filepath = PathUtils.join(PathUtils.get_out_dirpath(), f"{stim_dirname}_stability.csv")
+                stim_filepath = PathUtils.join(PathUtils.get_out_model_dirpath(), f"{stim_dirname}_stability.csv")
 
             if not FileUtils.is_file(stim_filepath):
                 continue
@@ -69,10 +69,10 @@ class ModelRunner:
 @click.command()
 @click.option("-si", "--stim_index", type=click.STRING, help="the index of the stimulus to run")
 def main(stim_index):
-    # ModelRunner.run_diff_planner(int(stim_index))
+    ModelRunner.run_diff_planner(int(stim_index))
     # ModelRunner.combine_results(StimuliDiff(), "model_genea.csv")
 
-    ModelRunner.run_diff_stability(int(stim_index))
+    # ModelRunner.run_diff_stability(int(stim_index))
     # ModelRunner.combine_results(StimuliDiff(), "model_stability.csv")
 
 

@@ -31,16 +31,20 @@ class PathUtils:
         return os.path.join(PathUtils.get_root_dirpath(), "library")
 
     @staticmethod
+    def get_prolific_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "prolific")
+
+    @staticmethod
     def get_out_dirpath():
         return os.path.join(PathUtils.get_library_dirpath(), "out")
 
     @staticmethod
-    def get_out_model_dirpath():
-        return os.path.join(PathUtils.get_library_dirpath(), "model")
+    def get_out_plots_dirpath():
+        return os.path.join(PathUtils.get_out_dirpath(), "plots")
 
     @staticmethod
-    def get_out_prolific_dirpath():
-        return os.path.join(PathUtils.get_library_dirpath(), "prolific")
+    def get_out_model_dirpath():
+        return os.path.join(PathUtils.get_out_dirpath(), "model")
 
     @staticmethod
     def get_out_nav_data_dirpath():

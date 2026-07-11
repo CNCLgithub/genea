@@ -9,6 +9,8 @@ class CoreConfig:
 
 class AnalysisConfig:
     TEMP_DEFAULT = 3.0
+    
+    ANALYSIS_PEARSON = True
 
 
 class NavConfig:
