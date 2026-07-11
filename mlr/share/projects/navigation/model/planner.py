@@ -24,21 +24,19 @@ from mlr.share.projects.navigation.utils.stimuli_utils import Stimulus
 
 
 class NavOutPlanner(Enum):
-    STIMULUS_NAME = 0
-    STIMULUS_PLATFORM_COUNT = 1
-    MOVE_NUM = 1
-    VARIATION_NUM = 2
-    RUN_NUM = 3
-    PATH_AS_STR = 5
-    PATH_SYM_LEN = 6
-    PATH_ATTEMPTS = 7
-    PATH_COST_KE = 8
-    PATH_COST_CROCODDYL = 9
+    NAME = 0
+    SUCCESS = 1
+    RUN_NUM = 2
+    PATH_COST_KE = 3
+    PATH_COST_CROCODDYL = 4
+    PATH_SYM_LEN = 5
+    PATH_ATTEMPTS = 6
+    PATH_AS_STR = 7
 
 
 class NavOutHeuristic(Enum):
-    STIMULUS_NAME = 0
-    PLATFORM_COUNT = 1
+    NAME = 0
+    COUNT = 1
     P1 = 2
     P2 = 3
     P3 = 4
@@ -140,11 +138,16 @@ class NavState:
     def set_total_attempts(self, attempts):
         self._nav_total_attempts = attempts
 
-    def is_done(self):
+    def is_success(self):
         for platform in self.get_scene().get_platforms_list():
             if platform.is_goal() and platform.has_been_visited():
                 return True
         return False
+
+    def is_done(self):
+        condition1 = self.get_move_num() == CoreConfig.EXP_MAX_MOVE_COUNT
+        condition2 = self.get_total_attempts() >= CoreConfig.EXP_MAX_MOVE_ATTEMPTS
+        return condition1 or condition2 or self.is_success()
 
     def add_nav_task(self, nav_task):
         self._nav_tasks_list.append(nav_task)
@@ -241,7 +244,7 @@ class NavModel:
         return ComputeUtils.sample_skew_normal(mu, sigma, alpha, bound_min, bound_max)
 
     @staticmethod
-    def _correct_walk(walk_vec_xy): # compensate for the beveled corners
+    def _correct_walk(walk_vec_xy):  # compensate for the beveled corners
         if -25. < np.rad2deg(np.arctan2(walk_vec_xy[1], walk_vec_xy[0])) < 25.:
             walk_vec_xy -= (walk_vec_xy / (np.linalg.norm(walk_vec_xy) + 1e-12)) * NavConfig.MIN_PLATFORM_PADDING
         elif -47.5 < np.rad2deg(np.arctan2(walk_vec_xy[1], walk_vec_xy[0])) < 47.5:
@@ -422,9 +425,6 @@ class NavModel:
             if len(nav_state.get_candidate_platform_names_list()) == 0:
                 continue
 
-            if nav_state.get_move_num() > NavConfig.MAX_TASKS_PER_PLAN:
-                continue
-
             Msg.print_info(f"{nav_state.get_move_num()}_{nav_state.get_variation_num()} {len(self._nav_states_queue)}")
 
             variation_num = 0
@@ -462,14 +462,14 @@ class NavModel:
                     Msg.print_info(f"INFO [NavModel]: failed dynamics validator")
                     if nav_task_type == NavTask.WALK:
                         next_moves_list.extend(next_move.jump())
-                    elif nav_task_type == NavTask.JUMP and next_move.get_attempts() < CoreConfig.EXP_MOVE_MAX_ATTEMPTS:
+                    elif nav_task_type == NavTask.JUMP and next_move.get_attempts() < CoreConfig.EXP_MAX_MOVE_ATTEMPTS:
                         next_moves_list.append(next_move.redo())
                     continue
 
                 dyn_sim_status = NavModel.run_dynamics_simulator(next_nav_state)
                 if dyn_sim_status == Msg.FAILURE:
                     Msg.print_info(f"INFO [NavModel]: failed dynamics simulator")
-                    if next_move.get_attempts() < CoreConfig.EXP_MOVE_MAX_ATTEMPTS:
+                    if next_move.get_attempts() < CoreConfig.EXP_MAX_MOVE_ATTEMPTS:
                         next_moves_list.append(next_move.redo())
                         continue
 
@@ -523,8 +523,8 @@ class NavModel:
 
         if not FileUtils.is_file(out_filepath):
             FileUtils.create_file(out_filepath)
-            FileUtils.write_row_to_file(out_filepath, [NavOutHeuristic.STIMULUS_NAME.name,
-                                                       NavOutHeuristic.PLATFORM_COUNT.name,
+            FileUtils.write_row_to_file(out_filepath, [NavOutHeuristic.NAME.name,
+                                                       NavOutHeuristic.COUNT.name,
                                                        NavOutHeuristic.P1.name,
                                                        NavOutHeuristic.P2.name,
                                                        NavOutHeuristic.P3.name,
@@ -546,56 +546,53 @@ class NavModel:
 
             path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
 
-            if nav_state.is_done() or nav_state.get_move_num() == NavConfig.MAX_TASKS_PER_PLAN:
-                print(f"root1{path_str}")
+            if nav_state.is_done():
+                print(path_str)
                 return
 
             for child in nav_state.get_children_states_list():
                 _explore_state(child, path_str)
 
         for child_state in self._root_nav_state.get_children_states_list():
-            _explore_state(child_state)
+            _explore_state(child_state, "root1")
 
     def save_state_to_file(self, out_filepath, run_num):
         if not FileUtils.is_file(out_filepath):
             FileUtils.create_file(out_filepath)
-            FileUtils.write_row_to_file(out_filepath, [NavOutPlanner.STIMULUS_NAME.name,
-                                                       NavOutPlanner.MOVE_NUM.name,
-                                                       NavOutPlanner.VARIATION_NUM.name,
+            FileUtils.write_row_to_file(out_filepath, [NavOutPlanner.NAME.name,
+                                                       NavOutPlanner.SUCCESS.name,
                                                        NavOutPlanner.RUN_NUM.name,
-                                                       NavOutPlanner.PATH_AS_STR.name,
+                                                       NavOutPlanner.PATH_COST_KE.name,
+                                                       NavOutPlanner.PATH_COST_CROCODDYL.name,
                                                        NavOutPlanner.PATH_SYM_LEN.name,
                                                        NavOutPlanner.PATH_ATTEMPTS.name,
-                                                       NavOutPlanner.PATH_COST_KE.name,
-                                                       NavOutPlanner.PATH_COST_CROCODDYL.name])
+                                                       NavOutPlanner.PATH_AS_STR.name])
 
-        def _explore_state(nav_state: NavState, input_path_str="", total_attempts=0, total_ke=0.0, total_crocoddyl=0.0):
+        def _explore_state(nav_state: NavState, input_path_as_str, total_attempts=0, total_ke=0.0, total_croc=0.0):
             shape = nav_state.get_ref_platform_name().split("_")[0]
             platform_number = nav_state.get_ref_platform_name().split("_")[-1]
 
-            path_str = input_path_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
+            path_as_str = input_path_as_str + f" --{nav_state.get_nav_task_type()[0]}-> [{shape}{platform_number}]"
             attempts = total_attempts + nav_state.get_total_attempts()
             cost_ke = total_ke + nav_state.get_total_cost_ke()
-            cost_crocoddyl = total_crocoddyl + nav_state.get_total_cost_crocoddyl()
-            symbolic_len = path_str.count("->")
+            cost_croc = total_croc + nav_state.get_total_cost_crocoddyl()
 
-            if nav_state.is_done() or nav_state.get_move_num() == NavConfig.MAX_TASKS_PER_PLAN:
+            if nav_state.is_done():
                 FileUtils.write_row_to_file(out_filepath, [nav_state.get_scene().get_stimulus_name(),
-                                                           str(nav_state.get_move_num()),
-                                                           str(nav_state.get_variation_num()),
+                                                           int(nav_state.is_success()),
                                                            str(run_num),
-                                                           f"root1{path_str}",
-                                                           symbolic_len,
-                                                           attempts,
                                                            cost_ke,
-                                                           cost_crocoddyl])
+                                                           cost_croc,
+                                                           path_as_str.count("->"),
+                                                           attempts,
+                                                           path_as_str])
                 return
 
             for child in nav_state.get_children_states_list():
-                _explore_state(child, path_str, attempts, cost_ke, cost_crocoddyl)
+                _explore_state(child, path_as_str, attempts, cost_ke, cost_croc)
 
         for child_state in self._root_nav_state.get_children_states_list():
-            _explore_state(child_state)
+            _explore_state(child_state, "root1")
 
     def get_scene(self):
         return self._scene

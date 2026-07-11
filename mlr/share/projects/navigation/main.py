@@ -15,6 +15,7 @@ class ModelRunner:
     def run_diff_planner(stim_index):
         stim_diff = StimuliDiff()
         stim_dir_list = FileUtils.get_dir_list_in_directory(stim_diff.get_stimuli_set_dirpath())
+        stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[2]))
         stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
 
         stim_dirname = FileUtils.get_basename(stim_dir_list[stim_index])
