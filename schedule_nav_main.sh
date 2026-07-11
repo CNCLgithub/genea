@@ -2,7 +2,7 @@
 #SBATCH --job-name=genea_main
 #SBATCH --partition=day
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=256G
+#SBATCH --mem=32G
 #SBATCH --mail-user=aalap.shah@yale.edu
 #SBATCH --mail-type=ALL
 #SBATCH --output=job_%A_%a.out
