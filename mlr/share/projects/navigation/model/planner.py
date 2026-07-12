@@ -313,8 +313,8 @@ class NavModel:
         skewed_x_bound = surface_xy[0] / 2 - NavConfig.MIN_PLATFORM_PADDING
         skewed_y_bound = surface_xy[1] / 6
 
-        skewed_x = NavModel.skew(0, NavConfig.LARGE_SKEW_SIGMA, -1, -skewed_x_bound, skewed_x_bound)
-        skewed_y = NavModel.skew(0, NavConfig.SMALL_SKEW_SIGMA, 1, -skewed_y_bound, skewed_y_bound)
+        skewed_x = NavModel.skew(-surface_xy[0] / 6, NavConfig.SMALL_SKEW_SIGMA, -1, -skewed_x_bound, skewed_x_bound)
+        skewed_y = NavModel.skew(0, NavConfig.LARGE_SKEW_SIGMA, 1, -skewed_y_bound, skewed_y_bound)
         skewed_y = abs(skewed_y)
 
         jump_vec = nav_state.get_scene().get_platform_center(final_platform_name)
