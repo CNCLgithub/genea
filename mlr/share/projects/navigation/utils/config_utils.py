@@ -29,7 +29,7 @@ class NavConfig:
     WALK_SKEW_SIGMA = 0.1
     JUMP_SKEW_SIGMA = 0.5
 
-    MAX_JUMP_LENGTH = 5.2
+    MAX_JUMP_LENGTH = 5.0
     MAX_JUMP_HEIGHT = 2.0
 
     MAX_STEP_LENGTH = 1.0

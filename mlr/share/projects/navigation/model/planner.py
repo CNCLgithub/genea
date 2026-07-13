@@ -277,7 +277,7 @@ class NavModel:
             walk_vec_xy = np.array([1., 0]) * dist
             walk_vec_xy = NavModel._correct_walk(walk_vec_xy)
 
-            if np.linalg.norm(walk_vec_xy) < 1.5 * NavConfig.MAX_STEP_LENGTH:
+            if np.linalg.norm(walk_vec_xy) < 2.25 * NavConfig.MAX_STEP_LENGTH:
                 return []
             return NavModel._compute_walk(walk_vec_xy, do_skew=True)
 

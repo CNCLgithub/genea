@@ -114,18 +114,16 @@ class NavTask:
         if self._task_solver is None:
             return 0.0
 
-        total_ke = 0.0
-
         pin_model = self.get_task_solver().problem.runningModels[0].state.pinocchio
         pin_data = pin_model.createData()
 
-        for pose_vec in self.get_task_solver().xs:
-            nq = pin_model.nq
-            nv = pin_model.nv
+        nq = pin_model.nq
+        nv = pin_model.nv
 
+        total_ke = 0.0
+        for pose_vec in self.get_task_solver().xs:
             q = pose_vec[:nq]
             v = pose_vec[nq:nq + nv]
-
             total_ke += pinocchio.computeKineticEnergy(pin_model, pin_data, q, v)
         return total_ke
 
