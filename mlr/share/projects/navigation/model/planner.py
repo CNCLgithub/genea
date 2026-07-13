@@ -76,6 +76,8 @@ class NavMove:
     def redo(self):
         nav_move = NavMove(self.get_source_platform_name(), self.get_target_platform_name(), self.get_nav_task_type())
         nav_move.set_attempts(self.get_attempts() + 1)
+        nav_move.add_cost_ke(self.get_cost_ke())
+        nav_move.add_cost_crocoddyl(self.get_cost_crocoddyl())
         return nav_move
 
     def get_source_platform_name(self):
@@ -452,10 +454,6 @@ class NavModel:
 
                 if src_platform == dst_platform:
                     next_moves_list = []
-
-                task_registry_list = []
-                for nav_task in next_nav_state.get_nav_task():
-                    task_registry_list.extend(nav_task.get_task_registry_list())
 
                 dyn_val_status = NavModel.run_dynamics_validator(next_nav_state)
                 if dyn_val_status == Msg.FAILURE:
