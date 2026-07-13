@@ -5,38 +5,6 @@ from mlr.share.projects.navigation.utils.platform_utils import PlatformType, Pla
 from mlr.share.projects.navigation.utils.stimuli_utils import StimuliSet, Stimulus
 
 
-class StimuliTestWalk(StimuliSet):
-    def __init__(self):
-        super().__init__("test_walk")
-
-    def make_stimuli(self):
-        platform_type = PlatformType(PlatformShape.WALK, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY)
-
-        stimulus = Stimulus(self)
-        stimulus.add_platform(platform_type, NavPose(NavPosition(0.0, 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
-        stimulus.add_ground(NavPose(NavPosition(stimulus.get_stim_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
-        stimulus.add_camera()
-        stimulus.save_to_mjcf()
-        stimulus.visualize()
-
-
-class StimuliTestJump(StimuliSet):
-    def __init__(self):
-        super().__init__("test_jump")
-
-    def make_stimuli(self):
-        platform_type1 = PlatformType(PlatformShape.BASE, PlatformScale.NOT_SCALED, PlatformMaterial.WOODY)
-        platform_type2 = PlatformType(PlatformShape.BASE, PlatformScale.BOT_SCALED, PlatformMaterial.WOODY)
-
-        stimulus = Stimulus(self)
-        stimulus.add_platform(platform_type1, NavPose(NavPosition(0.0, 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
-        stimulus.add_platform(platform_type2, stimulus.get_next_platform_pose(platform_type2, 0, 0.0, 0.0))
-        stimulus.add_ground(NavPose(NavPosition(stimulus.get_stim_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
-        stimulus.add_camera()
-        stimulus.save_to_mjcf()
-        stimulus.visualize()
-
-
 class StimuliDiff(StimuliSet):
     def __init__(self):
         super().__init__("diff")
@@ -53,7 +21,8 @@ class StimuliDiff(StimuliSet):
         stimulus.add_ground(NavPose(NavPosition(stimulus.get_stim_center_x(), 0.0, -PlatformConfig.PLATFORM_HEIGHT)))
         stimulus.add_camera()
         stimulus.save_to_mjcf()
-        stimulus.visualize()
+        if StimuliConfig.VIEW_STIMULI:
+            stimulus.visualize()
 
     def _make_permuted_stim_set(self, platform_types_list, parent_ids_list, delta_x_list, delta_y_list):
         self._make_stimuli(platform_types_list, parent_ids_list, delta_x_list, delta_y_list)

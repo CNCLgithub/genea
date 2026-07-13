@@ -260,7 +260,7 @@ class NavModel:
         walk_disp_xy = np.linalg.norm(walk_vec_xy)
 
         if do_skew:
-            walk_disp_xy = NavModel.skew(walk_disp_xy, NavConfig.SMALL_SKEW_SIGMA, -1, 0, walk_disp_xy)
+            walk_disp_xy = NavModel.skew(walk_disp_xy, NavConfig.WALK_SKEW_SIGMA, -1, 0, walk_disp_xy)
 
         step_num = int(np.ceil(walk_disp_xy / NavConfig.MAX_STEP_LENGTH - 0.5))
         step_len = walk_disp_xy / (step_num + 0.5)
@@ -312,11 +312,10 @@ class NavModel:
 
         surface_xy = Platform.get_platform_top_surface_xy(PlatformType.get_base())
 
-        skewed_x_bound = surface_xy[0] / 2 - NavConfig.MIN_PLATFORM_PADDING
-        skewed_y_bound = surface_xy[1] / 6
+        bound = surface_xy[0] / 2 - NavConfig.MIN_PLATFORM_PADDING
 
-        skewed_x = NavModel.skew(-surface_xy[0] / 6, NavConfig.SMALL_SKEW_SIGMA, -1, -skewed_x_bound, skewed_x_bound)
-        skewed_y = NavModel.skew(0, NavConfig.LARGE_SKEW_SIGMA, 1, -skewed_y_bound, skewed_y_bound)
+        skewed_x = NavModel.skew(-surface_xy[0] / 4, NavConfig.JUMP_SKEW_SIGMA, -1, -bound, bound)
+        skewed_y = NavModel.skew(+surface_xy[1] / 6, NavConfig.JUMP_SKEW_SIGMA, +0, -bound, bound)
         skewed_y = abs(skewed_y)
 
         jump_vec = nav_state.get_scene().get_platform_center(final_platform_name)

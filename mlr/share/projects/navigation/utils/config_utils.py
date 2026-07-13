@@ -11,7 +11,7 @@ class CoreConfig:
 
 
 class AnalysisConfig:
-    TEMP_DEFAULT = -10 ** -8
+    TEMP_DEFAULT = -10 ** -4
 
     ANALYSIS_PEARSON = True
 
@@ -26,8 +26,8 @@ class NavConfig:
     FRICTION_COEFFICIENT = 0.7
     TIME_STEP = 0.02
 
-    SMALL_SKEW_SIGMA = 0.10
-    LARGE_SKEW_SIGMA = 0.50
+    WALK_SKEW_SIGMA = 0.1
+    JUMP_SKEW_SIGMA = 0.5
 
     MAX_JUMP_LENGTH = 5.2
     MAX_JUMP_HEIGHT = 2.0
@@ -49,7 +49,7 @@ class NavConfig:
 
 
 class CrocoddylConfig:
-    CROCODDYL_FORCE_MULTIPLIER = .1 ** 4
+    CROCODDYL_FORCE_MULTIPLIER = 5 * 10 ** -5
 
 
 class MujocoConfig:
@@ -57,6 +57,8 @@ class MujocoConfig:
 
 
 class StimuliConfig:
+    VIEW_STIMULI = False
+
     MIN_GAP_X = 1.2
     WALK_GAP_X = 0.25
 
@@ -66,8 +68,8 @@ class StimuliConfig:
 
 
 class PlatformConfig:
-    PLATFORM_MASS_WOODY = 4.0
-    PLATFORM_MASS_STONE = 8.0
+    PLATFORM_MASS_WOODY = 3.0
+    PLATFORM_MASS_STONE = 9.0
 
     PLATFORM_HEIGHT = 3.5
     PLATFORM_SIZE_BASE = 3.0
