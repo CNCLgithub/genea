@@ -49,6 +49,8 @@ class WalkTask(NavTask):
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
             elif phase1 <= time_index < phase2:
+                pacifier = np.random.uniform(0.1, 0.5)
+                task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
                 task_registry.set_force_left(task_forces_list[0])
             elif phase2 <= time_index < phase3:
                 task_registry.set_force_right(task_forces_list[0])
@@ -56,6 +58,8 @@ class WalkTask(NavTask):
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
             elif phase4 <= time_index < phase5:
+                pacifier = np.random.uniform(0.1, 0.5)
+                task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
                 task_registry.set_force_right(task_forces_list[0])
 
             if self.is_lunge_step():

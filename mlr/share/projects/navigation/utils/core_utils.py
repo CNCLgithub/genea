@@ -78,6 +78,9 @@ class NavForce:
         self._force_magnitude = force_magnitude
         self._force_pose = force_pose
 
+    def set_force_magnitude(self, force_magnitude):
+        self._force_magnitude = force_magnitude
+
     def get_force_magnitude(self):
         return self._force_magnitude
 
