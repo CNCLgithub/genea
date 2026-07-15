@@ -18,6 +18,7 @@ class NavAgent:
         self._init_agent()
         self._reference_pose = self.get_neutral_pose()
         self._current_pose = self.get_neutral_pose()
+        self._current_pose[1] = np.random.uniform(-0.5, 0.5)
 
     def _init_agent(self):
         if self._name == NavAgent.TALOS_LEGS:
