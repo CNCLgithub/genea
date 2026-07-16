@@ -1,25 +1,21 @@
 import numpy as np
 import scipy.stats as stats
+import time
 
-from itertools import combinations
 from scipy.spatial.transform import Rotation
 
 
 class ComputeUtils:
-    @staticmethod
-    def get_unique_combinations(input_list, length_of_combinations):
-        """
-        returns a list of indices, each equal to the length_of_combinations specified (e.g., 2 for a pair of indices)
-        """
-        return list(combinations(range(len(input_list)), length_of_combinations))
+
+    RNG = np.random.default_rng(int(time.time() // 86400))
 
     @staticmethod
     def sample_uniform(min_value, max_value, size=1):
-        return np.asarray(np.random.uniform(min_value, max_value, size)).tolist()
+        return ComputeUtils.RNG.uniform(min_value, max_value, size)
 
     @staticmethod
     def sample_normal(mu, sigma):
-        return np.random.normal(mu, sigma)
+        return ComputeUtils.RNG.normal(mu, sigma)
 
     @staticmethod
     def sample_trunc_normal(mu, bound_min, bound_max, sigma=1.0):
@@ -28,7 +24,7 @@ class ComputeUtils:
 
         lower = (bound_min - mu) / sigma
         upper = (bound_max - mu) / sigma
-        return stats.truncnorm.rvs(lower, upper, loc=mu, scale=sigma, size=1).item()
+        return stats.truncnorm.rvs(lower, upper, loc=mu, scale=sigma, size=1, random_state=ComputeUtils.RNG).item()
 
     @staticmethod
     def sample_skew_normal(mu, sigma, alpha, bound_min, bound_max):
@@ -45,20 +41,7 @@ class ComputeUtils:
         distribution = stats.skewnorm(alpha, loc=mu, scale=sigma)
         cdf_min = distribution.cdf(bound_min)
         cdf_max = distribution.cdf(bound_max)
-        return distribution.ppf(stats.uniform.rvs(cdf_min, cdf_max - cdf_min, size=1).item())
-
-    @staticmethod
-    def sample_trunc_normal_circular(center, bound_radius, sigma=1.0):
-        while True:
-            x = ComputeUtils.sample_trunc_normal(center, center - bound_radius, center + bound_radius, sigma)
-            y = ComputeUtils.sample_trunc_normal(center, center - bound_radius, center + bound_radius, sigma)
-            if (x - center) ** 2 + (y - center) ** 2 <= bound_radius ** 2:
-                return x, y
-
-    @staticmethod
-    def chunkify_list(input_list, total_chunks):
-        k, m = divmod(len(input_list), total_chunks)
-        return list(input_list[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(total_chunks))
+        return distribution.ppf(ComputeUtils.sample_uniform(cdf_min, cdf_max).item())
 
     @staticmethod
     def zscore_list(input_list):
