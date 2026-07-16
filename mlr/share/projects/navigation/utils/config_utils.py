@@ -11,8 +11,6 @@ class CoreConfig:
 
 
 class AnalysisConfig:
-    TEMP_DEFAULT = -10 ** -4
-
     ANALYSIS_PEARSON = True
 
 
