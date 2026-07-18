@@ -144,7 +144,7 @@ class MujocoUtils:
         while self._viewer.is_running():
             self._viewer.sync()
 
-    def simulate(self, nav_task_registry_list: list[NavTaskRegistry]):  # TODO: get platform dim and check force within
+    def simulate(self, nav_task_registry_list: list[NavTaskRegistry]):
         start_body_pos_list = [self.get_init_pose(body_name) for body_name in self.get_body_names_list()]
 
         if NavConfig.VIEW_DYNAMICS:

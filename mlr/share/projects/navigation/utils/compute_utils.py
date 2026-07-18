@@ -1,10 +1,22 @@
 import numpy as np
 import scipy.stats as stats
 
+from collections.abc import Iterable
 from scipy.spatial.transform import Rotation
 
 
 class ComputeUtils:
+    @staticmethod
+    def flatten(input_list):
+        flattened_list = []
+
+        for item in input_list:
+            if isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
+                flattened_list.extend(ComputeUtils.flatten(item))
+            else:
+                flattened_list.append(item)
+
+        return flattened_list
 
     @staticmethod
     def sample_uniform(min_value, max_value, size=1):
@@ -77,3 +89,11 @@ class ComputeUtils:
 
         relative_rot = r1.inv() * r2
         return np.degrees(relative_rot.magnitude())
+
+    @staticmethod
+    def compute_paired_t_test(list1, list2):
+        return stats.ttest_rel(list1, list2)
+
+    @staticmethod
+    def compute_t_test(list1, list2):
+        return stats.ttest_ind(list1, list2)

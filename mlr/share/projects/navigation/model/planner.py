@@ -14,7 +14,7 @@ from mlr.share.projects.navigation.model.tasks.turn import TurnTask
 from mlr.share.projects.navigation.model.tasks.walk import WalkTask
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
-from mlr.share.projects.navigation.utils.config_utils import NavConfig, CoreConfig
+from mlr.share.projects.navigation.utils.config_utils import NavConfig, CoreConfig, PlatformConfig
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 from mlr.share.projects.navigation.utils.mujoco_utils import MujocoUtils
@@ -277,7 +277,7 @@ class NavModel:
             walk_vec_xy = np.array([1., 0]) * dist
             walk_vec_xy = NavModel._correct_walk(walk_vec_xy)
 
-            if np.linalg.norm(walk_vec_xy) < 2.25 * NavConfig.MAX_STEP_LENGTH:
+            if np.linalg.norm(walk_vec_xy) < PlatformConfig.PLATFORM_SIZE_BASE * .75:
                 return []
             return NavModel._compute_walk(walk_vec_xy, do_skew=True)
 
