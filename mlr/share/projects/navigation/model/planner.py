@@ -497,10 +497,12 @@ class NavModel:
                 for _ in range(CoreConfig.EXP_STABILITY_COUNT):
                     platform = self.get_scene().get_platform(platform_name)
                     platform_surface_xy = Platform.get_platform_top_surface_xy(platform.get_platform_type())
+                    platform_half_x = platform_surface_xy[0] / 2
+                    platform_half_y = platform_surface_xy[1] / 2
 
                     force_pos_vec = self.get_scene().get_platform_center(platform_name)
-                    force_pos_vec[0] = np.random.uniform(-platform_surface_xy[0] / 2, platform_surface_xy[0] / 2)
-                    force_pos_vec[1] = np.random.uniform(-platform_surface_xy[1] / 2, platform_surface_xy[1] / 2)
+                    force_pos_vec[0] = ComputeUtils.sample_uniform(-platform_half_x, platform_half_x)
+                    force_pos_vec[1] = ComputeUtils.sample_uniform(-platform_half_y, platform_half_y)
 
                     force_left = NavTask.get_random_force(force_pos_vec)
                     force_right = NavTask.get_random_force(force_pos_vec)

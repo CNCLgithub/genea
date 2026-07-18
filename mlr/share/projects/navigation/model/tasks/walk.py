@@ -3,6 +3,7 @@ import pinocchio
 import numpy as np
 
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
+from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
 from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavProblem, NavProblemConstraints, \
     NavTaskRegistry
@@ -49,7 +50,7 @@ class WalkTask(NavTask):
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
             elif phase1 <= time_index < phase2:
-                pacifier = np.random.uniform(0.1, 0.5)
+                pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
                 task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
                 task_registry.set_force_left(task_forces_list[0])
             elif phase2 <= time_index < phase3:
@@ -58,7 +59,7 @@ class WalkTask(NavTask):
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
             elif phase4 <= time_index < phase5:
-                pacifier = np.random.uniform(0.1, 0.5)
+                pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
                 task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
                 task_registry.set_force_right(task_forces_list[0])
 

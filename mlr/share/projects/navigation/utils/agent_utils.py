@@ -20,7 +20,7 @@ class NavAgent:
         self._init_agent()
         self._reference_pose = self.get_neutral_pose()
         self._current_pose = self.get_neutral_pose()
-        self._current_pose[0] = ComputeUtils.sample_skew_normal(0., 0.25, -1, -0.5, 0.0).item()
+        self._current_pose[0] = ComputeUtils.sample_skew_normal(0., 0.15, -1, -0.5, 0.0).item()
         self._current_pose[1] = ComputeUtils.sample_uniform(-0.5, 0.5).item()
 
     def _init_agent(self):

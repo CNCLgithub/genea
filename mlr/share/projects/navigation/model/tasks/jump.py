@@ -1,8 +1,8 @@
 import crocoddyl
-import numpy as np
 import pinocchio
 
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
+from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
 from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavProblem, NavProblemConstraints, \
     NavTaskRegistry
@@ -31,7 +31,7 @@ class JumpTask(NavTask):
                 task_registry.set_platform_name_left(platform_names_list[0])
                 task_registry.set_platform_name_right(platform_names_list[0])
             elif time_index == phase1:  # impulse phase
-                pacifier = np.random.uniform(0.1, 0.5)
+                pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
                 task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
                 task_forces_list[1].set_force_magnitude(task_forces_list[1].get_force_magnitude() * pacifier)
                 task_registry.set_force_left(task_forces_list[0])

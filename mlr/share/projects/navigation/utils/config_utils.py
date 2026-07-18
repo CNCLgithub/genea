@@ -24,6 +24,9 @@ class NavConfig:
     FRICTION_COEFFICIENT = 0.7
     TIME_STEP = 0.02
 
+    MIN_PACIFIER = 0.2
+    MAX_PACIFIER = 0.5
+
     WALK_SKEW_SIGMA = 0.1
     JUMP_SKEW_SIGMA = 0.5
 

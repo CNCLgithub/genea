@@ -1,11 +1,15 @@
 import numpy as np
 import scipy.stats as stats
+import time
 
 from collections.abc import Iterable
 from scipy.spatial.transform import Rotation
 
 
 class ComputeUtils:
+
+    RNG = np.random.default_rng(int(time.time() // 86400))
+
     @staticmethod
     def flatten(input_list):
         flattened_list = []
@@ -20,11 +24,11 @@ class ComputeUtils:
 
     @staticmethod
     def sample_uniform(min_value, max_value, size=1):
-        return np.atleast_1d(np.random.uniform(min_value, max_value, size))
+        return np.atleast_1d(ComputeUtils.RNG.uniform(min_value, max_value, size))
 
     @staticmethod
     def sample_normal(mu, sigma):
-        return np.random.normal(mu, sigma)
+        return ComputeUtils.RNG.normal(mu, sigma)
 
     @staticmethod
     def sample_trunc_normal(mu, bound_min, bound_max, sigma=1.0):
@@ -33,7 +37,7 @@ class ComputeUtils:
 
         lower = (bound_min - mu) / sigma
         upper = (bound_max - mu) / sigma
-        return stats.truncnorm.rvs(lower, upper, loc=mu, scale=sigma, size=1).item()
+        return stats.truncnorm.rvs(lower, upper, loc=mu, scale=sigma, size=1, random_state=ComputeUtils.RNG).item()
 
     @staticmethod
     def sample_skew_normal(mu, sigma, alpha, bound_min, bound_max):

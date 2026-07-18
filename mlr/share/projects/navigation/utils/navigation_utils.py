@@ -3,6 +3,7 @@ import numpy as np
 import pinocchio
 
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
+from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
 from mlr.share.projects.navigation.utils.core_utils import NavForce, NavPose, NavPosition
 from mlr.share.projects.navigation.utils.crocoddyl_utils import CrocoddylUtils
@@ -68,9 +69,9 @@ class NavTask:
 
     @staticmethod
     def get_random_force(force_pos_vec):
-        roll = np.random.uniform(-100, 100)
-        pitch = np.random.uniform(-100, 100)
-        yaw = np.random.uniform(-1000, -2500)
+        roll = ComputeUtils.sample_uniform(-100, 100).item()
+        pitch = ComputeUtils.sample_uniform(-100, 100).item()
+        yaw = ComputeUtils.sample_uniform(-1000, -2500).item()
 
         force_pose = NavPose(NavPosition(force_pos_vec[0], force_pos_vec[1], force_pos_vec[2]))
         force_pose.set_rpy(roll, pitch, yaw)
