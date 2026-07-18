@@ -35,7 +35,7 @@ class JumpTask(NavTask):
                 min_pacifier = NavConfig.MIN_PACIFIER
                 max_pacifier = NavConfig.MAX_PACIFIER
                 if PlatformType.from_str(platform_names_list[0]).is_bot_scaled():
-                    min_pacifier -= .1
+                    min_pacifier -= .2
                     max_pacifier -= .2
                 pacifier = ComputeUtils.sample_uniform(min_pacifier, max_pacifier).item()
                 task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
