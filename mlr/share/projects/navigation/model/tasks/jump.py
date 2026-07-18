@@ -6,7 +6,7 @@ from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
 from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavProblem, NavProblemConstraints, \
     NavTaskRegistry
-from mlr.share.projects.navigation.utils.platform_utils import PlatformType
+from mlr.share.projects.navigation.utils.platform_utils import Platform
 
 
 class JumpTask(NavTask):
@@ -34,7 +34,7 @@ class JumpTask(NavTask):
             elif time_index == phase1:  # impulse phase
                 min_pacifier = NavConfig.MIN_PACIFIER
                 max_pacifier = NavConfig.MAX_PACIFIER
-                if PlatformType.from_str(platform_names_list[0]).is_bot_scaled():
+                if Platform.from_str(platform_names_list[0]).is_bot_scaled():
                     min_pacifier -= .2
                     max_pacifier -= .2
                 pacifier = ComputeUtils.sample_uniform(min_pacifier, max_pacifier).item()
