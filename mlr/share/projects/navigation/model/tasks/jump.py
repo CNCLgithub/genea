@@ -16,15 +16,14 @@ class JumpTask(NavTask):
         self._jump_vector = jump_vector
 
     def tally_task(self, *platform_names_list):
-        task_forces_by_time_list = self.get_task_forces_by_time_list()
+        phase1 = NavConfig.JUMP_GROUND_KNOTS - 1
+        phase2 = NavConfig.JUMP_FLYING_KNOTS + phase1 + 1
+        phase3 = NavConfig.JUMP_FLYING_KNOTS + 1 + phase2
+        phase4 = NavConfig.JUMP_GROUND_KNOTS + phase3
 
+        task_forces_by_time_list = self.get_task_forces_by_time_list()
         for time_index, task_forces_list in enumerate(task_forces_by_time_list):
             task_registry = NavTaskRegistry()
-
-            phase1 = NavConfig.JUMP_GROUND_KNOTS - 1
-            phase2 = NavConfig.JUMP_FLYING_KNOTS + phase1 + 1
-            phase3 = NavConfig.JUMP_FLYING_KNOTS + 1 + phase2
-            phase4 = NavConfig.JUMP_GROUND_KNOTS + phase3
 
             if 0 <= time_index < phase1:
                 task_registry.set_force_left(task_forces_list[0])
@@ -32,12 +31,13 @@ class JumpTask(NavTask):
                 task_registry.set_platform_name_left(platform_names_list[0])
                 task_registry.set_platform_name_right(platform_names_list[0])
             elif time_index == phase1:  # impulse phase
-                min_pacifier = NavConfig.MIN_PACIFIER
-                max_pacifier = NavConfig.MAX_PACIFIER
-                if Platform.from_str(platform_names_list[0]).is_bot_scaled():
-                    min_pacifier /= 3.
-                    max_pacifier /= 3.
-                pacifier = ComputeUtils.sample_uniform(min_pacifier, max_pacifier).item()
+                # min_pacifier = NavConfig.MIN_PACIFIER
+                # max_pacifier = NavConfig.MAX_PACIFIER
+                # if Platform.from_str(platform_names_list[0]).is_bot_scaled():
+                #     min_pacifier /= 3.
+                #     max_pacifier /= 3.
+                # pacifier = ComputeUtils.sample_uniform(min_pacifier, max_pacifier).item()
+                pacifier = 1.0
                 task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
                 task_forces_list[1].set_force_magnitude(task_forces_list[1].get_force_magnitude() * pacifier)
                 task_registry.set_force_left(task_forces_list[0])

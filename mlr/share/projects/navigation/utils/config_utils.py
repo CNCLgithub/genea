@@ -50,7 +50,7 @@ class NavConfig:
 
 
 class CrocoddylConfig:
-    CROCODDYL_FORCE_MULTIPLIER = 10 ** -4
+    CROCODDYL_FORCE_MULTIPLIER = 10 ** -5
 
 
 class MujocoConfig:
