@@ -26,6 +26,7 @@ class NavConfig:
 
     MIN_PACIFIER = 0.3
     MAX_PACIFIER = 0.6
+    MAX_FORCE_MAG = 10. ** 3
 
     WALK_SKEW_SIGMA = 0.1
     JUMP_SKEW_SIGMA = 0.5
