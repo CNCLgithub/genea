@@ -38,8 +38,7 @@ class NavTaskRegistry:
 
     def get_force_left_vec(self) -> np.ndarray:
         force_mag = self.get_force_left().get_force_magnitude()
-        force_out = self.get_force_left().get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
-        return min(force_out, NavConfig.MAX_FORCE_MAG)
+        return self.get_force_left().get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
 
     def get_force_right(self) -> NavForce:
         return self._nav_force_right

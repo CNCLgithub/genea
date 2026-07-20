@@ -49,33 +49,33 @@ class WalkTask(NavTask):
             if 0 <= time_index < phase1:
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
-            elif phase1 <= time_index < phase2:
-                # pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
-                # task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
-                task_registry.set_force_left(task_forces_list[0])
+            # elif phase1 <= time_index < phase2:
+            #     pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
+            #     task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
+            #     task_registry.set_force_left(task_forces_list[0])
             elif phase2 <= time_index < phase3:
                 task_registry.set_force_right(task_forces_list[0])
             elif phase3 <= time_index < phase4:
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
-            elif phase4 <= time_index < phase5:
-                # pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
-                # task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
-                task_registry.set_force_right(task_forces_list[0])
+            # elif phase4 <= time_index < phase5:
+            #     pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
+            #     task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
+            #     task_registry.set_force_right(task_forces_list[0])
 
             if self.is_lunge_step():
                 if 0 <= time_index < phase1:
                     task_registry.set_platform_name_left(platform_names_list[0])
                     task_registry.set_platform_name_right(platform_names_list[0])
-                elif phase1 <= time_index < phase2:
-                    task_registry.set_platform_name_left(platform_names_list[0])
+                # elif phase1 <= time_index < phase2:
+                #     task_registry.set_platform_name_left(platform_names_list[0])
                 elif phase2 <= time_index < phase3:
                     task_registry.set_platform_name_right(platform_names_list[1])
                 elif phase3 <= time_index < phase4:
                     task_registry.set_platform_name_left(platform_names_list[0])
                     task_registry.set_platform_name_right(platform_names_list[1])
-                elif phase4 <= time_index < phase5:
-                    task_registry.set_platform_name_right(platform_names_list[1])
+                # elif phase4 <= time_index < phase5:
+                #     task_registry.set_platform_name_right(platform_names_list[1])
             elif self.is_other_step():
                 task_registry.set_platform_name_left(platform_names_list[1])
                 task_registry.set_platform_name_right(platform_names_list[1])

@@ -30,19 +30,19 @@ class JumpTask(NavTask):
                 task_registry.set_force_right(task_forces_list[1])
                 task_registry.set_platform_name_left(platform_names_list[0])
                 task_registry.set_platform_name_right(platform_names_list[0])
-            elif time_index == phase1:  # impulse phase
-                # min_pacifier = NavConfig.MIN_PACIFIER
-                # max_pacifier = NavConfig.MAX_PACIFIER
-                # if Platform.from_str(platform_names_list[0]).is_bot_scaled():
-                #     min_pacifier /= 3.
-                #     max_pacifier /= 3.
-                # pacifier = ComputeUtils.sample_uniform(min_pacifier, max_pacifier).item()
-                # task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
-                # task_forces_list[1].set_force_magnitude(task_forces_list[1].get_force_magnitude() * pacifier)
-                task_registry.set_force_left(task_forces_list[0])
-                task_registry.set_force_right(task_forces_list[1])
-                task_registry.set_platform_name_left(platform_names_list[0])
-                task_registry.set_platform_name_right(platform_names_list[0])
+            # elif time_index == phase1:  # impulse phase
+            #     min_pacifier = NavConfig.MIN_PACIFIER
+            #     max_pacifier = NavConfig.MAX_PACIFIER
+            #     if Platform.from_str(platform_names_list[0]).is_bot_scaled():
+            #         min_pacifier /= 3.
+            #         max_pacifier /= 3.
+            #     pacifier = ComputeUtils.sample_uniform(min_pacifier, max_pacifier).item()
+            #     task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
+            #     task_forces_list[1].set_force_magnitude(task_forces_list[1].get_force_magnitude() * pacifier)
+            #     task_registry.set_force_left(task_forces_list[0])
+            #     task_registry.set_force_right(task_forces_list[1])
+            #     task_registry.set_platform_name_left(platform_names_list[0])
+            #     task_registry.set_platform_name_right(platform_names_list[0])
             elif phase3 <= time_index < phase4:
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
