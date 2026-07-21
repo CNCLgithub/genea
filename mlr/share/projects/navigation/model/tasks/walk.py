@@ -45,8 +45,9 @@ class WalkTask(NavTask):
         for time_index, task_forces_list in enumerate(task_forces_by_time_list):
             task_registry = NavTaskRegistry()
 
-            self.validate_force(task_forces_list[0], NavConfig.WALK_FORCE_CUTOFF)
-            if len(task_forces_list) == 2:
+            if len(task_forces_list) > 0:
+                self.validate_force(task_forces_list[0], NavConfig.WALK_FORCE_CUTOFF)
+            if len(task_forces_list) > 1:
                 self.validate_force(task_forces_list[1], NavConfig.WALK_FORCE_CUTOFF)
 
             if 0 <= time_index < phase1:

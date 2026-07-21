@@ -23,8 +23,10 @@ class JumpTask(NavTask):
         for time_index, task_forces_list in enumerate(task_forces_by_time_list):
             task_registry = NavTaskRegistry()
 
-            JumpTask.validate_force(task_forces_list[0], NavConfig.JUMP_FORCE_CUTOFF)
-            JumpTask.validate_force(task_forces_list[1], NavConfig.JUMP_FORCE_CUTOFF)
+            if len(task_forces_list) > 0:
+                JumpTask.validate_force(task_forces_list[0], NavConfig.JUMP_FORCE_CUTOFF)
+            if len(task_forces_list) > 1:
+                JumpTask.validate_force(task_forces_list[1], NavConfig.JUMP_FORCE_CUTOFF)
 
             if 0 <= time_index < phase1:
                 task_registry.set_force_left(task_forces_list[0])
