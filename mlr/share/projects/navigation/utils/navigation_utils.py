@@ -68,6 +68,11 @@ class NavTask:
         self._task_registry_list = []
 
     @staticmethod
+    def validate_force(nav_force, cutoff):
+        if nav_force.get_force_norm() > cutoff:
+            nav_force.set_force_magnitude(nav_force.get_force_magnitude() * 10. ** -1)
+
+    @staticmethod
     def get_random_force(force_pos_vec):
         roll = ComputeUtils.sample_uniform(-100, 100).item()
         pitch = ComputeUtils.sample_uniform(-100, 100).item()

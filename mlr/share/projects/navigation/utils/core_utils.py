@@ -81,6 +81,9 @@ class NavForce:
     def set_force_magnitude(self, force_magnitude):
         self._force_magnitude = force_magnitude
 
+    def get_force_norm(self):
+        return np.linalg.norm(self.get_force_pose().get_rotation().get_rotation_as_np_array())
+
     def get_force_magnitude(self):
         return self._force_magnitude
 

@@ -3,7 +3,6 @@ import pinocchio
 import numpy as np
 
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
-from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
 from mlr.share.projects.navigation.utils.navigation_utils import NavTask, NavProblem, NavProblemConstraints, \
     NavTaskRegistry
@@ -46,36 +45,36 @@ class WalkTask(NavTask):
         for time_index, task_forces_list in enumerate(task_forces_by_time_list):
             task_registry = NavTaskRegistry()
 
+            self.validate_force(task_forces_list[0], NavConfig.WALK_FORCE_CUTOFF)
+            if len(task_forces_list) == 2:
+                self.validate_force(task_forces_list[1], NavConfig.WALK_FORCE_CUTOFF)
+
             if 0 <= time_index < phase1:
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
-            # elif phase1 <= time_index < phase2:
-            #     pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
-            #     task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
-            #     task_registry.set_force_left(task_forces_list[0])
+            elif phase1 <= time_index < phase2:
+                task_registry.set_force_left(task_forces_list[0])
             elif phase2 <= time_index < phase3:
                 task_registry.set_force_right(task_forces_list[0])
             elif phase3 <= time_index < phase4:
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
-            # elif phase4 <= time_index < phase5:
-            #     pacifier = ComputeUtils.sample_uniform(NavConfig.MIN_PACIFIER, NavConfig.MAX_PACIFIER).item()
-            #     task_forces_list[0].set_force_magnitude(task_forces_list[0].get_force_magnitude() * pacifier)
-            #     task_registry.set_force_right(task_forces_list[0])
+            elif phase4 <= time_index < phase5:
+                task_registry.set_force_right(task_forces_list[0])
 
             if self.is_lunge_step():
                 if 0 <= time_index < phase1:
                     task_registry.set_platform_name_left(platform_names_list[0])
                     task_registry.set_platform_name_right(platform_names_list[0])
-                # elif phase1 <= time_index < phase2:
-                #     task_registry.set_platform_name_left(platform_names_list[0])
+                elif phase1 <= time_index < phase2:
+                    task_registry.set_platform_name_left(platform_names_list[0])
                 elif phase2 <= time_index < phase3:
                     task_registry.set_platform_name_right(platform_names_list[1])
                 elif phase3 <= time_index < phase4:
                     task_registry.set_platform_name_left(platform_names_list[0])
                     task_registry.set_platform_name_right(platform_names_list[1])
-                # elif phase4 <= time_index < phase5:
-                #     task_registry.set_platform_name_right(platform_names_list[1])
+                elif phase4 <= time_index < phase5:
+                    task_registry.set_platform_name_right(platform_names_list[1])
             elif self.is_other_step():
                 task_registry.set_platform_name_left(platform_names_list[1])
                 task_registry.set_platform_name_right(platform_names_list[1])
