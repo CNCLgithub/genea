@@ -24,7 +24,7 @@ class NavConfig:
     FRICTION_COEFFICIENT = 0.7
     TIME_STEP = 0.02
 
-    WALK_FORCE_CUTOFF = 10 ** 2 * 4
+    WALK_FORCE_CUTOFF = 10 ** 3
     JUMP_FORCE_CUTOFF = 10 ** 3
 
     WALK_SKEW_SIGMA = 0.1
