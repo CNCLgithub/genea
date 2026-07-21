@@ -68,9 +68,9 @@ class NavTask:
         self._task_registry_list = []
 
     @staticmethod
-    def validate_force(nav_force, cutoff):
-        if nav_force.get_force_norm() > cutoff:
-            nav_force.set_force_magnitude(nav_force.get_force_magnitude() * 10. ** -1)
+    def validate_force(nav_force):
+        if nav_force.get_force_norm() > 10 ** 4:
+            nav_force.set_force_magnitude(nav_force.get_force_magnitude() * .5)
 
     @staticmethod
     def get_random_force(force_pos_vec):

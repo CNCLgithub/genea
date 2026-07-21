@@ -24,9 +24,9 @@ class JumpTask(NavTask):
             task_registry = NavTaskRegistry()
 
             if len(task_forces_list) > 0:
-                JumpTask.validate_force(task_forces_list[0], NavConfig.JUMP_FORCE_CUTOFF)
+                JumpTask.validate_force(task_forces_list[0])
             if len(task_forces_list) > 1:
-                JumpTask.validate_force(task_forces_list[1], NavConfig.JUMP_FORCE_CUTOFF)
+                JumpTask.validate_force(task_forces_list[1])
 
             if 0 <= time_index < phase1:
                 task_registry.set_force_left(task_forces_list[0])
