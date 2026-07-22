@@ -69,8 +69,9 @@ class NavTask:
 
     @staticmethod
     def validate_force(nav_force):
-        if nav_force.get_force_norm() > 2500.:
-            nav_force.set_force_magnitude(nav_force.get_force_magnitude() * .1)
+        if nav_force.get_force_norm() > NavConfig.FORCE_NORM_CUTOFF:
+            scale = max(0.1, 0.5 * (NavConfig.FORCE_NORM_CUTOFF / nav_force.get_force_norm()))
+            nav_force.set_force_magnitude(nav_force.get_force_magnitude() * scale)
 
     @staticmethod
     def get_random_force(force_pos_vec):
