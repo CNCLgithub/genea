@@ -9,6 +9,8 @@ from collections import deque
 from enum import Enum
 from typing import List
 
+from pygments.lexers import factor
+
 from mlr.share.projects.navigation.model.tasks.jump import JumpTask
 from mlr.share.projects.navigation.model.tasks.turn import TurnTask
 from mlr.share.projects.navigation.model.tasks.walk import WalkTask
@@ -314,20 +316,24 @@ class NavModel:
 
         bound = surface_xy[0] / 2 - NavConfig.MIN_PLATFORM_PADDING
 
-        skewed_x = NavModel._skew(-surface_xy[0] / 4, NavConfig.JUMP_SKEW_SIGMA, -1, -bound, bound)
-        skewed_y = NavModel._skew(+surface_xy[1] / 6, NavConfig.JUMP_SKEW_SIGMA, +0, -bound, bound)
-        skewed_y = abs(skewed_y)
+        factor_x = NavModel._skew(-surface_xy[0] / 4, NavConfig.JUMP_SKEW_SIGMA, -1, -bound, bound)
 
         jump_vec = nav_state.get_scene().get_platform_center(final_platform_name)
         jump_vec[2] = 0.0
-        jump_vec[0] += skewed_x
+        jump_vec[0] += factor_x
         jump_vec[:2] -= nav_state.get_agent_pose()[:2]
 
-        if not (-15.0 < np.rad2deg(np.arctan2(jump_vec[1], jump_vec[0])) < 15.0):
+        if -15.0 < np.rad2deg(np.arctan2(jump_vec[1], jump_vec[0])) < 15.0:
+            factor_y = NavModel._skew(0., NavConfig.JUMP_SKEW_SIGMA, +0, -bound, bound)
+            factor_y *= ComputeUtils.sample_sign()
+            jump_vec[1] += factor_y
+        else:
+            factor_y = NavModel._skew(+surface_xy[1] / 6, NavConfig.JUMP_SKEW_SIGMA, +0, -bound, bound)
+            factor_y = abs(factor_y)
             if jump_vec[1] > 0:
-                jump_vec[1] -= skewed_y
+                jump_vec[1] -= factor_y
             else:
-                jump_vec[1] += skewed_y
+                jump_vec[1] += factor_y
 
         if np.linalg.norm(jump_vec) > NavConfig.MAX_JUMP_LENGTH:
             jump_vec = (jump_vec / (np.linalg.norm(jump_vec) + 1e-12)) * NavConfig.MAX_JUMP_LENGTH

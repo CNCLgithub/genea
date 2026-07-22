@@ -23,6 +23,10 @@ class ComputeUtils:
         return flattened_list
 
     @staticmethod
+    def sample_sign():
+        return ComputeUtils.RNG.choice([-1, 1]).item()
+
+    @staticmethod
     def sample_uniform(min_value, max_value, size=1):
         return np.atleast_1d(ComputeUtils.RNG.uniform(min_value, max_value, size))
 
