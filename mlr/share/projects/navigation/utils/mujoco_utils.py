@@ -7,7 +7,6 @@ import time
 
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import MujocoConfig, NavConfig
-from mlr.share.projects.navigation.utils.core_utils import NavForce
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 from mlr.share.projects.navigation.utils.navigation_utils import NavTaskRegistry
 
@@ -42,35 +41,6 @@ class MujocoLandmark:
 
     def get_landmark_vec(self):
         return self._landmark_vec
-
-
-class MujocoForceRecord:
-    def __init__(self, platform_id, nav_force: NavForce, sim_onset_time, sim_stint_time):
-        """
-        :param platform_id       : the ID of the platform onto which some force is to be applied
-        :param nav_force         : the @NavForce object defining the force to be applied
-        :param sim_onset_time    : the force onset time in seconds, measured from t=0
-        :param sim_stint_time    : the duration (in seconds) for which the force must be applied
-        """
-        self._platform_id = platform_id
-        self._nav_force = nav_force
-        self._sim_onset_time = sim_onset_time
-        self._sim_stint_time = sim_stint_time
-
-    def get_platform_id(self):
-        return self._platform_id
-
-    def get_nav_force(self):
-        return self._nav_force
-
-    def get_sim_onset_time(self):
-        return self._sim_onset_time
-
-    def get_sim_stint_time(self):
-        return self._sim_stint_time
-
-    def get_sim_end_time(self):
-        return self.get_sim_onset_time() + self.get_sim_stint_time()
 
 
 class MujocoUtils:

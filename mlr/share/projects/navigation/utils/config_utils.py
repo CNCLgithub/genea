@@ -21,7 +21,7 @@ class NavConfig:
     DEBUG_KINEMATICS = False
     DEBUG_DYNAMICS = False
 
-    FORCE_NORM_CUTOFF = 1000.
+    FORCE_NORM_CUTOFF = 500.
     FRICTION_COEFFICIENT = 0.7
     TIME_STEP = 0.02
 
@@ -45,10 +45,6 @@ class NavConfig:
     DYNAMICS_THRESHOLD = 1e-7
     DYNAMICS_TOLERANCE_POS = 0.1
     DYNAMICS_TOLERANCE_ROT = 0.1
-
-
-class CrocoddylConfig:
-    CROCODDYL_FORCE_MULTIPLIER = 10 ** -4
 
 
 class MujocoConfig:

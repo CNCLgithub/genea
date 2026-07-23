@@ -44,6 +44,11 @@ class NavRotation:
         self._rot_pitch = pitch
         self._rot_yaw = yaw
 
+    def scale(self, scale_factor):
+        self._rot_roll *= scale_factor
+        self._rot_pitch *= scale_factor
+        self._rot_yaw *= scale_factor
+
     def get_rotation_as_list(self):
         return [self._rot_roll, self._rot_pitch, self._rot_yaw]
 
@@ -66,26 +71,14 @@ class NavPose:
     def set_rpy(self, roll, pitch, yaw):
         self._rotation = NavRotation(roll, pitch, yaw)
 
+    def scale(self, scale_factor):
+        self.get_rotation().scale(scale_factor)
+
+    def get_norm(self):
+        return np.linalg.norm(self.get_rotation().get_rotation_as_np_array())
+
     def get_position(self):
         return self._position
 
     def get_rotation(self):
         return self._rotation
-
-
-class NavForce:
-    def __init__(self, force_pose: NavPose, force_magnitude):
-        self._force_magnitude = force_magnitude
-        self._force_pose = force_pose
-
-    def set_force_magnitude(self, force_magnitude):
-        self._force_magnitude = force_magnitude
-
-    def get_force_norm(self):
-        return np.linalg.norm(self.get_force_pose().get_rotation().get_rotation_as_np_array())
-
-    def get_force_magnitude(self):
-        return self._force_magnitude
-
-    def get_force_pose(self):
-        return self._force_pose

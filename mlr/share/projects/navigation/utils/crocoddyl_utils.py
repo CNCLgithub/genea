@@ -1,4 +1,3 @@
-import numpy as np
 import pinocchio
 
 from crocoddyl import ActionDataImpulseFwdDynamics, StdVec_DiffActionData
@@ -6,8 +5,7 @@ from crocoddyl import DifferentialActionDataContactFwdDynamics as FwdDynamics
 from crocoddyl import DifferentialActionModelContactInvDynamics as InvDynamics
 from typing import List
 
-from mlr.share.projects.navigation.utils.config_utils import CrocoddylConfig
-from mlr.share.projects.navigation.utils.core_utils import NavForce, NavPose, NavPosition, NavRotation
+from mlr.share.projects.navigation.utils.core_utils import NavPose, NavPosition, NavRotation
 
 
 class CrocoddylUtils:
@@ -51,14 +49,12 @@ class CrocoddylUtils:
                 force_rot = -force_wrench.linear
                 nav_rot = NavRotation(force_rot[0], force_rot[1], force_rot[2])
 
-                force_pose = NavPose(nav_pos, nav_rot)
-                force_magnitude = np.linalg.norm(force_wrench.linear) * CrocoddylConfig.CROCODDYL_FORCE_MULTIPLIER
-                forces_list.append(NavForce(force_pose, force_magnitude))
+                forces_list.append(NavPose(nav_pos, nav_rot))
 
         return forces_list
 
     @staticmethod
-    def get_forces_by_time_list(crocoddyl_solver) -> List[List[NavForce]]:
+    def get_forces_by_time_list(crocoddyl_solver) -> List[List[NavPose]]:
         forces_by_time_list = []
         model_list = [*crocoddyl_solver.problem.runningModels.tolist(), crocoddyl_solver.problem.terminalModel]
         data_list = [*crocoddyl_solver.problem.runningDatas.tolist(), crocoddyl_solver.problem.terminalData]

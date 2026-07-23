@@ -5,7 +5,7 @@ import pinocchio
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import NavConfig
-from mlr.share.projects.navigation.utils.core_utils import NavForce, NavPose, NavPosition
+from mlr.share.projects.navigation.utils.core_utils import NavPose, NavPosition
 from mlr.share.projects.navigation.utils.crocoddyl_utils import CrocoddylUtils
 from mlr.share.projects.navigation.utils.msg_utils import Msg
 
@@ -18,10 +18,10 @@ class NavTaskRegistry:
         self._nav_platform_name_left = None
         self._nav_platform_name_right = None
 
-    def set_force_left(self, nav_force: NavForce):
+    def set_force_left(self, nav_force: NavPose):
         self._nav_force_left = nav_force
 
-    def set_force_right(self, nav_force: NavForce):
+    def set_force_right(self, nav_force: NavPose):
         self._nav_force_right = nav_force
 
     def set_platform_name_left(self, platform_name: str):
@@ -30,25 +30,23 @@ class NavTaskRegistry:
     def set_platform_name_right(self, platform_name: str):
         self._nav_platform_name_right = platform_name
 
-    def get_force_left(self) -> NavForce:
+    def get_force_left(self) -> NavPose:
         return self._nav_force_left
 
     def get_force_left_pos(self) -> np.ndarray:
-        return self.get_force_left().get_force_pose().get_position().get_position_as_np_array()
+        return self.get_force_left().get_position().get_position_as_np_array()
 
     def get_force_left_vec(self) -> np.ndarray:
-        force_mag = self.get_force_left().get_force_magnitude()
-        return self.get_force_left().get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
+        return self.get_force_left().get_rotation().get_rotation_as_np_array()
 
-    def get_force_right(self) -> NavForce:
+    def get_force_right(self) -> NavPose:
         return self._nav_force_right
 
     def get_force_right_pos(self) -> np.ndarray:
-        return self.get_force_right().get_force_pose().get_position().get_position_as_np_array()
+        return self.get_force_right().get_position().get_position_as_np_array()
 
     def get_force_right_vec(self) -> np.ndarray:
-        force_mag = self.get_force_right().get_force_magnitude()
-        return self.get_force_right().get_force_pose().get_rotation().get_rotation_as_np_array() * force_mag
+        return self.get_force_right().get_rotation().get_rotation_as_np_array()
 
     def get_platform_name_left(self) -> str:
         return self._nav_platform_name_left
@@ -68,17 +66,13 @@ class NavTask:
         self._task_registry_list = []
 
     @staticmethod
-    def validate_force(nav_force):
-        if nav_force.get_force_norm() > 5 * NavConfig.FORCE_NORM_CUTOFF:
-            nav_force.set_force_magnitude(0.0)
-            return
-
-        if nav_force.get_force_norm() > NavConfig.FORCE_NORM_CUTOFF:
-            scale = max(0.25, np.exp(- (nav_force.get_force_norm() / NavConfig.FORCE_NORM_CUTOFF - 1.)))
-            nav_force.set_force_magnitude(nav_force.get_force_magnitude() * scale)
+    def validate_force(nav_force_pose: NavPose):
+        nav_force_pose.scale(.1)
+        if nav_force_pose.get_norm() > NavConfig.FORCE_NORM_CUTOFF:
+            nav_force_pose.scale(ComputeUtils.sample_trunc_normal(.5, .0, 1., .2))
 
     @staticmethod
-    def get_random_force(force_pos_vec):
+    def get_random_force(force_pos_vec) -> NavPose:
         roll = ComputeUtils.sample_uniform(-100, 100).item()
         pitch = ComputeUtils.sample_uniform(-100, 100).item()
         yaw = ComputeUtils.sample_uniform(-750, -1500).item()
@@ -86,7 +80,7 @@ class NavTask:
         force_pose = NavPose(NavPosition(force_pos_vec[0], force_pos_vec[1], force_pos_vec[2]))
         force_pose.set_rpy(roll, pitch, yaw)
 
-        return NavForce(force_pose, 0.001)
+        return force_pose
 
     def add_to_registry(self, nav_task_registry: NavTaskRegistry):
         self._task_registry_list.append(nav_task_registry)
