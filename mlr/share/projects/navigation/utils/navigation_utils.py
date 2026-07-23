@@ -70,14 +70,14 @@ class NavTask:
     @staticmethod
     def validate_force(nav_force):
         if nav_force.get_force_norm() > NavConfig.FORCE_NORM_CUTOFF:
-            scale = np.exp(-(nav_force.get_force_norm() / NavConfig.FORCE_NORM_CUTOFF - 1.))
+            scale = np.exp(- .5 * (nav_force.get_force_norm() / NavConfig.FORCE_NORM_CUTOFF - 1.))
             nav_force.set_force_magnitude(nav_force.get_force_magnitude() * scale)
 
     @staticmethod
     def get_random_force(force_pos_vec):
         roll = ComputeUtils.sample_uniform(-100, 100).item()
         pitch = ComputeUtils.sample_uniform(-100, 100).item()
-        yaw = ComputeUtils.sample_uniform(-1000, -2500).item()
+        yaw = ComputeUtils.sample_uniform(-750, -1500).item()
 
         force_pose = NavPose(NavPosition(force_pos_vec[0], force_pos_vec[1], force_pos_vec[2]))
         force_pose.set_rpy(roll, pitch, yaw)
