@@ -74,7 +74,7 @@ class NavTask:
             return
 
         if nav_force.get_force_norm() > NavConfig.FORCE_NORM_CUTOFF:
-            scale = max(0.1, np.exp(- (nav_force.get_force_norm() / NavConfig.FORCE_NORM_CUTOFF - 1.)))
+            scale = max(0.25, np.exp(- (nav_force.get_force_norm() / NavConfig.FORCE_NORM_CUTOFF - 1.)))
             nav_force.set_force_magnitude(nav_force.get_force_magnitude() * scale)
 
     @staticmethod
