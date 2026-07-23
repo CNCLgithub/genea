@@ -69,7 +69,7 @@ class NavTask:
     def validate_force(nav_force_pose: NavPose):
         nav_force_pose.scale(.1)
         if nav_force_pose.get_norm() > NavConfig.FORCE_NORM_CUTOFF:
-            nav_force_pose.scale(ComputeUtils.sample_trunc_normal(.5, .0, 1., .2))
+            nav_force_pose.scale(ComputeUtils.sample_skew_normal(.5, 1.5, -3, .0, 2.))
 
     @staticmethod
     def get_random_force(force_pos_vec) -> NavPose:

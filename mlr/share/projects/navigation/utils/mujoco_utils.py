@@ -58,6 +58,7 @@ class MujocoUtils:
 
     def _register_force(self, force_pos, force_vec, platform_name):
         mj_body_id = mj.mj_name2id(self._model, mj.mjtObj.mjOBJ_BODY, platform_name)
+        force_vec = self._data.xmat[mj_body_id].reshape(3, 3) @ force_vec
         mj.mj_applyFT(self._model, self._data, force_vec, np.zeros(3), force_pos, mj_body_id, self._data.qfrc_applied)
 
     def _unpack_task_registry(self, task_registry: NavTaskRegistry):
