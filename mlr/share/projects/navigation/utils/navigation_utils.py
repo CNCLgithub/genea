@@ -30,6 +30,12 @@ class NavTaskRegistry:
     def set_platform_name_right(self, platform_name: str):
         self._nav_platform_name_right = platform_name
 
+    def has_left_force(self):
+        return self._nav_force_left is not None and self._nav_platform_name_left is not None
+
+    def has_right_force(self):
+        return self._nav_force_right is not None and self._nav_platform_name_right is not None
+
     def get_force_left(self) -> NavPose:
         return self._nav_force_left
 
@@ -69,7 +75,7 @@ class NavTask:
     def validate_force(nav_force_pose: NavPose):
         nav_force_pose.scale(.1)
         if nav_force_pose.get_norm() > NavConfig.FORCE_NORM_CUTOFF:
-            nav_force_pose.scale(ComputeUtils.sample_skew_normal(.5, 1.5, -3, .0, 2.))
+            nav_force_pose.scale(ComputeUtils.sample_skew_normal(2.5, 1.5, -3, .0, 5.))
 
     @staticmethod
     def get_random_force(force_pos_vec) -> NavPose:

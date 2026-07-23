@@ -58,11 +58,10 @@ class MujocoUtils:
 
     def _register_force(self, force_pos, force_vec, platform_name):
         mj_body_id = mj.mj_name2id(self._model, mj.mjtObj.mjOBJ_BODY, platform_name)
-        force_vec = self._data.xmat[mj_body_id].reshape(3, 3) @ force_vec
         mj.mj_applyFT(self._model, self._data, force_vec, np.zeros(3), force_pos, mj_body_id, self._data.qfrc_applied)
 
     def _unpack_task_registry(self, task_registry: NavTaskRegistry):
-        if task_registry.get_force_left() is not None:
+        if task_registry.has_left_force():
             left_pos = task_registry.get_force_left_pos()
             left_vec = task_registry.get_force_left_vec()
             left_loc = task_registry.get_platform_name_left()
@@ -71,7 +70,7 @@ class MujocoUtils:
             else:
                 self._register_force(left_pos, left_vec, left_loc)
 
-        if task_registry.get_force_right() is not None:
+        if task_registry.has_right_force():
             right_pos = task_registry.get_force_right_pos()
             right_vec = task_registry.get_force_right_vec()
             right_loc = task_registry.get_platform_name_right()

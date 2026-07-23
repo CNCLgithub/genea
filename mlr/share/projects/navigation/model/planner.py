@@ -384,13 +384,13 @@ class NavModel:
             task_registry_list.extend(nav_task.get_task_registry_list())
 
         for task_index, task_registry in enumerate(task_registry_list):
-            if task_registry.get_force_left() is not None:
+            if task_registry.has_left_force():
                 left_pos = task_registry.get_force_left_pos()
                 left_loc = task_registry.get_platform_name_left()
                 if not nav_state.get_scene().is_within_bounds(left_loc, left_pos):
                     return Msg.FAILURE
 
-            if task_registry.get_force_right() is not None:
+            if task_registry.has_right_force():
                 right_pos = task_registry.get_force_right_pos()
                 right_loc = task_registry.get_platform_name_right()
                 if not nav_state.get_scene().is_within_bounds(right_loc, right_pos):

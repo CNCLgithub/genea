@@ -28,17 +28,7 @@ class JumpTask(NavTask):
             if len(task_forces_list) > 1:
                 JumpTask.validate_force(task_forces_list[1])
 
-            if 0 <= time_index < phase1:
-                task_registry.set_force_left(task_forces_list[0])
-                task_registry.set_force_right(task_forces_list[1])
-                task_registry.set_platform_name_left(platform_names_list[0])
-                task_registry.set_platform_name_right(platform_names_list[0])
-            elif time_index == phase1:  # impulse phase
-                task_registry.set_force_left(task_forces_list[0])
-                task_registry.set_force_right(task_forces_list[1])
-                task_registry.set_platform_name_left(platform_names_list[0])
-                task_registry.set_platform_name_right(platform_names_list[0])
-            elif phase3 <= time_index < phase4:
+            if phase3 <= time_index < phase4:
                 task_registry.set_force_left(task_forces_list[0])
                 task_registry.set_force_right(task_forces_list[1])
                 task_registry.set_platform_name_left(platform_names_list[1])
