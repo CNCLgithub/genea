@@ -74,14 +74,14 @@ class NavTask:
     @staticmethod
     def validate_walk(nav_force_pose: NavPose):
         nav_force_pose.scale(.1)
-        if nav_force_pose.get_norm() > NavConfig.FORCE_NORM_CUTOFF:
+        if nav_force_pose.get_norm() > NavConfig.WALK_FORCE_NORM_CUTOFF:
             nav_force_pose.scale(.0)
 
     @staticmethod
     def validate_jump(nav_force_pose: NavPose):
-        nav_force_pose.scale(ComputeUtils.sample_uniform(.01, .75))
-        if nav_force_pose.get_norm() > NavConfig.FORCE_NORM_CUTOFF:
-            nav_force_pose.scale(.1 * np.exp(-nav_force_pose.get_norm() / NavConfig.FORCE_NORM_CUTOFF))
+        nav_force_pose.scale(ComputeUtils.sample_uniform(.01, 2.))
+        if nav_force_pose.get_norm() > NavConfig.JUMP_FORCE_NORM_CUTOFF:
+            nav_force_pose.scale(.1 * np.exp(-nav_force_pose.get_norm() / NavConfig.JUMP_FORCE_NORM_CUTOFF))
 
     @staticmethod
     def get_random_force(force_pos_vec) -> NavPose:
