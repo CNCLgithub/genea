@@ -45,9 +45,9 @@ class WalkTask(NavTask):
             task_registry = NavTaskRegistry()
 
             if len(task_forces_list) > 0:
-                self.validate_force(task_forces_list[0])
+                self.validate_walk(task_forces_list[0])
             if len(task_forces_list) > 1:
-                self.validate_force(task_forces_list[1])
+                self.validate_walk(task_forces_list[1])
 
             if 0 <= time_index < phase1:
                 task_registry.set_force_left(task_forces_list[0])
@@ -59,13 +59,20 @@ class WalkTask(NavTask):
                 task_registry.set_force_right(task_forces_list[1])
 
             if self.is_lunge_step():
-                if phase2 <= time_index < phase3:
+                if 0 <= time_index < phase1:
+                    task_registry.set_platform_name_left(platform_names_list[0])
+                    task_registry.set_platform_name_right(platform_names_list[0])
+                elif phase2 <= time_index < phase3:
                     task_registry.set_platform_name_right(platform_names_list[1])
                 elif phase3 <= time_index < phase4:
+                    task_registry.set_platform_name_left(platform_names_list[0])
                     task_registry.set_platform_name_right(platform_names_list[1])
             elif self.is_other_step():
                 task_registry.set_platform_name_left(platform_names_list[1])
                 task_registry.set_platform_name_right(platform_names_list[1])
+            else:
+                task_registry.set_platform_name_left(platform_names_list[0])
+                task_registry.set_platform_name_right(platform_names_list[0])
 
             self.add_to_registry(task_registry)
 

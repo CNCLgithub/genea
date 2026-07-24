@@ -72,10 +72,16 @@ class NavTask:
         self._task_registry_list = []
 
     @staticmethod
-    def validate_force(nav_force_pose: NavPose):
+    def validate_walk(nav_force_pose: NavPose):
         nav_force_pose.scale(.1)
+
+    @staticmethod
+    def validate_jump(nav_force_pose: NavPose):
         if nav_force_pose.get_norm() > NavConfig.FORCE_NORM_CUTOFF:
-            nav_force_pose.scale(ComputeUtils.sample_skew_normal(3., 3., -3, .0, 5.))
+            nav_force_pose.scale(.1 * np.exp(-nav_force_pose.get_norm() / NavConfig.FORCE_NORM_CUTOFF))
+            return
+
+        nav_force_pose.scale(ComputeUtils.sample_uniform(.01, .75))
 
     @staticmethod
     def get_random_force(force_pos_vec) -> NavPose:
