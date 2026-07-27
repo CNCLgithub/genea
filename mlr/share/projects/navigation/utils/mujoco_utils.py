@@ -145,10 +145,11 @@ class MujocoUtils:
         final_body_pos_list = [self.get_curr_pose(body_name) for body_name in self.get_body_names_list()]
 
         for start, final in zip(start_body_pos_list, final_body_pos_list):
-            pos_diff = np.linalg.norm(start[0] - final[0]).item()
-            rot_diff = np.linalg.norm(start[1] - final[1]).item()
+            pos_diff = np.round(np.linalg.norm(start[0] - final[0]).item(), 1)
+            rot_diff = np.round(np.linalg.norm(start[1] - final[1]).item(), 1)
             if pos_diff > NavConfig.DYNAMICS_TOLERANCE_POS or rot_diff > NavConfig.DYNAMICS_TOLERANCE_ROT:
                 Msg.print_info(f"ERROR [MujocoUtils]: pos -- {pos_diff} | rot -- {rot_diff}")
+                print(f"ERROR [MujocoUtils]: pos -- {pos_diff} | rot -- {rot_diff}")
                 return Msg.FAILURE
         return Msg.SUCCESS
 

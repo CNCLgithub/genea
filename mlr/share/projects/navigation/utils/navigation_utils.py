@@ -79,7 +79,7 @@ class NavTask:
 
     @staticmethod
     def validate_jump(nav_force_pose: NavPose):
-        nav_force_pose.scale(ComputeUtils.sample_uniform(.01, 2.5))
+        nav_force_pose.scale(ComputeUtils.sample_uniform(.01, 5.))
         if nav_force_pose.get_norm() > NavConfig.JUMP_FORCE_NORM_CUTOFF:
             nav_force_pose.scale(.1 * np.exp(-nav_force_pose.get_norm() / NavConfig.JUMP_FORCE_NORM_CUTOFF))
 
