@@ -79,15 +79,17 @@ class NavTask:
 
     @staticmethod
     def validate_jump(nav_force_pose: NavPose):
-        nav_force_pose.scale(ComputeUtils.sample_uniform(.01, 5.))
-        if nav_force_pose.get_norm() > NavConfig.JUMP_FORCE_NORM_CUTOFF:
-            nav_force_pose.scale(.1 * np.exp(-nav_force_pose.get_norm() / NavConfig.JUMP_FORCE_NORM_CUTOFF))
+        nav_force_pose.scale(ComputeUtils.sample_skew_normal(.2, .5, -5, .0, 5.))
 
     @staticmethod
     def get_random_force(force_pos_vec) -> NavPose:
-        roll = ComputeUtils.sample_uniform(-100, 100).item()
-        pitch = ComputeUtils.sample_uniform(-100, 100).item()
-        yaw = ComputeUtils.sample_uniform(-750, -1500).item()
+        roll = ComputeUtils.sample_skew_normal(.0, 1., 0, -1.5, 1.5).item()
+        pitch = ComputeUtils.sample_skew_normal(.0, 1., 0, -1.5, 1.5).item()
+        yaw = ComputeUtils.sample_skew_normal(-1., 5., -5, -5., 5.).item()
+        if ComputeUtils.sample_uniform(0., 10.).item() > 8.:
+            roll = 0.0
+            pitch = 0.0
+            yaw = 0.0
 
         force_pose = NavPose(NavPosition(force_pos_vec[0], force_pos_vec[1], force_pos_vec[2]))
         force_pose.set_rpy(roll, pitch, yaw)

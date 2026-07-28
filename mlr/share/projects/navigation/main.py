@@ -1,7 +1,8 @@
 import click
 
-from mlr.share.projects.navigation.model.planner import NavModel
-from mlr.share.projects.navigation.model.stimuli import StimuliDiff
+from mlr.share.projects.navigation.model.genea.planner import NavModel
+from mlr.share.projects.navigation.model.genea.stimuli import StimuliDiff
+from mlr.share.projects.navigation.model.vlm.exp import VLMExperiment
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.config_utils import CoreConfig
 from mlr.share.projects.navigation.utils.file_utils import FileUtils
@@ -44,11 +45,17 @@ class ModelRunner:
         nav_model.run_stability_heuristic(out_filepath)
 
     @staticmethod
+    def run_vlm_diff_planner():
+        VLMExperiment(StimuliDiff().get_stimuli_set_name()).run_experiment()
+
+    @staticmethod
     def combine_results(stimuli, out_filename):
         stim_dir_list = FileUtils.get_dir_list_in_directory(stimuli.get_stimuli_set_dirpath())
         stim_dir_list.sort(key=lambda x: int(x.split("/")[-1].split("_")[1]))
 
         out_filepath = PathUtils.join(PathUtils.get_out_dirpath(), out_filename)
+        if FileUtils.is_file(out_filepath):
+            FileUtils.delete_file(out_filepath)
 
         for stim_index, stim_dirpath in enumerate(stim_dir_list):
             stim_dirname = FileUtils.get_basename(stim_dirpath)
@@ -68,13 +75,25 @@ class ModelRunner:
 
 
 @click.command()
+@click.option("-vlm", "--run_vlm", default=False, is_flag=True, help="run vlm experiment")
+@click.option("-s", "--run_stability", default=False, is_flag=True, help="run stability experiment")
+@click.option("-g", "--run_genea", default=False, is_flag=True, help="run genea experiment")
 @click.option("-si", "--stim_index", type=click.STRING, help="the index of the stimulus to run")
-def main(stim_index):
-    ModelRunner.run_diff_planner(int(stim_index))
-    # ModelRunner.combine_results(StimuliDiff(), "model_genea.csv")
+def main(run_vlm, run_stability, run_genea, stim_index):
+    if run_vlm:
+        ModelRunner.run_vlm_diff_planner()
+        return
 
-    # ModelRunner.run_diff_stability(int(stim_index))
-    # ModelRunner.combine_results(StimuliDiff(), "model_stability.csv")
+    if run_stability:
+        ModelRunner.run_diff_stability(int(stim_index))
+        return
+
+    if run_genea:
+        ModelRunner.run_diff_planner(int(stim_index))
+        return
+
+    ModelRunner.combine_results(StimuliDiff(), "model_genea.csv")
+    ModelRunner.combine_results(StimuliDiff(), "model_stability.csv")
 
 
 if __name__ == '__main__':

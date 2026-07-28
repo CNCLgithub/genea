@@ -55,6 +55,22 @@ class PathUtils:
         return os.path.join(PathUtils.get_out_dirpath(), "stim_videos")
 
     @staticmethod
+    def get_out_vlm_dirpath():
+        return os.path.join(PathUtils.get_out_dirpath(), "vlm")
+
+    @staticmethod
+    def get_vlm_files_dirpath():
+        return os.path.join(PathUtils.get_library_dirpath(), "vlm_files")
+
+    @staticmethod
+    def get_vlm_img_files_dirpath():
+        return os.path.join(PathUtils.get_vlm_files_dirpath(), "img_files")
+
+    @staticmethod
+    def get_vlm_json_files_dirpath():
+        return os.path.join(PathUtils.get_vlm_files_dirpath(), "json_files")
+
+    @staticmethod
     def get_platforms_dirpath():
         return os.path.join(PathUtils.get_library_dirpath(), "platforms")
 

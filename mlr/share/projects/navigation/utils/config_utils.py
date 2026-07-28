@@ -7,7 +7,9 @@ class CoreConfig:
     EXP_MAX_MOVE_ATTEMPTS = 10
 
     EXP_STABILITY_MOVES = 500
-    EXP_STABILITY_COUNT = 10
+    EXP_STABILITY_COUNT = 30
+
+    OPENAI_MODEL_NAME = "gpt-5-2025-08-07"
 
 
 class AnalysisConfig:
@@ -25,7 +27,6 @@ class NavConfig:
     TIME_STEP = 0.02
 
     WALK_FORCE_NORM_CUTOFF = 100.
-    JUMP_FORCE_NORM_CUTOFF = 150.
 
     WALK_SKEW_SIGMA = 0.1
     JUMP_SKEW_SIGMA = 0.5

@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import re
 import shutil
@@ -77,6 +78,10 @@ class FileUtils:
             assert False
 
     @staticmethod
+    def write_as_json(input_data):
+        return json.dumps(input_data, indent=4)
+
+    @staticmethod
     def get_basename(filepath, is_attached=True):
         if is_attached:
             return os.path.basename(filepath)
@@ -143,6 +148,18 @@ class FileUtils:
                 data.append(row)
             file.close()
 
+            return data
+
+        except Exception:
+            Msg.print_error("Error while reading from " + filepath)
+            raise FileNotFoundError
+
+    @staticmethod
+    def read_json_file(filepath):
+        try:
+            file = open(filepath, 'r')
+            data = json.load(file)
+            file.close()
             return data
 
         except Exception:

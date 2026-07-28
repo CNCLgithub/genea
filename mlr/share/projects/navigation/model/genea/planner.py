@@ -9,11 +9,9 @@ from collections import deque
 from enum import Enum
 from typing import List
 
-from pygments.lexers import factor
-
-from mlr.share.projects.navigation.model.tasks.jump import JumpTask
-from mlr.share.projects.navigation.model.tasks.turn import TurnTask
-from mlr.share.projects.navigation.model.tasks.walk import WalkTask
+from mlr.share.projects.navigation.model.genea.tasks.jump import JumpTask
+from mlr.share.projects.navigation.model.genea.tasks.turn import TurnTask
+from mlr.share.projects.navigation.model.genea.tasks.walk import WalkTask
 from mlr.share.projects.navigation.utils.agent_utils import NavAgent
 from mlr.share.projects.navigation.utils.compute_utils import ComputeUtils
 from mlr.share.projects.navigation.utils.config_utils import NavConfig, CoreConfig, PlatformConfig
@@ -507,17 +505,16 @@ class NavModel:
                     platform_half_y = platform_surface_xy[1] / 2
 
                     force_pos_vec = self.get_scene().get_platform_center(platform_name)
-                    force_pos_vec[0] = ComputeUtils.sample_uniform(-platform_half_x, platform_half_x)
-                    force_pos_vec[1] = ComputeUtils.sample_uniform(-platform_half_y, platform_half_y)
+                    force_pos_vec[0] = ComputeUtils.sample_uniform(-platform_half_x, platform_half_x).item()
+                    force_pos_vec[1] = ComputeUtils.sample_uniform(-platform_half_y, platform_half_y).item()
 
-                    force_left = NavTask.get_random_force(force_pos_vec)
-                    force_right = NavTask.get_random_force(force_pos_vec)
+                    force = NavTask.get_random_force(force_pos_vec)
 
                     task_registry = NavTaskRegistry()
                     task_registry.set_platform_name_left(platform_name)
                     task_registry.set_platform_name_right(platform_name)
-                    task_registry.set_force_left(force_left)
-                    task_registry.set_force_right(force_right)
+                    task_registry.set_force_left(force)
+                    task_registry.set_force_right(force)
 
                     task_registry_list.append(task_registry)
 

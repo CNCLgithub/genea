@@ -1,3 +1,4 @@
+from mlr.share.projects.navigation.model.exp_type import ExpType
 from mlr.share.projects.navigation.utils.config_utils import PlatformConfig, StimuliConfig
 from mlr.share.projects.navigation.utils.core_utils import NavPosition, NavPose
 from mlr.share.projects.navigation.utils.platform_utils import PlatformType, PlatformShape, PlatformScale, \
@@ -7,7 +8,7 @@ from mlr.share.projects.navigation.utils.stimuli_utils import StimuliSet, Stimul
 
 class StimuliDiff(StimuliSet):
     def __init__(self):
-        super().__init__("diff")
+        super().__init__(ExpType.NAV_DIFFICULTY)
 
     def _make_stimuli(self, platform_types_list, parent_ids_list, dx_list, dy_list, dx_goal=0., dy_goal=0., var=False):
         stimulus = Stimulus(self, is_variant=var)
