@@ -93,6 +93,7 @@ def main(run_vlm, run_stability, run_genea, stim_index):
         return
 
     ModelRunner.combine_results(StimuliDiff(), "model_genea.csv")
+    ModelRunner.combine_results(StimuliDiff(), "model_tamp.csv")
     ModelRunner.combine_results(StimuliDiff(), "model_stability.csv")
 
 
