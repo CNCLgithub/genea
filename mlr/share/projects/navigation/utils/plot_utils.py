@@ -23,7 +23,8 @@ class PlotUtils:
         plt.grid(True)
 
         plt.xlim(min(x_list), max(x_list))
-        plt.ylim(min(y_list), max(y_list))
+        # plt.ylim(min(y_list), max(y_list))
+        plt.ylim(0, 100)
 
         slope, intercept, r, p, _ = stats.linregress(x=x_list, y=y_list)
 
@@ -46,7 +47,7 @@ class PlotUtils:
             plt.close()
 
     @staticmethod
-    def draw_histogram_plot(samples_list,  bins, title, x_label, y_label):
+    def draw_histogram_plot(samples_list, bins, title, x_label, y_label):
         plt.figure()
         plt.hist(samples_list, bins=bins, density=True)
         plt.title(title)
@@ -55,15 +56,13 @@ class PlotUtils:
         plt.show()
 
     @staticmethod
-    def draw_multiple_bar_plots(x_labels_list, y_values_list_dict, behavior_values_list=None, save_path=None):
+    def draw_bootstrap_bar_plot(x_labels_list, y_values_list_dict, y_limits=None, save_path=None):
         color_list = ["#12314e", "#505052", "#12314e", "#505052", "#12314e", "#505052", "#12314e", "#505052", "#12314e"]
 
         plt.rcParams['legend.handlelength'] = 1
         plt.rcParams['legend.handleheight'] = 1.125
 
         sns.set_theme(style="whitegrid")
-
-        split_half_lower, split_half_upper = behavior_values_list
 
         means_list = [np.mean(value).item() for key, value in y_values_list_dict.items()]
         lower_list = [np.mean(value) - np.percentile(value, 2.5) for key, value in y_values_list_dict.items()]
@@ -76,8 +75,47 @@ class PlotUtils:
         for bar, color in zip(ax.patches, color_list):
             bar.set_facecolor(color)
 
-        ax.axhline(y=split_half_lower, color="#929498", linestyle="--", linewidth=.5)
-        ax.axhline(y=split_half_upper, color="#929498", linestyle="--", linewidth=.5)
+        ax.yaxis.grid(True)
+        ax.xaxis.grid(False)
+        ax.set_axisbelow(True)
+        plt.xticks(rotation=90)
+        plt.ylim(y_limits)
+        ax.tick_params(labelsize=5)
+        plt.ylabel("Correlation", fontsize=20)
+        plt.tight_layout()
+
+        if save_path:
+            plt.savefig(save_path)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
+
+    @staticmethod
+    def draw_strip_plot(x_values_list, y_values_list, show_dot, show_line, do_jitter=False, save_path=None):
+        sns.set_theme(style="whitegrid")
+
+        ax = sns.barplot(x=x_values_list, y=list(y_values_list),
+                         estimator=np.mean,
+                         errorbar=("ci", 95),
+                         color="lightgray")
+
+        if show_dot:
+            jitter = 0.1 if do_jitter else 0.0
+            sns.stripplot(x=x_values_list, y=y_values_list, color="black", size=6, jitter=jitter, alpha=0.8, ax=ax)
+
+        if show_line:
+            unique_x = list(dict.fromkeys(x_values_list))
+            x_pos = {label: i for i, label in enumerate(unique_x)}
+
+            grouped = {}
+            for x, y in zip(x_values_list, y_values_list):
+                grouped.setdefault(x, []).append(y)
+
+            for i in range(len(next(iter(grouped.values())))):
+                xs = [x_pos[label] for label in unique_x]
+                ys = [grouped[label][i] for label in unique_x]
+                ax.plot(xs, ys, color="gray", alpha=0.5, linewidth=1, zorder=99)
 
         ax.yaxis.grid(True)
         ax.xaxis.grid(False)
