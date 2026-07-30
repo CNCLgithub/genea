@@ -671,7 +671,7 @@ class RoundedCuboidPlatform(Platform):
 
         obj = bpy.context.object
 
-        obj.scale = (self.get_platform_bounding_box(self.get_platform_type()))
+        obj.scale = (*self.get_platform_bounding_box(self.get_platform_type()), Platform.get_platform_height())
         bpy.ops.object.transform_apply(scale=True)
 
         obj.location.z += self.get_platform_height() / 2
@@ -834,8 +834,35 @@ def make_stimuli(stimuli_set_name: str, save_as_img=False, save_as_video=False, 
             BPYUtils.render_video(out_vid_filepath)
 
 
+def capture_scene():
+    scene = bpy.context.scene
+
+    if scene.camera is None:
+        raise Exception("No active camera found")
+
+    scene.render.engine = 'CYCLES'
+
+    scene.cycles.samples = 128
+    scene.cycles.use_denoising = True
+    scene.render.film_transparent = True
+
+    scene.render.image_settings.file_format = 'PNG'
+    scene.render.image_settings.color_mode = 'RGBA'
+
+    scene.cycles.device = 'GPU'
+
+    scene.render.resolution_x = 1920
+    scene.render.resolution_y = 1080
+    scene.render.resolution_percentage = 100
+
+    scene.render.filepath = "/home/jakiroshah/Desktop/talos_cycles_render.png"
+
+    bpy.ops.render.render(write_still=True)
+
+
 def main():
     # make_platforms()
+    # capture_scene()
 
     frame_number = -1
     if len(sys.argv) == 5:
