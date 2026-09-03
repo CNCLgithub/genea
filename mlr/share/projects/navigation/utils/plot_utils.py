@@ -23,8 +23,8 @@ class PlotUtils:
         plt.grid(True)
 
         plt.xlim(min(x_list), max(x_list))
-        # plt.ylim(min(y_list), max(y_list))
-        plt.ylim(0, 100)
+        plt.ylim(min(y_list), max(y_list))
+        # plt.ylim(0, 100)
 
         slope, intercept, r, p, _ = stats.linregress(x=x_list, y=y_list)
 
@@ -54,6 +54,22 @@ class PlotUtils:
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.show()
+
+    @staticmethod
+    def draw_bar_plot(x_labels_list, y_values_list, save_path=None):
+        plt.figure()
+
+        ax = sns.barplot(x=x_labels_list, y=y_values_list, estimator=np.mean, errorbar=("ci", 95), color="lightgray")
+        ax.yaxis.grid(True)
+        ax.set_axisbelow(True)
+        plt.tight_layout()
+
+        if save_path:
+            plt.savefig(save_path)
+            plt.close()
+        else:
+            plt.show()
+            plt.close()
 
     @staticmethod
     def draw_bootstrap_bar_plot(x_labels_list, y_values_list_dict, y_limits=None, save_path=None):
@@ -117,8 +133,11 @@ class PlotUtils:
                 ys = [grouped[label][i] for label in unique_x]
                 ax.plot(xs, ys, color="gray", alpha=0.5, linewidth=1, zorder=99)
 
+        # plt.ylim(min(y_list), max(y_list))
+        plt.ylim(-0.1, 0.5)
+
         ax.yaxis.grid(True)
-        ax.xaxis.grid(False)
+        ax.xaxis.grid(True)
         ax.set_axisbelow(True)
         plt.xticks(rotation=90)
         ax.tick_params(labelsize=5)

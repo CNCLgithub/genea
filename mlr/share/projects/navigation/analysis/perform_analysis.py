@@ -1,5 +1,6 @@
 import click
 import numpy as np
+
 from scipy.stats import binomtest
 
 from mlr.share.projects.navigation.analysis.behavior import ExperimentType
@@ -182,46 +183,44 @@ def draw_model_vs_behavior_bar_plots(experiment_type, behavior_data, model_respo
     PlotUtils.draw_bootstrap_bar_plot(list(model_response_dict_dict.keys()), corr_dict, [-0.2, 1.2], save_path)
 
 
-def draw_material_bar_plots(behavior_data, model_response_dict):
+def draw_material_bar_plots(behavior_data, model_response_dict_dict):
     stone_trails_list = [1, 4, 6, 8, 10, 15, 3]
     woody_trails_list = [2, 5, 7, 9, 11, 16, 21]
-    behavior_response_dict = behavior_data.get_all_trial_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE)
-    # behavior_response_dict = behavior_data.get_mean_trial_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE)
+    behavior_response_dict = behavior_data.get_all_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE)
 
     trial_names_list = stone_trails_list + woody_trails_list
 
     behavior_responses_list = []
-    model_responses_list = []
+    model_responses_list_dict = {}
 
     for trial_name in trial_names_list:
         behavior_responses_list.append(behavior_response_dict[trial_name])
-        model_responses_list.append(model_response_dict[trial_name])
+        for model_name, model_response_dict in model_response_dict_dict.items():
+            if model_name not in model_responses_list_dict:
+                model_responses_list_dict[model_name] = []
+            model_responses_list_dict[model_name].append(model_response_dict[trial_name])
 
     b_stone = np.mean(behavior_responses_list[:len(stone_trails_list)], axis=0)
     b_woody = np.mean(behavior_responses_list[len(stone_trails_list):], axis=0)
-    m_stone = np.mean(model_responses_list[:len(stone_trails_list)], axis=0)
-    m_woody = np.mean(model_responses_list[len(stone_trails_list):], axis=0)
+    m_stone_dict = {}
+    m_woody_dict = {}
+    for model_name, model_responses_list in model_responses_list_dict.items():
+        m_stone_dict[model_name] = np.mean(model_responses_list[:len(stone_trails_list)], axis=0)
+        m_woody_dict[model_name] = np.mean(model_responses_list[len(stone_trails_list):], axis=0)
 
-    # b_stone = behavior_responses_list[:len(stone_trails_list)]
-    # b_woody = behavior_responses_list[len(stone_trails_list):]
-    # m_stone = model_responses_list[:len(stone_trails_list)]
-    # m_woody = model_responses_list[len(stone_trails_list):]
+    b_diff = np.array(b_woody).reshape(-1) - np.array(b_stone).reshape(-1)
+    m_diff_dict = {}
+    for model_name, m_stone, m_woody in zip(m_stone_dict.keys(), m_stone_dict.values(), m_woody_dict.values()):
+        m_diff_dict[model_name] = np.array(m_woody).reshape(-1) - np.array(m_stone).reshape(-1)
 
-    bt, bp = ComputeUtils.compute_paired_t_test(b_stone, b_woody)
-    mt, mp = ComputeUtils.compute_paired_t_test(m_stone, m_woody)
+    x_labels_list = []
+    y_values_list = []
+    for label, values_list in zip(["humans", *m_diff_dict.keys()], [b_diff, *m_diff_dict.values()]):
+        x_labels_list.extend([label] * len(values_list))
+        y_values_list.extend(values_list)
 
-    print(f"Behavior t-test: {bt:.2f} ({bp:.3f})")
-    print(f"Model t-test: {mt:.2f} ({mp:.3f})")
-
-    x_values_list = [i for i in [0, 1] for _ in range(len(b_stone))]
-    y_values_list = list(b_stone) + list(b_woody)
-    save_filepath = PathUtils.join(PathUtils.get_out_plots_dirpath(), "material_behavior.pdf")
-    PlotUtils.draw_strip_plot(x_values_list, y_values_list, False, False, save_path=save_filepath)
-
-    x_values_list = [i for i in [0, 1] for _ in range(len(m_stone))]
-    y_values_list = list(m_stone) + list(m_woody)
-    save_filepath = PathUtils.join(PathUtils.get_out_plots_dirpath(), "material_model.pdf")
-    PlotUtils.draw_strip_plot(x_values_list, y_values_list, False, False, save_path=save_filepath)
+    save_filepath = PathUtils.join(PathUtils.get_out_plots_dirpath(), f"materials.pdf")
+    PlotUtils.draw_bar_plot(x_labels_list, y_values_list, save_filepath)
 
 
 def draw_behavior_plot(behavior_data):
@@ -300,20 +299,30 @@ def run_analysis(experiment_type):
     tamp = Parser.parse_model_data(ModelType.NAV_TAMP)
 
     genea_all_ke_dict = genea.get_all_model_responses_list(ModelData.COST_KE)
+    tamp_all_ke_dict = tamp.get_all_model_responses_list(ModelData.COST_KE)
 
     genea_ke_dict = genea.get_model_response_list(ModelData.COST_KE)
     tamp_ke_dict = tamp.get_model_response_list(ModelData.COST_KE)
     genea_croc_dict = genea.get_model_response_list(ModelData.COST_CROCODDYL)
+    tamp_croc_dict = tamp.get_model_response_list(ModelData.COST_CROCODDYL)
     genea_sym_dict = genea.get_model_response_list(ModelData.COST_SYM_LEN)
+    tamp_sym_dict = tamp.get_model_response_list(ModelData.COST_SYM_LEN)
 
     stability_dict = Parser.parse_model_data(ModelType.STABILITY)
     vlm_dict = Parser.parse_model_data(ModelType.VLM)
+
+    model_all_dict_dict = {
+        "genea_ke": genea_all_ke_dict,
+        "tamp_ke": tamp_all_ke_dict
+    }
 
     model_pref_dict_dict = {
         "genea_ke": genea_ke_dict,
         "tamp_ke": tamp_ke_dict,
         "genea_crocoddyl": genea_croc_dict,
+        "tamp_crocoddyl": tamp_croc_dict,
         "genea_sym": genea_sym_dict,
+        "tamp_sym": tamp_sym_dict,
         "stability": stability_dict,
         "vlm": vlm_dict
     }
@@ -324,7 +333,8 @@ def run_analysis(experiment_type):
     draw_model_vs_behavior_bar_plots(experiment_type, behavior, model_pref_dict_dict, save_filepath)
 
     run_behavior_vs_model_correlation(behavior, genea_ke_dict, "model")
-    draw_material_bar_plots(behavior, genea_all_ke_dict)
+
+    draw_material_bar_plots(behavior, model_all_dict_dict)
 
 
 @click.command()

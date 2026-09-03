@@ -105,17 +105,15 @@ class Parser:
         cost_sym_len_dict = {}
         for stim_str, stim_iter_dict in stim_str_dict.items():
             for iter_num, trial_dict in stim_iter_dict.items():
-                trial_success = np.asarray(trial_dict[ModelData.TRIAL_SUCCESS])
-                if sum(trial_success) == 0:
-                    continue
-
-                indices = np.where(trial_success == 1)
-
+                indices = np.arange(len(np.asarray(trial_dict[ModelData.TRIAL_SUCCESS])))
                 cost_ke = np.min(np.asarray(trial_dict[ModelData.COST_KE])[indices])
                 cost_crocoddyl = np.min(np.asarray(trial_dict[ModelData.COST_CROCODDYL])[indices])
                 cost_sym_len = np.min(np.asarray(trial_dict[ModelData.COST_SYM_LEN])[indices])
 
                 if cost_ke > 10 ** 7:
+                    continue
+
+                if cost_crocoddyl > 10 ** 8:
                     continue
 
                 if stim_str not in cost_ke_dict:

@@ -50,8 +50,9 @@ fi
 ## ==========================================================================
 if [[ "$2" =~ "cont_pull" ]];then
     echo_blue "Pulling singularity container..."
-    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EVysC-tuizdIgs9wmTrXYwoBjwkTOXNlF9kTLsRMfbPj4w?e=M4ZrLd&download=1" -O "${ENV[cont_init]}"
-    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/EaFj9lg1b-5FseCdNFSJkcQB5VAYydkXVqjYYQu0LSeeJg?e=njvmDj&download=1" -O "${ENV[cont_bb]}"
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQBcrAvrbos3SILPcJk612MKATyqOpdEVouAOEuVzhZ27w4?e=SwtPnQ&download=1" -O "${ENV[cont_init]}"
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQAg3jbnzqsuQZ-PtBW-L0cXAdKD0c-zPrRQNxKwakUs6WA?e=qbRCr1&download=1" -O "${ENV[cont_bb]}"
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQC7F3nkaE3RSYifrdT2x7cWAZfAegaz9jq43ikp4F_uG9I?e=3hBIpJ&download=1" -O "${ENV[cont_nav]}"
 elif [[ "$2" =~ "cont_build" ]];then
     echo_blue "Building apptainer container..."
     remove "${APP_CONT}"
@@ -102,6 +103,7 @@ elif [[ "$1" =~ "nav" ]] && [[ "$2" =~ "python" ]];then
     ./run.sh "$1" "python -m pip install mujoco==3.9.0"
     ./run.sh "$1" "python -m pip install meshcat==0.3.2"
     ./run.sh "$1" "python -m pip install sqlalchemy==2.0.51"
+    ./run.sh "$1" "python -m pip install statsmodels==0.14.6"
 else
     echo_green "Not touching python"
 fi
@@ -122,12 +124,21 @@ fi
 ## ==========================================================================
 if [[ "$1" =~ "data" ]] || [[ "$1" =~ "all" ]];then
     echo_blue "Pulling data..."
-    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQBOZDE5XIxLSYk-1a0bCfORAX_kEzotA-G29bg42KGdnJY?e=SOf1wL&download=1" -O library.zip
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQBOZDE5XIxLSYk-1a0bCfORAX_kEzotA-G29bg42KGdnJY?e=YjpOgX&download=1" -O manipulation.zip
     rm -rf mlr/share/projects/block_building/library
-    chmod +777 library.zip
-    unzip library.zip
-    mv library mlr/share/projects/block_building
-    rm -rf library.zip
+    chmod +777 manipulation.zip
+    unzip manipulation.zip
+    mv manipulation/library mlr/share/projects/block_building
+    rm -rf manipulation
+    rm -rf manipulation.zip
+    ## ----------------------------------------------------------------------
+    wget --no-check-certificate "https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQAPFhXP2MqkRKRh9AK_MbzTAYTWILa0YjDSPmhtTN5r0YQ?e=L5SH1M&download=1" -O navigation.zip
+    rm -rf mlr/share/projects/block_building/library
+    chmod +777 navigation.zip
+    unzip navigation.zip
+    mv navigation/library mlr/share/projects/navigation
+    rm -rf navigation
+    rm -rf navigation.zip
 else
     echo_green "Not pulling any data"
 fi

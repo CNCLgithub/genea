@@ -53,7 +53,7 @@ class ModelData(Experiment):
         return self.get_mean_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure)
 
     def get_all_model_responses_list(self, model_measure):
-        return self.get_all_trial_responses_dict(TrialKeys.TRIAL_SLIDER_VALUE, model_measure)
+        return self.get_all_trial_responses_dict(TrialKeys.TRIAL_Z_SCORE_VALUE, model_measure)
 
     @staticmethod
     def get_stability_scores(out_filepath):
