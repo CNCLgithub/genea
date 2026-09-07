@@ -137,6 +137,6 @@ The source code for the three experiments reported in the paper can be found usi
 - Embodiment Strategies: [https://github.com/CNCLgithub/genea-hands-psiturk.git](https://github.com/CNCLgithub/genea-hands-psiturk.git)
 - Navigation: [https://github.com/CNCLgithub/genea_nav_psiturk.git](https://github.com/CNCLgithub/genea_nav_psiturk.git)
 
-All stimuli used in these experiments can be found via [this link](https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQAGf7XA4C98R5QFIIeRkh3oAZ59mxX-bxSok1ps3F5nko8?e=dMbCX0).
+All stimuli used in these experiments can be found via [this link](https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQAGf7XA4C98R5QFIIeRkh3oAZ59mxX-bxSok1ps3F5nko8?e=totF3k).
 
 ---
