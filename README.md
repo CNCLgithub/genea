@@ -50,6 +50,7 @@ However, you should be able to use any operating system supported by [Apptainer]
 When running the code for the first time, you will need to compile the CPP files in the codebase. 
 This is done by running the following command (~ 5 mins):
 ```
+singularity exec cont_init.simg bash -c "cd mlr/share && make cleanAll"
 singularity exec cont_init.simg bash -c "cd mlr/share && make"
 ```
 NOTE: A lot of targets under `mlr/share` will fail to compile with messages such as `***** FAILED`. This is completely fine and expected!
