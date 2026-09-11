@@ -133,9 +133,9 @@ The output of the model is stored in the `library/out/model` directory. To gener
 
 ## Behavioral Studies
 The source code for the three experiments reported in the paper can be found using the links below:
-- Goal and Action Inference: [https://github.com/CNCLgithub/genea-goal-action-psiturk.git](https://github.com/CNCLgithub/genea-goal-action-psiturk.git)
-- Embodiment Strategies: [https://github.com/CNCLgithub/genea-hands-psiturk.git](https://github.com/CNCLgithub/genea-hands-psiturk.git)
-- Navigation: [https://github.com/CNCLgithub/genea_nav_psiturk.git](https://github.com/CNCLgithub/genea_nav_psiturk.git)
+- Goal and Action Inference: [https://github.com/CNCLgithub/genea-goal-action-psiturk.git](https://github.com/CNCLgithub/genea-goal-action-psiturk)
+- Embodiment Strategies: [https://github.com/CNCLgithub/genea-hands-psiturk.git](https://github.com/CNCLgithub/genea-hands-psiturk)
+- Navigation: [https://github.com/CNCLgithub/genea_nav_psiturk.git](https://github.com/CNCLgithub/genea_nav_psiturk)
 
 All stimuli used in these experiments can be found via [this link](https://yaleedu-my.sharepoint.com/:u:/g/personal/aalap_shah_yale_edu/IQAGf7XA4C98R5QFIIeRkh3oAZ59mxX-bxSok1ps3F5nko8?e=totF3k).
 
