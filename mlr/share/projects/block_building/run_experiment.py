@@ -7,7 +7,7 @@ import time
 
 from itertools import repeat
 
-from mlr.share.projects.block_building.model.exp import ExpType
+from mlr.share.projects.block_building.model.exp_type import ExpType
 from mlr.share.projects.block_building.model.genea.exp import GeneaExperiment
 from mlr.share.projects.block_building.model.vlm.exp import VLMExperiment
 from mlr.share.projects.block_building.run_risk_test import run_risk_test

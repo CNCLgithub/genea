@@ -1,4 +1,4 @@
-from mlr.share.projects.block_building.model.exp import ExpType
+from mlr.share.projects.block_building.model.exp_type import ExpType
 from mlr.share.projects.block_building.model.genea.env import Block
 from mlr.share.projects.block_building.model.genea.planner import Planner
 from mlr.share.projects.block_building.utils.core_utils import NameUtils, ConfigUtils
