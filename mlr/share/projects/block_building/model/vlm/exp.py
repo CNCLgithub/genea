@@ -1,4 +1,4 @@
-from mlr.share.projects.block_building.model.exp import ExpType
+from mlr.share.projects.block_building.model.exp_type import ExpType
 from mlr.share.projects.block_building.model.vlm.planner import OpenAIPlanner
 from mlr.share.projects.block_building.utils.file_utils import FileUtils
 from mlr.share.projects.block_building.utils.msg_utils import Msg
